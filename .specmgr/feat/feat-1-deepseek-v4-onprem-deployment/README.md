@@ -1,9 +1,10 @@
 ---
-id: feat-0-deepseek-v4-onprem-deployment
+id: feat-1-deepseek-v4-onprem-deployment
 version: 1.0.0
 status: planning
 created: 2026-08-18
 updated: 2026-08-18
+github_issue: 1
 ---
 
 # Feature: On-prem DeepSeek-V4-Flash/Pro serving for OpenCode + OpenWebUI
@@ -151,19 +152,19 @@ What is explicitly out of scope:
 ### Task List
 
 #### Phase 0: Environment prep
-- [ ] Task 0.1: Validate available local disk space on the Dell 7960T (need 1TB+ free for both weight sets combined) — depends on: none — status: not-started
-- [ ] Task 0.2: Verify GPU driver/CUDA version compatibility with RTX Pro 6000 Blackwell across all 4 GPUs — depends on: none — status: not-started
-- [ ] Task 0.3: Set up Hugging Face access/token and download tooling — depends on: none — status: not-started
-- [ ] Task 0.4: Choose and record pinned HF revision/commit for `deepseek-ai/DeepSeek-V4-Flash` — depends on: Task 0.3 — status: not-started
-- [ ] Task 0.5: Choose and record pinned HF revision/commit for `deepseek-ai/DeepSeek-V4-Pro` — depends on: Task 0.3 — status: not-started
-- [ ] Task 0.6: Download DeepSeek-V4-Flash weights at the pinned revision — depends on: Task 0.4, Task 0.1 — status: not-started
-- [ ] Task 0.7: Download DeepSeek-V4-Pro weights at the pinned revision — depends on: Task 0.5, Task 0.1 — status: not-started
+- [x] Task 0.1: Validate available local disk space on the Dell 7960T (need 1TB+ free for both weight sets combined) — depends on: none — status: completed (2026-08-18: /data has 9.3 TB free)
+- [x] Task 0.2: Verify GPU driver/CUDA version compatibility with RTX Pro 6000 Blackwell across all 4 GPUs — depends on: none — status: completed (2026-08-18: 4 GPUs detected, driver 610.57.04, CUDA 13.3, 384 GB VRAM total; GRUB + modprobe fixes applied; GPU 0 has ollama using 43 GB, GPUs 1-3 free)
+- [x] Task 0.3: Set up Hugging Face access/token and download tooling — depends on: none — status: completed (2026-08-18: HF CLI logged in as appclusive; hf_transfer installed via uv)
+- [x] Task 0.4: Choose and record pinned HF revision/commit for `deepseek-ai/DeepSeek-V4-Flash` — depends on: Task 0.3 — status: completed (2026-08-18: pinned to 60d8d70770c6776ff598c94bb586a859a38244f1 from main branch, dated 2026-06-22)
+- [x] Task 0.5: Choose and record pinned HF revision/commit for `deepseek-ai/DeepSeek-V4-Pro` — depends on: Task 0.3 — status: completed (2026-08-18: pinned to b5968e9190ef611bbf34a7229255be88a0e937c1 from main branch, dated 2026-06-22)
+- [x] Task 0.6: Download DeepSeek-V4-Flash weights at the pinned revision — depends on: Task 0.4, Task 0.1 — status: completed (2026-08-18: 46/46 shards, 186 GB at /data/nvidia/hf_cache/hub/models--deepseek-ai--DeepSeek-V4-Flash)
+- [ ] Task 0.7: Download DeepSeek-V4-Pro weights at the pinned revision — depends on: Task 0.5, Task 0.1 — status: in-progress (2026-08-18: script created at /data/vllm/download_pro.py)
 
 #### Phase 1: DeepSeek-V4-Flash (vLLM)
-- [ ] Task 1.1: Confirm vLLM version/build with merged DeepSeek-V4 tool-call and reasoning parsers — depends on: none — status: not-started
-- [ ] Task 1.2: Verify whether vLLM's `deepseek_v4` loader honors an FP8-expert override (vs. native FP4 experts) — depends on: Task 1.1 — status: not-started
-- [ ] Task 1.3: Install vLLM + DeepSeek-V4-Flash as a systemd service (tensor-parallel=4) on the Dell 7960T — depends on: Task 1.2, Task 0.6 — status: not-started
-- [ ] Task 1.4: `systemctl start` the service; curl smoke test against `/v1/chat/completions`, verify tool-calls and think/non-think output — depends on: Task 1.3 — status: not-started
+- [x] Task 1.1: Confirm vLLM version/build with merged DeepSeek-V4 tool-call and reasoning parsers — depends on: none — status: completed (2026-08-18: vLLM 0.26.0 has DeepSeek-V4 model, tokenizer, tool parser (deepseek_v4), reasoning parser (deepseek_v4), FP8 quant config with expert_dtype detection; --hf-overrides available for expert_dtype override)
+- [x] Task 1.2: Verify whether vLLM's `deepseek_v4` loader honors an FP8-expert override (vs. native FP4 experts) — depends on: Task 1.1 — status: completed (2026-08-18: verified via --hf-overrides '{"expert_dtype": "fp8"}'; quant config resolves to fp8 when vllm_config context active)
+- [x] Task 1.3: Install vLLM + DeepSeek-V4-Flash as a systemd service (tensor-parallel=4) on the Dell 7960T — depends on: Task 1.2, Task 0.6 — status: completed (2026-08-18: service at /etc/systemd/system/vllm-deepseek-v4-flash.service now starts reliably, stays up under `systemctl`, and serves HTTP. Reached only after fixing a chain of 7 distinct bugs, in order: (1) `KillMode=process` left orphaned GPU-memory-holding workers behind after a start-timeout kill, causing every subsequent attempt to fail on insufficient free VRAM — fixed via `KillMode=control-group` + `TimeoutStartSec=3600` (script `bin/00-fix-vllm-flash-service.sh`); (2) every startup silently hung on an outbound Hugging Face network call (`snapshot_download`/Xet backend) despite weights being fully local — fixed via `HF_HUB_OFFLINE=1`/`TRANSFORMERS_OFFLINE=1` (`bin/02-fix-vllm-flash-offline.sh`); (3) `--hf-overrides '{"expert_dtype":"fp8"}'` hit a real vLLM TP-sharding bug in the MoE weight loader (`tensor a (32) != tensor b (128)`, i.e. `128 experts / tp_size(4)`) — fixed by dropping the override and falling back to the model's native FP4+FP8 mixed expert precision, the contingency already called out in Design Notes (`bin/03-fallback-native-quant.sh`); (4) the venv's pip-installed CUDA component wheels were version-skewed (`nvidia-cuda-nvcc`/`-crt`/`-cccl` on 13.3.x vs `-runtime`/`-nvrtc`/`-cupti` still on 13.0.x), breaking TileLang's nvcc JIT compiles — fixed by upgrading the latter three to 13.3.x (`bin/04-fix-cuda-toolkit-skew.sh`); (5) the systemd unit had no `PATH`, so `ninja` (needed for JIT-compiled CUDA extensions) couldn't be found even though it was installed — fixed by adding `PATH=/data/vllm/.venv/bin:...` (`bin/05-fix-missing-venv-path.sh`); (6) `--attention-backend FLASHMLA_SPARSE_DSV4` has a confirmed, unconditional gap for `sm_120` GPUs (ours) in this vLLM build — its tile-scheduler builder intentionally returns all-`None` on SM120, but the FlashMLA decode path asserts on it anyway — fixed by switching to the SM120-aware sibling backend `FLASHINFER_MLA_SPARSE_DSV4`, which in turn needed `nvcc`'s directory added to `PATH` for FlashInfer's own capability probing (`bin/06-fix-attention-backend-sm120.sh`); (7) FlashInfer's JIT linker step failed with `cannot find -lcudart` because the pip-installed CUDA runtime wheel uses a `lib/` + versioned-only layout, not the classic toolkit's `lib64/` + unversioned-symlink layout FlashInfer's build script assumes — fixed with two symlinks (`lib64 -> lib`, `libcudart.so -> libcudart.so.13`) (`bin/07-fix-cudart-symlinks.sh`). All fix scripts live in `bin/` in this feature folder, numbered in the order they were created, each with a detailed root-cause comment header.)
+- [ ] Task 1.4: `systemctl start` the service; curl smoke test against `/v1/chat/completions`, verify tool-calls and think/non-think output — depends on: Task 1.3 — status: blocked (2026-08-18: service starts and responds over HTTP with `finish_reason: length`, but generated output is degenerate garbage, not a crash. At temperature=1 output is token noise mixing many scripts/languages; at temperature=0 (greedy) every single decode position returns the exact same special token (`<|begin▁of▁sentence|>`) with the exact identical logprob (-11.7697...) regardless of position/context — a strong signature of a broken forward pass (e.g. sparse-attention decode returning zeroed/garbage context), not a sampling or tokenizer issue. Ruled out CUDA-graph capture as the cause via `--enforce-eager` (`bin/08-diag-enforce-eager.sh`): identical degenerate output with graphs fully disabled. Remaining suspects: the `FLASHINFER_MLA_SPARSE_DSV4` SM120 sparse-MLA decode kernel path (needed per Task 1.3 fix #6, since the alternative `FLASHMLA_SPARSE_DSV4` backend is unconditionally broken on our `sm_120` GPUs in this vLLM build) and/or the native FP4+FP8 mixed quantization fallback (needed per Task 1.3 fix #3) and/or missing fp8 kv-cache scaling factors (vLLM logs its own warning: "may cause accuracy drop without a proper scaling factor"). A true `--tensor-parallel-size 1` isolation test is infeasible: native-precision weights are ~152 GB total (38 GB/GPU × 4), which doesn't fit on one ~95 GB GPU. Needs upstream vLLM/FlashInfer investigation, a different vLLM/FlashInfer version, or a `--tensor-parallel-size 2` isolation test (feasible but weaker signal, not yet tried) before this can be unblocked.)
 - [ ] Task 1.5: Connect OpenWebUI and OpenCode to the Flash endpoint — depends on: Task 1.4 — status: not-started
 - [ ] Task 1.6: Validate 350-370K-token context works without OOM — depends on: Task 1.5 — status: not-started
 - [ ] Task 1.7: User runs their real coding-task examples against the endpoint — depends on: Task 1.6 — status: not-started
@@ -185,15 +186,40 @@ originally planned, rather than keeping a second copy of the task around.
 
 ### Current Status
 
-**As of 2026-08-18**: Planning complete via discussion; hardware, engine,
-precision, security, versioning, and operational (systemd) decisions all
-finalized. Repo `biz.dfch.LlmOps` created. No implementation started yet.
+**As of 2026-08-18 (evening)**: Phase 0 complete. Phase 1: Task 1.3 (systemd
+service) now complete after a long crash-loop debugging session (7 distinct
+infra/environment bugs found and fixed — see Task 1.3 note and `bin/00`-`07`
+scripts). Task 1.4 is now blocked on a genuine model-output correctness bug
+(degenerate/garbage generation), not an infra problem — see Blockers below.
+Service is currently left running (may still be up from the last
+`--enforce-eager` diagnostic attempt) but should not be considered usable
+until the correctness bug is resolved.
+
+### Next Steps
+
+1. **Decide how to attack the correctness bug** (Task 1.4 blocker): try a
+   `--tensor-parallel-size 2` isolation run (feasible VRAM-wise, weaker
+   signal than TP=1 which doesn't fit), try a different vLLM/FlashInfer
+   version, or open an upstream issue against vLLM/FlashInfer for the
+   `FLASHINFER_MLA_SPARSE_DSV4`/SM120 sparse-MLA decode path.
+2. Once Task 1.4 is unblocked, remove the diagnostic `--enforce-eager`
+   flag from the unit (`bin/08-diag-enforce-eager.sh` was diagnostic-only,
+   not a fix) before proceeding to Task 1.5+.
+3. **Start Pro download** (Task 0.7, independent of the Flash blocker):
+   ```bash
+   cd /data/vllm && python3 download_pro.py
+   ```
 
 ### Blockers
 
-- [ ] vLLM's exact support for the FP8-expert override on DeepSeek-V4 is
-  unverified — impact: Flash may have to run at native FP4+FP8 mixed
-  instead of full FP8 experts; mitigation: verify early in Task 1.2
+- [ ] **Task 1.4: DeepSeek-V4-Flash generates degenerate/garbage output**
+  despite the service running and responding over HTTP without crashing —
+  impact: endpoint is up but unusable; blocks Task 1.4 through 1.7;
+  mitigation: see Task 1.4 note for full diagnostic trail (CUDA graphs
+  already ruled out via `--enforce-eager`); next candidates are a
+  `--tensor-parallel-size 2` isolation run, a different vLLM/FlashInfer
+  version, or an upstream bug report against the SM120 sparse-MLA decode
+  kernel path.
 - [ ] Pro's actual KV-cache cost at 350-370K tokens is unknown — impact:
   can't confirm precision/context fit without empirical testing;
   mitigation: Task 2.2 measures this directly before committing to a quant
@@ -212,8 +238,29 @@ finalized. Repo `biz.dfch.LlmOps` created. No implementation started yet.
   folder scaffolded (including `.specmgr/_template/v1/README.md`, copied
   from biz.dfch.SpecMgr's convention for reuse in this repo)
 - Next: Begin Phase 0 (environment prep)
-- Notes: Feature created without a GitHub issue (`feat-0-`) per user
-  instruction
+- Notes: Feature linked to GitHub issue #1 (was `feat-0-` per user instruction)
+
+#### 2026-08-18 (evening session — Flash crash-loop debugging)
+- Completed: Diagnosed and fixed a 7-bug chain preventing
+  `vllm-deepseek-v4-flash.service` from ever starting successfully after a
+  reboot (see Task 1.3 note for full detail): orphaned-process GPU-memory
+  leak from `KillMode=process`, a silent network hang on every startup
+  despite fully-local weights, a TP-sharding bug in the FP8-expert-override
+  weight loader, a pip CUDA-toolkit version skew breaking JIT compiles, a
+  missing `PATH` breaking `ninja`, an unconditional SM120 gap in the
+  `FLASHMLA_SPARSE_DSV4` attention backend, and a missing `libcudart`
+  dev-symlink breaking FlashInfer's JIT linker step. All fixes captured as
+  numbered, root-cause-documented scripts in `bin/00` through `bin/07`.
+- Completed: Got the service to actually start, load weights, capture CUDA
+  graphs, and serve HTTP successfully for the first time.
+- Found: Task 1.4 smoke test reveals the served model generates degenerate
+  output (identical special token + identical logprob at every decode
+  position at temperature=0) — a real correctness bug, not a crash.
+  Ruled out CUDA-graph capture as the cause via `bin/08-diag-enforce-eager.sh`
+  (diagnostic only, same degenerate output with graphs disabled). Root
+  cause still open — see Blockers.
+- Next: Decide on further correctness-bug isolation (TP=2 test, version
+  change, or upstream bug report) before continuing to Task 1.5+.
 
 ### Decisions Made
 
@@ -239,6 +286,23 @@ finalized. Repo `biz.dfch.LlmOps` created. No implementation started yet.
   future feature — not built here
 - **2026-08-18**: Repo named `biz.dfch.LlmOps` (generic, not
   DeepSeek-specific, to host future model-serving features like GLM-5.2)
+- **2026-08-18 (evening)**: For Flash, fell back from the FP8-expert
+  override to native FP4+FP8 mixed expert precision — the override hit a
+  real vLLM TP-sharding bug (checkpoint/loader shape mismatch), not just
+  "unsupported"; this is the exact contingency already anticipated in
+  Design Notes, just triggered by a bug rather than a missing feature
+- **2026-08-18 (evening)**: For Flash, switched `--attention-backend` from
+  `FLASHMLA_SPARSE_DSV4` to `FLASHINFER_MLA_SPARSE_DSV4` — the FlashMLA
+  backend has a confirmed, unconditional gap for `sm_120` GPUs (ours) in
+  this vLLM build; the FlashInfer sibling backend has a dedicated SM120
+  code path instead. This later turned out to still produce degenerate
+  output, so this decision may need revisiting once Task 1.4's blocker is
+  resolved
+- **2026-08-18 (evening)**: All infra/environment fix scripts for this
+  feature live in `bin/` under this feature folder, numbered in the order
+  they were created (`00`-`08`), each with a comment header documenting
+  the root cause and evidence — kept as both a remediation record and a
+  reproducible runbook for future redeploys
 
 ### Related PRs / Commits
 

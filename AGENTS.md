@@ -4,8 +4,9 @@
 On-prem LLM serving for DeepSeek-V4-Flash and DeepSeek-V4-Pro via OpenAI-compatible APIs, consumed by OpenCode and OpenWebUI. Managed through specmgr feature folders.
 
 ## Repository Structure
-- `.specmgr/feat/feat-0-deepseek-v4-onprem-deployment/README.md` — Active feature spec (planning phase, not started)
+- `.specmgr/feat/feat-1-deepseek-v4-onprem-deployment/README.md` — Active feature spec (planning phase, not started)
 - `.specmgr/_template/v1/README.md` — Feature template (copy for new features)
+- `hardware/dell-7960t/` — Dell 7960T NVIDIA driver config, package pinning, recovery procedure
 - `session-ses_fec5.md` — Research session (Ollama cloud tags → HF weights decision)
 
 ## Key Conventions
@@ -14,7 +15,7 @@ On-prem LLM serving for DeepSeek-V4-Flash and DeepSeek-V4-Pro via OpenAI-compati
 - **Decisions logged in feature README** under "Decisions Made" with date + rationale
 - **No GitHub issues** — features tracked directly in repo (user instruction)
 
-## Current Feature: `feat-0-deepseek-v4-onprem-deployment`
+## Current Feature: `feat-1-deepseek-v4-onprem-deployment`
 **Hardware**: Dell 7960T (4× RTX Pro 6000 Blackwell Max-Q, 96 GB VRAM each = 384 GB total; 512 GB sys RAM). DGX Spark explicitly excluded.
 
 **Engines**:

@@ -18,7 +18,7 @@ opencode
 ```
 
 ## Repository Structure
-- `.specmgr/feat/feat-0-deepseek-v4-onprem-deployment/README.md` — Active feature spec (planning phase)
+- `.specmgr/feat/feat-1-deepseek-v4-onprem-deployment/README.md` — Active feature spec (planning phase)
 - `.specmgr/_template/v1/README.md` — Feature template
 - `hardware/dell-7960t/` — Dell 7960T NVIDIA driver config & recovery docs
 - `session-ses_fec5.md` — Research session (Ollama cloud tags → HF weights decision)
@@ -31,7 +31,7 @@ opencode
 - See `hardware/dell-7960t/configuration.md` for working package list & pinning
 - See `hardware/dell-7960t/recovery.md` for full recovery procedure + power fixes
 
-## Current Feature: `feat-0-deepseek-v4-onprem-deployment`
+## Current Feature: `feat-1-deepseek-v4-onprem-deployment`
 **Engines**:
 - DeepSeek-V4-Flash → vLLM (tensor-parallel=4), FP8-expert override target
 - DeepSeek-V4-Pro → ktransformers (GPU+CPU-RAM hybrid MoE)
