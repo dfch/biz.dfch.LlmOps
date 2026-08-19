@@ -83,10 +83,21 @@ minimums (their reference config runs the 2-bit quant on a single 24 GB GPU
 
 - [ ] ACC-001: Verifies REQ-001/REQ-002 — GLM-5.2 running on the Dell 7960T,
   reachable via `/v1/chat/completions`, no new hardware, DGX Spark unused
-- [ ] ACC-002: Verifies REQ-010 — a short smoke test at temperature=0
+- [x] ACC-002: Verifies REQ-010 — a short smoke test at temperature=0
   produces coherent, non-degenerate output on SM120 (explicitly checked
   against the `feat-1` Task 1.4 failure signature: NOT a single frozen
-  token repeated at every decode position)
+  token repeated at every decode position) — PASS 2026-08-19
+  (`bin/05-spike-glm-dsa-strong.sh`, `llama.cpp`/`UD-IQ1_S`): 3 of 4 cases
+  (`enable_thinking:false`) reached a finished, non-truncated answer —
+  `"Hello!"`, `"Paris"` (factually correct), and a correct recursive
+  Python `factorial()` — each run TWICE at temperature=0 and byte-identical
+  both times (rules out flaky/intermittent failure, not just a lucky single
+  run). The 4th case (default thinking mode, 600 tokens) produced a
+  coherent, structured reasoning trace with no frozen-token pattern, just
+  still truncated (GLM-5.2 defaults to `reasoning_effort: max`, needs an
+  even larger budget or an explicit lower effort level to finish — separate
+  from REQ-010 correctness). `OVERALL: no degenerate/suspicious/
+  non-deterministic results found`
 - [ ] ACC-003: Verifies REQ-003 — empirical test confirms the endpoint
   handles a 350-370K-token coding prompt without OOM
 - [ ] ACC-004: Verifies REQ-004/REQ-011 — tool-call verified via curl smoke
@@ -147,7 +158,13 @@ What is explicitly out of scope:
   sparse-attention-decode diagnostic (Task 1.4). If `feat-1` establishes
   that the SM120 sparse-attention problem is engine-specific (e.g. vLLM
   fails but SGLang works), that finding directly informs REQ-010 here and
-  may let this feature skip its own spike.
+  may let this feature skip its own spike. UPDATE 2026-08-19: `feat-1`
+  confirmed its bug is vLLM/FlashInfer's `FLASHINFER_MLA_SPARSE_DSV4`
+  specifically (all local hypotheses ruled out, filed upstream as
+  vllm-project/vllm#52938), and this feature's own Task 1.2 spike (run
+  independently, not skipped) found `llama.cpp` producing coherent output
+  on the same SM120 GPUs — the two findings corroborate each other toward
+  "engine-specific," not "SM120-fundamental."
 - Blocks: none
 
 ### Design Notes
@@ -219,15 +236,15 @@ What is explicitly out of scope:
 - [ ] Task 0.1: Confirm disk headroom for GLM-5.2 weights + quant on /data (feat-1 Task 0.1 already showed 9.3 TB free; re-check remaining after feat-1's DeepSeek downloads) — depends on: none — status: not-started
 - [ ] Task 0.2: Reuse feat-1's validated GPU/driver/CUDA (driver 610.57.04, CUDA 13.3, 4x SM120 GPUs) — no new work unless a different engine needs a different toolchain — depends on: none — status: not-started
 - [ ] Task 0.3: Reuse feat-1's HF access/token + download tooling (hf CLI, hf_transfer) — depends on: none — status: not-started
-- [ ] Task 0.4: Choose and record pinned HF revision/commit for `zai-org/GLM-5.2` (base) — depends on: Task 0.3 — status: not-started
-- [ ] Task 0.5: Select the quant strategy + source and record its pinned revision. Default: unsloth Dynamic GGUF `UD-Q5_K_XL` (target) / `UD-Q4_K_XL` (fallback) from `unsloth/GLM-5.2-GGUF` for a llama.cpp/SGLang path; or an FP8/FP4 checkpoint if vLLM is chosen (vLLM does not consume GGUF) — depends on: Task 0.4 — status: not-started
+- [x] Task 0.4: Choose and record pinned HF revision/commit for `zai-org/GLM-5.2` (base) — depends on: Task 0.3 — status: done — pinned revision `b4734de4facf877f85769a911abafc5283eab3d9` (recorded 2026-08-19; not downloaded, base BF16 not needed for the GGUF path)
+- [x] Task 0.5: Select the quant strategy + source and record its pinned revision. Default: unsloth Dynamic GGUF `UD-Q5_K_XL` (target) / `UD-Q4_K_XL` (fallback) from `unsloth/GLM-5.2-GGUF` for a llama.cpp/SGLang path; or an FP8/FP4 checkpoint if vLLM is chosen (vLLM does not consume GGUF) — depends on: Task 0.4 — status: done — pinned revision `abc55e72527792c6e77069c99b4cb7de16fa9f23` (recorded 2026-08-19); download kicked off out of order via `bin/00-download-glm-quants.sh` (see Decisions Made)
 
 #### Phase 1: SM120 correctness spike (de-risk REQ-010 BEFORE full deploy)
 
-- [ ] Task 1.1: Pick the engine(s) to spike and their GLM-5.2-supporting versions. Candidates in order of SM120-risk: llama.cpp/llama-server (separate GGUF CUDA path, does NOT inherit feat-1's vLLM sparse-attention bug — strongest Plan B), SGLang (distinct SM120 path), vLLM (default runbook but same broken kernel class as feat-1) — depends on: Task 0.4 — status: not-started
-- [ ] Task 1.2: Minimal short-context bring-up of GLM-5.2 on ONE engine at a small quant, temperature=0 greedy smoke test — check specifically for the feat-1 Task 1.4 degenerate signature (single frozen token at every decode position) — depends on: Task 1.1, Task 0.5 — status: not-started
-- [ ] Task 1.3: If output is degenerate on the first engine, repeat Task 1.2 on the next engine (llama.cpp vs SGLang vs vLLM is the SM120 sparse-attention discriminator that also informs feat-1) — depends on: Task 1.2 — status: not-started
-- [ ] Task 1.4: Record the outcome: which engine(s) produce coherent GLM-5.2 output on SM120, and whether the sparse-attention problem is engine-specific or SM120-fundamental (feed this back into feat-1 Task 1.4) — depends on: Task 1.2, Task 1.3 — status: not-started
+- [ ] Task 1.1: Pick the engine(s) to spike and their GLM-5.2-supporting versions. Candidates in order of SM120-risk: llama.cpp/llama-server (separate GGUF CUDA path, does NOT inherit feat-1's vLLM sparse-attention bug — strongest Plan B), SGLang (distinct SM120 path), vLLM (default runbook but same broken kernel class as feat-1) — depends on: Task 0.4 — status: in-progress — llama.cpp picked as the lead spike candidate; dedicated checkout cloned+built at `/data/llama.cpp-dsa` (commit `ee4c505a4fb37be8ea37a78af272e74dad2835c1`, 2026-08-19) via `bin/01-clone-llama-cpp-dsa.sh` + `bin/02-build-llama-cpp-dsa.sh`, CUDA/SM120 confirmed linked (`CMAKE_CUDA_ARCHITECTURES` includes `120a-real`); done in parallel with the quant download while GPUs are still occupied by `feat-1`'s service, so Task 1.2 bring-up itself has not started yet
+- [x] Task 1.2: Minimal short-context bring-up of GLM-5.2 on ONE engine at a small quant, temperature=0 greedy smoke test — check specifically for the feat-1 Task 1.4 degenerate signature (single frozen token at every decode position) — depends on: Task 1.1, Task 0.5 — status: done — 2026-08-19, `bin/03-spike-glm-dsa.sh`: `llama-server` (commit `ee4c505a4`) on `UD-IQ1_S`, all 4 GPUs (~50-53 GB VRAM each), `-c 4096`. Temp=0 greedy request produced coherent, grammatical chain-of-thought reasoning tokens (`The user wants me to say hello...`) with naturally varying logprobs (`-0.0000649` to `-1.126`) — NOT the feat-1 flat `-11.77`-at-every-position frozen-token signature. `finish_reason: length` with empty `message.content` is expected (GLM-5.2 defaults to thinking mode; 20-token budget was spent entirely on `reasoning_content`), not a failure. Decode ran at ~39 tok/s. Strengthened same-day via `bin/05-spike-glm-dsa-strong.sh`: multiple prompts (chit-chat/factual/code), `enable_thinking:false` to reach finished answers, each run twice for determinism — see ACC-002 for the full result. **REQ-010: llama.cpp's DSA decode path is correct on this box's SM120 GPUs.** Cross-reference: `feat-1` independently hit the same *class* of bug (vLLM's `FLASHINFER_MLA_SPARSE_DSV4` sparse-MLA decode produces the exact degenerate signature on these same SM120 GPUs, all local hypotheses ruled out, filed as upstream https://github.com/vllm-project/vllm/issues/52938) — this result is a second, independent data point supporting "vLLM/FlashInfer-specific bug," not "SM120 fundamentally broken for this kernel class"
+- [x] Task 1.3: If output is degenerate on the first engine, repeat Task 1.2 on the next engine (llama.cpp vs SGLang vs vLLM is the SM120 sparse-attention discriminator that also informs feat-1) — depends on: Task 1.2 — status: not applicable — the first engine tried (llama.cpp) did NOT produce degenerate output (see Task 1.2/ACC-002), so the "repeat on next engine" condition never triggers. SGLang/vLLM not tested for GLM-5.2 — not needed since Phase 1's goal (find ONE working engine) is already met
+- [x] Task 1.4: Record the outcome: which engine(s) produce coherent GLM-5.2 output on SM120, and whether the sparse-attention problem is engine-specific or SM120-fundamental (feed this back into feat-1 Task 1.4) — depends on: Task 1.2, Task 1.3 — status: done — **llama.cpp produces coherent GLM-5.2 DSA-decode output on this box's SM120 GPUs** (Task 1.2/ACC-002, strengthened via `bin/05-spike-glm-dsa-strong.sh`: deterministic, factually-correct, finished answers across chit-chat/factual/code prompts). Combined with `feat-1`'s finding that vLLM's `FLASHINFER_MLA_SPARSE_DSV4` produces the degenerate signature on the SAME GPUs for a different model (DeepSeek-V4-Flash, upstream vllm-project/vllm#52938), this is consistent with the sparse-attention problem being **engine-specific (vLLM/FlashInfer), not SM120-fundamental** — though this is corroborating evidence from a different model/engine pairing, not a direct reproduction of feat-1's exact bug. Fed back into `feat-1`'s README (cross-reference note under Task 1.4/Blockers)
 
 #### Phase 2: Full deployment (only if Phase 1 yields a working engine)
 
@@ -247,40 +264,53 @@ originally planned, rather than keeping a second copy of the task around.
 
 ### Current Status
 
-**As of 2026-08-19**: Feature scaffolded in planning phase, not started.
-Created as the alternative/fallback model deferred from `feat-1`, after
-confirming GLM-5.2 is real on Hugging Face (`zai-org/GLM-5.2`, MIT, 753B
-BF16, `glm_moe_dsa`). The critical open question is REQ-010: whether
-GLM-5.2's DSA sparse-attention decode path works on this box's SM120 GPUs,
-given `feat-1` Task 1.4 is currently blocked on exactly that class of
-kernel. Phase 1 is a deliberate spike to answer that before investing in a
-full quantized + hybrid deployment. The user is running `feat-1`'s
-remaining diagnostic steps (bin/16-bin/20, SGLang test) in parallel; those
-results feed directly into Task 1.4 here. Capacity is NOT a concern:
-unsloth's data confirms the near-lossless 5-bit quant (570 GB) fits this
-box's 896 GB pool, so the only real risk is SM120 correctness — and
-llama.cpp offers a Plan B on a separate CUDA code path if vLLM/SGLang fail.
+**As of 2026-08-19 (end of session)**: Phase 1 SM120 correctness spike
+**PASSED** — `llama.cpp` (fresh CUDA build at `/data/llama.cpp-dsa`,
+commit `ee4c505a4`) serves GLM-5.2's DSA decode correctly on this box's 4
+SM120 GPUs: coherent, deterministic (byte-identical across repeat runs at
+temperature=0), and factually correct output (e.g. "Paris", a working
+recursive `factorial()`) across chit-chat/factual/code prompts
+(`bin/03-spike-glm-dsa.sh`, strengthened by
+`bin/05-spike-glm-dsa-strong.sh`). REQ-010/ACC-002 closed; Task 1.1-1.4 all
+done (Task 1.3 not-applicable — first engine tried already worked). This
+also became a cross-feature signal for `feat-1`: its vLLM
+`FLASHINFER_MLA_SPARSE_DSV4` bug (upstream vllm-project/vllm#52938) now has
+a second, independent (though not conclusive) data point suggesting
+engine-specific rather than SM120-fundamental — a candidate follow-up
+comment is drafted (NOT posted) at `followup-comment-draft.md`.
+Quant download (`bin/00-download-glm-quants.sh`) was deliberately started
+ahead of the Phase 1 gate passing (user instruction, logged as a Decisions
+Made deviation): `UD-IQ1_S` (spike, 217 GB) finished; `UD-Q5_K_XL` (target,
+562 GB) in progress (~9% at session end); `UD-Q4_K_XL` (467 GB) still
+queued. GPUs are currently idle/free. Phase 2 (real deployment) is
+unblocked in principle but gated on the target/fallback quant downloads
+finishing — Task 2.1's KV-cache measurement needs the real target quant,
+not the 1-bit spike quant.
 
 ### Next Steps
 
-1. Run the Phase 1 SM120 correctness spike (Task 1.1-1.4) — this gates
-   everything else. Do NOT start the ~1.5 TB base download or invest in
-   quant selection until at least one engine is shown to produce coherent
-   GLM-5.2 output on SM120.
-2. Fold in any finding from `feat-1`'s parallel SM120/SGLang work — if that
-   already proves vLLM-vs-SGLang behaviour on SM120 sparse attention, Task
-   1.3 here may be skippable.
-3. Only after Phase 1 passes: Phase 0.4/0.5 pinning, then Phase 2 full
-   deployment.
+1. Let `bin/00-download-glm-quants.sh` finish `UD-Q5_K_XL` then
+   `UD-Q4_K_XL` in the background — check progress any time with
+   `bin/04-dl-status.sh`.
+2. Once `UD-Q5_K_XL` is done: start Phase 2 — Task 2.1 (measure real
+   KV-cache cost per 1K tokens on `llama.cpp` at real context shapes,
+   working toward the 350-370K target) through Task 2.7 (systemd service,
+   OpenWebUI/OpenCode wiring, context validation, quality comparison vs.
+   `feat-1`).
+3. Decide whether to post `followup-comment-draft.md` to
+   vllm-project/vllm#52938 — drafted and hedged, deliberately left for a
+   separate decision, not posted.
+4. `feat-1`'s parallel SGLang/vLLM-version diagnostics remain independently
+   useful context if they report back before Phase 2 starts, but are no
+   longer a hard dependency — this feature already has one confirmed
+   working engine (`llama.cpp`).
 
 ### Blockers
 
-- [ ] **REQ-010 unproven: GLM-5.2 DSA decode on SM120 is unverified** —
-  impact: the whole feature depends on it; GLM-5.2 uses the same class of
-  sparse-attention kernel that blocks `feat-1` Task 1.4 on these exact
-  SM120 GPUs. Mitigation: Phase 1 spike de-risks this before any large
-  download or quant work; `feat-1`'s parallel SGLang/SM120 diagnostic may
-  resolve it first.
+- None currently open. (Former blocker — REQ-010/GLM-5.2 DSA decode on
+  SM120 unverified — resolved this session via the Phase 1 spike; see
+  Current Status.) Only a soft dependency remains: Phase 2 can't fully
+  start until the `UD-Q5_K_XL`/`UD-Q4_K_XL` downloads finish.
 
 ### Recent Updates
 
@@ -309,6 +339,49 @@ llama.cpp offers a Plan B on a separate CUDA code path if vLLM/SGLang fail.
 - Notes: This feature intentionally leads with a correctness spike, not
   environment prep, because the dominant risk is SM120 sparse-attention
   correctness, not capacity.
+
+#### 2026-08-19 (download, llama.cpp CUDA build, Phase 1 spike — ahead of the Phase 1 gate)
+
+- Decided (user instruction, deviation from the "wait for Phase 1" plan):
+  started the GGUF quant download in parallel with other work rather than
+  waiting for the Phase 1 spike to pass first. Recorded as its own
+  Decisions Made entry below.
+- Completed: `bin/00-download-glm-quants.sh` — pulls `UD-IQ1_S` (spike),
+  `UD-Q5_K_XL` (target), `UD-Q4_K_XL` (fallback) from `unsloth/GLM-5.2-GGUF`
+  @ pinned `abc55e72527792c6e77069c99b4cb7de16fa9f23`. `UD-IQ1_S` finished
+  first (as ordered); `UD-Q5_K_XL` in progress at session end. Also
+  `bin/04-dl-status.sh` for on-demand progress/rate/ETA reporting.
+- Completed: `bin/01-clone-llama-cpp-dsa.sh` + `bin/02-build-llama-cpp-dsa.sh`
+  — a fresh, dedicated `llama.cpp` checkout at `/data/llama.cpp-dsa`
+  (commit `ee4c505a4`, separate from an unrelated existing checkout at
+  `~/src/llama.cpp`), built with `-DGGML_CUDA=ON`; confirmed CUDA-linked
+  and targeting Blackwell (`CMAKE_CUDA_ARCHITECTURES` includes `120a-real`).
+  Pure CPU/compiler work, done in parallel with the download and while
+  GPUs were still occupied by `feat-1`'s service.
+- Completed: `bin/03-spike-glm-dsa.sh` (Task 1.2 first pass) and
+  `bin/05-spike-glm-dsa-strong.sh` (strengthened follow-up: multiple
+  prompts, `enable_thinking:false` for finished answers, 2x repeat for
+  determinism) — see Task 1.2/1.3/1.4/ACC-002 for full results. **REQ-010
+  passes**: llama.cpp's GLM-5.2 DSA decode is coherent, deterministic, and
+  factually correct on this box's SM120 GPUs.
+- Found: cross-referenced this result into `feat-1`'s README — its vLLM
+  `FLASHINFER_MLA_SPARSE_DSV4` bug (upstream vllm-project/vllm#52938) now
+  has a second, independent corroborating data point suggesting
+  engine-specific rather than SM120-fundamental. Not yet posted as an
+  upstream comment — left as a deliberate follow-up decision, not done
+  automatically.
+- Completed: drafted (NOT posted, user instruction) a candidate follow-up
+  comment for `feat-1`'s upstream vLLM issue
+  (https://github.com/vllm-project/vllm/issues/52938), at
+  `followup-comment-draft.md` (this feature folder's root, not `bin/` — a
+  draft document, not a script). Cites this feature's Task 1.2/1.4 result
+  as corroborating-but-not-conclusive evidence (engine-specific vs.
+  SM120-fundamental), explicitly hedged: different model, different
+  quantization, and a genuinely different attention kernel implementation
+  than the one `feat-1` hit the bug in.
+- Next: Phase 2 is now unblocked in principle (Task 1.4 done) — but still
+  gated on `UD-Q5_K_XL`/`UD-Q4_K_XL` finishing download (Task 2.1 KV-cache
+  measurement needs the real target quant, not the 1-bit spike quant).
 
 ### Decisions Made
 
@@ -358,6 +431,17 @@ llama.cpp offers a Plan B on a separate CUDA code path if vLLM/SGLang fail.
   `--chat-template-kwargs` (`reasoning_effort` max/high, or
   `enable_thinking:false`); production sampling is `temperature=1.0, top_p=0.95, min_p=0.01` (unsloth defaults). The ACC-002 temp=0 test is a
   degenerate-signature diagnostic only, not the production config.
+- **2026-08-19 (deviation from Phase 1 gate)**: Started the GGUF quant
+  download (`bin/00-download-glm-quants.sh`) in parallel with other work,
+  ahead of the Phase 1 SM120 correctness spike passing, contrary to the
+  "do NOT start the ~1.5 TB download until Phase 1 passes" note under Next
+  Steps. Rationale: disk/bandwidth is a multi-hour, engine-independent
+  bottleneck (~1.25 TB total across the spike + both Phase 2 quants) that
+  does not need to wait on the SM120 correctness question, and the user
+  wanted it running in the background while doing other things. The spike
+  quant (`UD-IQ1_S`) is still downloaded first so Task 1.2 is unblocked
+  soonest; deployment (Phase 2) still will not proceed until Phase 1
+  actually passes.
 
 ### Related PRs / Commits
 

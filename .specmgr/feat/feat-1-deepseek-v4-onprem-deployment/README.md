@@ -295,7 +295,12 @@ steps (alternate vLLM/flashinfer version, or pivot to Phase 2). Phase 2
   **https://github.com/vllm-project/vllm/issues/52938** — awaiting
   response. Next action: monitor the upstream issue; consider a different
   vLLM/flashinfer version pairing, or reassess whether to keep debugging
-  Flash on vLLM vs. pivoting effort to Phase 2 in the meantime.
+  Flash on vLLM vs. pivoting effort to Phase 2 in the meantime. Cross-feature
+  signal (2026-08-19, see Recent Updates): `feat-2`'s `llama.cpp`/GLM-5.2
+  Phase 1 spike produced coherent (non-degenerate) sparse-attention decode
+  output on these same SM120 GPUs — supporting evidence this is a
+  vLLM/FlashInfer-specific implementation bug, not an SM120-hardware
+  limitation; worth adding to #52938 as a comment.
 - [ ] Pro's actual KV-cache cost at 350-370K tokens is unknown — impact:
   can't confirm precision/context fit without empirical testing;
   mitigation: Task 2.2 measures this directly before committing to a quant
@@ -801,6 +806,48 @@ steps (alternate vLLM/flashinfer version, or pivot to Phase 2). Phase 2
   diagnostic clean-venv unit) and reassess Task 1.4's path forward — wait
   on upstream response to #52938, try a different vLLM/flashinfer version
   pairing, or pivot effort to Phase 2 (Pro/ktransformers) in the meantime.
+
+#### 2026-08-19 (cross-feature signal from feat-2: llama.cpp unaffected on same SM120 hardware)
+
+- Found (via `feat-2-glm-5.2-onprem-deployment`'s Phase 1 SM120 spike,
+  Task 1.2): `llama.cpp` (fresh CUDA build, commit `ee4c505a4`) serving
+  GLM-5.2 (`UD-IQ1_S` quant) on these exact same 4 RTX Pro 6000 Blackwell
+  (SM120) GPUs produced **coherent, non-degenerate output** at
+  temperature=0 — grammatical chain-of-thought reasoning tokens with
+  naturally varying logprobs, not a single frozen token/logprob repeated
+  at every decode position. Different engine, different model, but the
+  same general class of kernel (DeepSeek Sparse Attention / sparse-MLA
+  decode) that produces the degenerate signature here under vLLM's
+  `FLASHINFER_MLA_SPARSE_DSV4` backend.
+- Implication: this is a second, independent data point (beyond this
+  feature's own exhausted local diagnostics — CUDA graphs, TP-vs-DP+EP,
+  torch.compile fusions, fp8 KV-cache, environment/in-place-patch
+  contamination, all ruled out) supporting the theory that Task 1.4's bug
+  is specific to vLLM/FlashInfer's SM120 sparse-attention decode
+  implementation, not a fundamental SM120-hardware limitation on
+  sparse-attention/DSA decode in general. Worth adding as a comment on
+  upstream issue #52938 — "a different engine's GGUF/CUDA sparse-attention
+  decode path works correctly on the identical GPUs" is exactly the kind
+  of corroborating evidence that distinguishes "vLLM-specific bug" from
+  "SM120 is broken for this kernel class," and may help prioritize/route
+  the upstream response.
+- Not yet done: actually posting this as a follow-up comment on #52938 —
+  flagged here for whoever picks this up next, not executed automatically.
+- Completed: drafted (NOT posted, user instruction) a candidate follow-up
+  comment, kept at
+  `../feat-2-glm-5.2-onprem-deployment/followup-comment-draft.md` (lives in
+  `feat-2` since that's where the underlying evidence/test was produced;
+  cross-referenced here rather than duplicated). Explicitly hedges that
+  this is corroborating, not conclusive, evidence — different model,
+  different quantization, and critically a different attention kernel
+  implementation (`llama.cpp`'s own DSA CUDA kernels vs. FlashInfer's
+  `fp8_ds_mla` fused layout) — so it's offered as a data point, not a
+  reproduction.
+- Next: consider adding this finding as a comment on
+  https://github.com/vllm-project/vllm/issues/52938 (draft ready in
+  `feat-2`'s `followup-comment-draft.md`); otherwise unchanged — still
+  awaiting upstream response, version-pairing exploration, or a Phase 2
+  pivot decision.
 
 ### Decisions Made
 
