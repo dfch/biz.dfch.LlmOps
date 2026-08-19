@@ -104,9 +104,12 @@ What is explicitly out of scope:
   Pro 6000 Blackwell; sufficient local disk space (1TB+) on the Dell
   7960T for both model weight sets
 - Blocks: none
-- Related (not a dependency, tracked separately): a future feature will
-  deploy GLM-5.2 as a fallback/alternative model — not part of this
-  feature's scope
+- Related (not a dependency, tracked separately):
+  `feat-2-glm-5.2-onprem-deployment` deploys GLM-5.2 as a fallback/
+  alternative model — not part of this feature's scope. Its Phase 1 SM120
+  sparse-attention correctness spike and this feature's Task 1.4 diagnostic
+  inform each other (both hit the same SM120 sparse-attention-decode kernel
+  class).
 
 ### Design Notes
 
@@ -451,6 +454,25 @@ staged, awaiting execution on the Dell 7960T.
   ad-hoc processes, including during testing
 - **2026-08-18**: GLM-5.2 fallback explicitly deferred to a separate,
   future feature — not built here
+- **2026-08-19**: GLM-5.2 confirmed real on Hugging Face
+  (`zai-org/GLM-5.2`, MIT, 753B BF16, arch tag `glm_moe_dsa` = MoE +
+  DeepSeek Sparse Attention). Two caveats recorded for the future GLM-5.2
+  feature: (1) at 753B BF16 (~1.5 TB) it does NOT fit in 384 GB VRAM, nor
+  in the 896 GB VRAM+RAM pool at native precision — it is a Pro-class
+  quantized + GPU/CPU-hybrid (ktransformers) deployment, not a Flash-class
+  VRAM-only one; (2) its DSA sparse-attention decode path is the same
+  *class* of kernel currently breaking Task 1.4 on SM120, so a GLM-5.2
+  pivot does NOT automatically escape the SM120 sparse-attention risk.
+  Vendor lists vLLM v0.23.0+, SGLang v0.5.13.post1+, KTransformers
+  v0.5.12+ as supported engines; SGLang is a genuinely distinct SM120
+  code path worth testing as a shared unblock for both models.
+- **2026-08-19**: REQ-006 relaxation scoped to GLM-5.2 ONLY. User accepts
+  GGUF requant for the future GLM-5.2 feature (no native sub-BF16
+  checkpoint exists that fits this hardware, so "no requant" = "can't run
+  it here at all"). DeepSeek-V4 in this feature stays native-weights-only
+  — REQ-006/ACC-006 remain unchanged and strict. This decision is
+  recorded here for carry-over; it is applied when the GLM-5.2 feature is
+  created, not retroactively to feat-1.
 - **2026-08-18**: Repo named `biz.dfch.LlmOps` (generic, not
   DeepSeek-specific, to host future model-serving features like GLM-5.2)
 - **2026-08-18 (evening)**: For Flash, fell back from the FP8-expert
