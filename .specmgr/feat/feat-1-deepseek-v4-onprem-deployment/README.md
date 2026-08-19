@@ -3,7 +3,7 @@ created: 2026-08-18
 github_issue: 1
 id: feat-1-deepseek-v4-onprem-deployment
 status: planning
-updated: 2026-08-18
+updated: 2026-08-19
 version: 1.0.0
 ---
 
@@ -168,7 +168,7 @@ What is explicitly out of scope:
 - [x] Task 1.1: Confirm vLLM version/build with merged DeepSeek-V4 tool-call and reasoning parsers — depends on: none — status: completed (2026-08-18: vLLM 0.26.0 has DeepSeek-V4 model, tokenizer, tool parser (deepseek_v4), reasoning parser (deepseek_v4), FP8 quant config with expert_dtype detection; --hf-overrides available for expert_dtype override)
 - [x] Task 1.2: Verify whether vLLM's `deepseek_v4` loader honors an FP8-expert override (vs. native FP4 experts) — depends on: Task 1.1 — status: completed (2026-08-18: verified via --hf-overrides '{"expert_dtype": "fp8"}'; quant config resolves to fp8 when vllm_config context active)
 - [x] Task 1.3: Install vLLM + DeepSeek-V4-Flash as a systemd service (tensor-parallel=4) on the Dell 7960T — depends on: Task 1.2, Task 0.6 — status: completed (2026-08-18: service at /etc/systemd/system/vllm-deepseek-v4-flash.service now starts reliably, stays up under `systemctl`, and serves HTTP. Reached only after fixing a chain of 7 distinct bugs, in order: (1) `KillMode=process` left orphaned GPU-memory-holding workers behind after a start-timeout kill, causing every subsequent attempt to fail on insufficient free VRAM — fixed via `KillMode=control-group` + `TimeoutStartSec=3600` (script `bin/00-fix-vllm-flash-service.sh`); (2) every startup silently hung on an outbound Hugging Face network call (`snapshot_download`/Xet backend) despite weights being fully local — fixed via `HF_HUB_OFFLINE=1`/`TRANSFORMERS_OFFLINE=1` (`bin/02-fix-vllm-flash-offline.sh`); (3) `--hf-overrides '{"expert_dtype":"fp8"}'` hit a real vLLM TP-sharding bug in the MoE weight loader (`tensor a (32) != tensor b (128)`, i.e. `128 experts / tp_size(4)`) — fixed by dropping the override and falling back to the model's native FP4+FP8 mixed expert precision, the contingency already called out in Design Notes (`bin/03-fallback-native-quant.sh`); (4) the venv's pip-installed CUDA component wheels were version-skewed (`nvidia-cuda-nvcc`/`-crt`/`-cccl` on 13.3.x vs `-runtime`/`-nvrtc`/`-cupti` still on 13.0.x), breaking TileLang's nvcc JIT compiles — fixed by upgrading the latter three to 13.3.x (`bin/04-fix-cuda-toolkit-skew.sh`); (5) the systemd unit had no `PATH`, so `ninja` (needed for JIT-compiled CUDA extensions) couldn't be found even though it was installed — fixed by adding `PATH=/data/vllm/.venv/bin:...` (`bin/05-fix-missing-venv-path.sh`); (6) `--attention-backend FLASHMLA_SPARSE_DSV4` has a confirmed, unconditional gap for `sm_120` GPUs (ours) in this vLLM build — its tile-scheduler builder intentionally returns all-`None` on SM120, but the FlashMLA decode path asserts on it anyway — fixed by switching to the SM120-aware sibling backend `FLASHINFER_MLA_SPARSE_DSV4`, which in turn needed `nvcc`'s directory added to `PATH` for FlashInfer's own capability probing (`bin/06-fix-attention-backend-sm120.sh`); (7) FlashInfer's JIT linker step failed with `cannot find -lcudart` because the pip-installed CUDA runtime wheel uses a `lib/` + versioned-only layout, not the classic toolkit's `lib64/` + unversioned-symlink layout FlashInfer's build script assumes — fixed with two symlinks (`lib64 -> lib`, `libcudart.so -> libcudart.so.13`) (`bin/07-fix-cudart-symlinks.sh`). All fix scripts live in `bin/` in this feature folder, numbered in the order they were created, each with a detailed root-cause comment header.)
-- [ ] Task 1.4: `systemctl start` the service; curl smoke test against `/v1/chat/completions`, verify tool-calls and think/non-think output — depends on: Task 1.3 — status: blocked (2026-08-18: service starts and responds over HTTP with `finish_reason: length`, but generated output is degenerate garbage, not a crash. At temperature=1 output is token noise mixing many scripts/languages; at temperature=0 (greedy) every single decode position returns the exact same special token (`<|begin▁of▁sentence|>`) with the exact identical logprob (-11.7697...) regardless of position/context — a strong signature of a broken forward pass (e.g. sparse-attention decode returning zeroed/garbage context), not a sampling or tokenizer issue. Ruled out CUDA-graph capture as the cause via `--enforce-eager` (`bin/08-diag-enforce-eager.sh`): identical degenerate output with graphs fully disabled. Remaining suspects: the `FLASHINFER_MLA_SPARSE_DSV4` SM120 sparse-MLA decode kernel path (needed per Task 1.3 fix #6, since the alternative `FLASHMLA_SPARSE_DSV4` backend is unconditionally broken on our `sm_120` GPUs in this vLLM build) and/or the native FP4+FP8 mixed quantization fallback (needed per Task 1.3 fix #3) and/or missing fp8 kv-cache scaling factors (vLLM logs its own warning: "may cause accuracy drop without a proper scaling factor"). A true `--tensor-parallel-size 1` isolation test is infeasible: native-precision weights are ~152 GB total (38 GB/GPU × 4), which doesn't fit on one ~95 GB GPU. Needs upstream vLLM/FlashInfer investigation, a different vLLM/FlashInfer version, or a `--tensor-parallel-size 2` isolation test (feasible but weaker signal, not yet tried) before this can be unblocked. UPDATE 2026-08-18 evening: researched and verified (via direct GitHub fetches, not just an LLM research summary) several open upstream vLLM issues matching this hardware/model combo — vLLM #47528 (DeepSeek-V4-Pro garbled under TP, correct under DP+EP), #50720 (FlashInfer SM120 sparse-MLA decode dispatch bug, spec-decode-specific), #50773 (fuse_norm_quant/fuse_act_quant fusions garble output on SM120 for DeepSeek-V4-Flash). Ran `bin/09-diag-dp-ep.sh` to test the #47528 pattern: switched to `--data-parallel-size 4 --enable-expert-parallel` (same native FP4+FP8 mixed experts, same FLASHINFER_MLA_SPARSE_DSV4 backend, `--max-model-len` temporarily dropped to 8192 for a fast diagnostic). Result: **identical degenerate signature** (every decode position returns `<|begin▁of▁sentence|>` at logprob -11.769736289978027, byte-for-byte the same as under TP=4) — rules out #47528's TP-vs-DP+EP pattern as the cause here. Also ruled out #50773's fusion-pass theory without a separate test: the DP+EP run's own startup log showed "Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored" immediately after "Enabled custom fusions: norm_quant, act_quant" — confirming those fusions are configured but never actually applied under `--enforce-eager`, which we'd already tested. Remaining live suspects: the `FLASHINFER_MLA_SPARSE_DSV4` decode kernel itself (independent of TP/DP+EP, since both parallelism strategies hit the same failure), missing FP8 KV-cache scaling factors, or a vLLM/FlashInfer version issue — vLLM 0.27.0/0.27.1 and flashinfer-python 0.6.16/0.6.17 postdate our 0.26.0/0.6.14 and contain real (verified) DeepSeek-V4 sparse-MLA-decode-adjacent fixes, though none confirmed to fix this exact signature. Diagnostic service is currently still running under the DP+EP/8192-context config from `bin/09-diag-dp-ep.sh`; not yet reverted. UPDATE 2026-08-18 late night: tried upgrading vLLM 0.26.0 → 0.27.1 and flashinfer-python 0.6.14 → 0.6.17 via `bin/10-upgrade-vllm-flashinfer.sh` (a much larger change than expected — vLLM 0.27.1 requires torch 2.13.0, pulling ~2GB of new/updated CUDA-toolkit wheels; pip also flagged flashinfer-python 0.6.17 as incompatible with vLLM 0.27.1's pinned `flashinfer-python==0.6.16.post3`, a risk accepted for the test). Result: **this upgrade path is a dead end on our hardware**, discovered via two consecutive deterministic crashes, both regressions vs. 0.26.0 (worse than the original bug — 0.26.0 at least served HTTP with degenerate output; 0.27.1 never got that far): (1) on first restart, `RuntimeError: Assertion error (deepgemm-src/csrc/apis/layout.hpp:60): Unknown SF transformation` in `deepgemm_post_process_weight_scale_block` during weight loading; (2) after trying the cheap `VLLM_USE_DEEP_GEMM=0` workaround (`bin/12-diag-disable-deepgemm.sh`), a *different* deterministic crash: `RuntimeError: Assertion error (deepgemm-src/csrc/apis/hyperconnection.hpp:56): Unsupported architecture`, raised from `tf32_hc_prenorm_gemm` while computing DeepSeek-V4's mHC (Manifold-Constrained Hyper-Connections) layers — this call path is unconditional and bypasses `VLLM_USE_DEEP_GEMM=0` entirely (that env var only affects the separate FP8 linear-layer scaled-mm path in `fp8.py`). Conclusion: vLLM 0.27.1's vendored DeepGEMM build does not support SM120 (RTX PRO 6000 Blackwell) for DeepSeek-V4's mHC kernels at all — a hard architecture gap, not a flag to work around. Rolled vLLM/flashinfer-python back to 0.26.0/0.6.14 via `bin/13-rollback-vllm-flashinfer.sh` (confirmed via `pip show`) and removed the now-irrelevant `VLLM_USE_DEEP_GEMM=0` env line via `bin/14-remove-deepgemm-env-and-retest.sh`, restoring the unit to its exact pre-upgrade baseline (TP=4, native FP4+FP8 mixed experts, `FLASHINFER_MLA_SPARSE_DSV4`, fp8 kv-cache, `--enforce-eager`, 8192-token diagnostic context) for retesting. This rules out the vLLM/flashinfer version-upgrade hypothesis entirely — remaining candidates are testing without `--kv-cache-dtype fp8`, or filing an upstream vLLM issue with our exact repro.)
+- [ ] Task 1.4: `systemctl start` the service; curl smoke test against `/v1/chat/completions`, verify tool-calls and think/non-think output — depends on: Task 1.3 — status: blocked (2026-08-18: service starts and responds over HTTP with `finish_reason: length`, but generated output is degenerate garbage, not a crash. At temperature=1 output is token noise mixing many scripts/languages; at temperature=0 (greedy) every single decode position returns the exact same special token (`<|begin▁of▁sentence|>`) with the exact identical logprob (-11.7697...) regardless of position/context — a strong signature of a broken forward pass (e.g. sparse-attention decode returning zeroed/garbage context), not a sampling or tokenizer issue. Ruled out CUDA-graph capture as the cause via `--enforce-eager` (`bin/08-diag-enforce-eager.sh`): identical degenerate output with graphs fully disabled. Remaining suspects: the `FLASHINFER_MLA_SPARSE_DSV4` SM120 sparse-MLA decode kernel path (needed per Task 1.3 fix #6, since the alternative `FLASHMLA_SPARSE_DSV4` backend is unconditionally broken on our `sm_120` GPUs in this vLLM build) and/or the native FP4+FP8 mixed quantization fallback (needed per Task 1.3 fix #3) and/or missing fp8 kv-cache scaling factors (vLLM logs its own warning: "may cause accuracy drop without a proper scaling factor"). A true `--tensor-parallel-size 1` isolation test is infeasible: native-precision weights are ~152 GB total (38 GB/GPU × 4), which doesn't fit on one ~95 GB GPU. Needs upstream vLLM/FlashInfer investigation, a different vLLM/FlashInfer version, or a `--tensor-parallel-size 2` isolation test (feasible but weaker signal, not yet tried) before this can be unblocked. UPDATE 2026-08-18 evening: researched and verified (via direct GitHub fetches, not just an LLM research summary) several open upstream vLLM issues matching this hardware/model combo — vLLM #47528 (DeepSeek-V4-Pro garbled under TP, correct under DP+EP), #50720 (FlashInfer SM120 sparse-MLA decode dispatch bug, spec-decode-specific), #50773 (fuse_norm_quant/fuse_act_quant fusions garble output on SM120 for DeepSeek-V4-Flash). Ran `bin/09-diag-dp-ep.sh` to test the #47528 pattern: switched to `--data-parallel-size 4 --enable-expert-parallel` (same native FP4+FP8 mixed experts, same FLASHINFER_MLA_SPARSE_DSV4 backend, `--max-model-len` temporarily dropped to 8192 for a fast diagnostic). Result: **identical degenerate signature** (every decode position returns `<|begin▁of▁sentence|>` at logprob -11.769736289978027, byte-for-byte the same as under TP=4) — rules out #47528's TP-vs-DP+EP pattern as the cause here. Also ruled out #50773's fusion-pass theory without a separate test: the DP+EP run's own startup log showed "Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored" immediately after "Enabled custom fusions: norm_quant, act_quant" — confirming those fusions are configured but never actually applied under `--enforce-eager`, which we'd already tested. Remaining live suspects: the `FLASHINFER_MLA_SPARSE_DSV4` decode kernel itself (independent of TP/DP+EP, since both parallelism strategies hit the same failure), missing FP8 KV-cache scaling factors, or a vLLM/FlashInfer version issue — vLLM 0.27.0/0.27.1 and flashinfer-python 0.6.16/0.6.17 postdate our 0.26.0/0.6.14 and contain real (verified) DeepSeek-V4 sparse-MLA-decode-adjacent fixes, though none confirmed to fix this exact signature. Diagnostic service is currently still running under the DP+EP/8192-context config from `bin/09-diag-dp-ep.sh`; not yet reverted. UPDATE 2026-08-18 late night: tried upgrading vLLM 0.26.0 → 0.27.1 and flashinfer-python 0.6.14 → 0.6.17 via `bin/10-upgrade-vllm-flashinfer.sh` (a much larger change than expected — vLLM 0.27.1 requires torch 2.13.0, pulling ~2GB of new/updated CUDA-toolkit wheels; pip also flagged flashinfer-python 0.6.17 as incompatible with vLLM 0.27.1's pinned `flashinfer-python==0.6.16.post3`, a risk accepted for the test). Result: **this upgrade path is a dead end on our hardware**, discovered via two consecutive deterministic crashes, both regressions vs. 0.26.0 (worse than the original bug — 0.26.0 at least served HTTP with degenerate output; 0.27.1 never got that far): (1) on first restart, `RuntimeError: Assertion error (deepgemm-src/csrc/apis/layout.hpp:60): Unknown SF transformation` in `deepgemm_post_process_weight_scale_block` during weight loading; (2) after trying the cheap `VLLM_USE_DEEP_GEMM=0` workaround (`bin/12-diag-disable-deepgemm.sh`), a *different* deterministic crash: `RuntimeError: Assertion error (deepgemm-src/csrc/apis/hyperconnection.hpp:56): Unsupported architecture`, raised from `tf32_hc_prenorm_gemm` while computing DeepSeek-V4's mHC (Manifold-Constrained Hyper-Connections) layers — this call path is unconditional and bypasses `VLLM_USE_DEEP_GEMM=0` entirely (that env var only affects the separate FP8 linear-layer scaled-mm path in `fp8.py`). Conclusion: vLLM 0.27.1's vendored DeepGEMM build does not support SM120 (RTX PRO 6000 Blackwell) for DeepSeek-V4's mHC kernels at all — a hard architecture gap, not a flag to work around. Rolled vLLM/flashinfer-python back to 0.26.0/0.6.14 via `bin/13-rollback-vllm-flashinfer.sh` (confirmed via `pip show`) and removed the now-irrelevant `VLLM_USE_DEEP_GEMM=0` env line via `bin/14-remove-deepgemm-env-and-retest.sh`, restoring the unit to its exact pre-upgrade baseline (TP=4, native FP4+FP8 mixed experts, `FLASHINFER_MLA_SPARSE_DSV4`, fp8 kv-cache, `--enforce-eager`, 8192-token diagnostic context) for retesting. This rules out the vLLM/flashinfer version-upgrade hypothesis entirely — remaining candidates are testing without `--kv-cache-dtype fp8`, or filing an upstream vLLM issue with our exact repro. UPDATE 2026-08-19T08:04:27Z: a structured unblock plan was folded in and scripted (`bin/16`-`bin/20`). Step 0 `bin/16-snapshot-baseline.sh` records the exact degenerate baseline (ExecStart, `pip freeze`, `nvidia-smi`, temp=0 response) to `bin/baselines/` for byte-exact comparison. Step 1 runs two parallel tracks: Track A `bin/17-diag-no-fp8-kvcache.sh` drops `--kv-cache-dtype fp8` (cheapest live suspect); Track B re-verifies the remaining SM120 sparse-MLA-decode-correctness signature against upstream and drafts (does NOT post) an issue if novel. If Track A yields coherent output, non-fp8 KV cache is adopted as the working fix (user decision 2026-08-19: test it; dig further only if quality/context is unacceptable) → `bin/20-restore-production-config.sh` restores `--max-model-len 370000` and drops the diagnostic `--enforce-eager`, then runs the real ACC-004 tool-call + think/non-think/max-think checks. If Track A still degenerate, Step 2 builds a clean side-by-side venv (`bin/18-build-clean-venv.sh`, leaving `/data/vllm/.venv` untouched) wired via `bin/19-diag-clean-venv-unit.sh` to rule out in-place-patch contamination; if that is still degenerate, the bug is genuinely vLLM 0.26.0's SM120 sparse-MLA decode path and the Track B upstream draft becomes the primary path. All scripts run on the Dell 7960T via `systemctl`; results feed the decision gates before any production restore.)
 - [ ] Task 1.5: Connect OpenWebUI and OpenCode to the Flash endpoint — depends on: Task 1.4 — status: not-started
 - [ ] Task 1.6: Validate 350-370K-token context works without OOM — depends on: Task 1.5 — status: not-started
 - [ ] Task 1.7: User runs their real coding-task examples against the endpoint — depends on: Task 1.6 — status: not-started
@@ -191,7 +191,7 @@ originally planned, rather than keeping a second copy of the task around.
 
 ### Current Status
 
-**As of 2026-08-18 (late night)**: Phase 0 nearly complete (Task 0.7 Pro
+**As of 2026-08-19T08:04:27Z**: Phase 0 nearly complete (Task 0.7 Pro
 download still running in the background, ~560GB downloaded so far). Phase 1:
 Task 1.3 (systemd service) complete after a 7-bug crash-loop debugging
 session (see Task 1.3 note and `bin/00`-`07` scripts). Task 1.4 remains
@@ -204,26 +204,36 @@ vLLM 0.26.0/flashinfer-python 0.6.14 and **confirmed reproducing the exact
 original degenerate-output baseline** post-rollback (identical frozen token
 and logprob to 15 decimal places) — the rollback and its own CUDA-toolkit-
 skew regression (bin/15, a repeat of Task 1.3 fix #4) are both fully
-resolved and verified.
+resolved and verified. A structured unblock plan for Task 1.4 has now been
+folded into this feature and scripted as `bin/16`-`bin/20` (baseline
+snapshot → parallel fp8-kv-cache test + upstream re-verify/draft → clean
+side-by-side venv fallback → production restore); scripts are authored and
+staged, awaiting execution on the Dell 7960T.
 
 ### Next Steps
 
-1. **Continue Task 1.4 correctness-bug isolation** — TP-vs-DP+EP, the
-   compilation fusion passes, and the vLLM/flashinfer version upgrade are
-   now all ruled out (see Task 1.4 note). Live candidates: (a) test without
-   `--kv-cache-dtype fp8` to rule out the missing-scaling-factor warning as
-   the cause; (b) file an upstream vLLM issue with our exact repro
-   (identical-token/identical-logprob at every position) since it doesn't
-   exactly match #47528/#50720/#50773; (c) a `--tensor-parallel-size 2`
-   isolation test (feasible VRAM-wise, weaker signal than the already-tried
-   DP+EP=4).
-2. ~~Confirm the post-rollback restart reproduces the original
-   degenerate-output baseline~~ — done, confirmed 2026-08-18 late night.
-3. Once Task 1.4 is unblocked, restore `--max-model-len 370000` (currently
-   8192 for fast diagnostics) and remove the diagnostic `--enforce-eager`
-   flag (`bin/08-diag-enforce-eager.sh` was diagnostic-only) before
-   proceeding to Task 1.5+.
-4. Monitor Task 0.7 (Pro download, `/data/vllm/download_pro.py`, PID 36347
+1. **Execute the Task 1.4 unblock plan (`bin/16`-`bin/20`) on the Dell
+   7960T**, in order:
+   1. `bin/16-snapshot-baseline.sh` — record the frozen degenerate baseline
+      to `bin/baselines/` (do first, changes nothing).
+   2. Track A: `bin/17-diag-no-fp8-kvcache.sh` — drop `--kv-cache-dtype fp8`,
+      restart, re-snapshot, diff vs baseline. Track B (parallel, no service
+      impact): re-verify the remaining SM120 sparse-MLA-decode-correctness
+      signature against upstream vLLM/FlashInfer issues and draft (do NOT
+      post) an issue if novel.
+   3. If Track A output is coherent → adopt non-fp8 KV cache as the working
+      fix (user decision 2026-08-19: test it; dig further only if
+      quality/context proves unacceptable), then run
+      `bin/20-restore-production-config.sh` and the real ACC-004 checks.
+   4. If Track A is still degenerate → `bin/18-build-clean-venv.sh` +
+      `bin/19-diag-clean-venv-unit.sh` (clean side-by-side venv, original
+      `.venv` untouched) to rule out in-place-patch contamination. If still
+      degenerate, the Track B upstream draft becomes the primary path;
+      reassess with the user.
+2. Once Task 1.4 is unblocked, `bin/20-restore-production-config.sh` restores
+   `--max-model-len 370000` (currently 8192 for fast diagnostics) and removes
+   the diagnostic `--enforce-eager` before proceeding to Task 1.5+.
+3. Monitor Task 0.7 (Pro download, `/data/vllm/download_pro.py`, PID 36347
    as of 2026-08-18 night) — independent of the Flash blocker, no action
    needed until it completes.
 
@@ -241,7 +251,9 @@ resolved and verified.
   unrelated SM120/DeepGEMM architecture gap in DeepSeek-V4's mHC layers —
   see Task 1.4 note — and was rolled back to 0.26.0/0.6.14). Remaining
   candidates: the `FLASHINFER_MLA_SPARSE_DSV4` decode kernel itself or
-  missing FP8 KV-cache scaling factors.
+  missing FP8 KV-cache scaling factors. Next action: run the scripted
+  unblock plan `bin/16`-`bin/20` on the Dell 7960T (baseline snapshot →
+  fp8-kv-cache test + upstream re-verify → clean-venv fallback → restore).
 - [ ] Pro's actual KV-cache cost at 350-370K tokens is unknown — impact:
   can't confirm precision/context fit without empirical testing;
   mitigation: Task 2.2 measures this directly before committing to a quant
@@ -377,6 +389,46 @@ resolved and verified.
   out, try disabling `--kv-cache-dtype fp8` or file an upstream vLLM issue
   with the exact repro — see Next Steps.
 
+#### 2026-08-19T08:04:27Z (Task 1.4 unblock plan folded in + scripted)
+
+- Decided: keep this work inside `feat-1` (do NOT open a new feature) — it
+  is the in-flight remediation of the existing, `blocked` Task 1.4 (serves
+  ACC-001/004/005, no new REQ), and continues the unbroken `bin/00`-`bin/15`
+  forensic runbook per the repo's single-source-of-truth + edit-in-place
+  conventions.
+- Completed: authored and staged the unblock plan as five numbered scripts
+  (not yet run — they execute on the Dell 7960T via `systemctl`):
+  - `bin/16-snapshot-baseline.sh` — Step 0, read-only capture of the exact
+    degenerate baseline (ExecStart, `pip freeze`, `nvidia-smi`, temp=0
+    response) to `bin/baselines/<ISO8601>-degenerate.txt` for byte-exact
+    comparison across experiments.
+  - `bin/17-diag-no-fp8-kvcache.sh` — Step 1 / Track A, drops
+    `--kv-cache-dtype fp8` (cheapest remaining live suspect) and re-tests.
+  - `bin/18-build-clean-venv.sh` — Step 2 fallback, builds a pristine
+    `/data/vllm/.venv-clean` at the same pinned vLLM 0.26.0 /
+    flashinfer 0.6.14 with the hard-won Task 1.3 fixes (#4 CUDA-line match,
+    #7 cudart symlinks) baked in; leaves the existing `.venv` untouched.
+  - `bin/19-diag-clean-venv-unit.sh` — wires a copy of the unit
+    (`...-flash-clean.service`) at the clean venv to isolate in-place-patch
+    contamination without disturbing the baseline service.
+  - `bin/20-restore-production-config.sh` — Step 3, restores
+    `--max-model-len 370000` and removes the diagnostic `--enforce-eager`,
+    then runs the real ACC-004 tool-call + reasoning-mode checks. Run only
+    after a diagnostic produces coherent output.
+- Decided: Track B (upstream) is re-verify + draft only — no issue is posted
+  (user instruction 2026-08-19). Draft written to
+  `bin/upstream-issue-draft.md` with a "why this is not a duplicate of
+  #47528/#50720/#50773" section and `<FILL FROM DELL BOX>` placeholders for
+  the env/ExecStart/response fields that `bin/16` captures; must pass a
+  dedup search before posting.
+- Decided: if Track A yields coherent output, non-fp8 KV cache is adopted as
+  the working fix and we proceed; dig further only if quality/context proves
+  unacceptable (user instruction 2026-08-19). Trade-off recorded: non-fp8 KV
+  cache roughly doubles KV memory, so Task 1.6's 350-370K context headroom
+  must be re-checked at restore time.
+- Next: run `bin/16` → `bin/17` (+ Track B) on the Dell 7960T; drive the
+  decision gates from the diffs vs the frozen baseline.
+
 ### Decisions Made
 
 - **2026-08-18**: Rejected Ollama's official `deepseek-v4-flash`/
@@ -425,6 +477,22 @@ resolved and verified.
   0.26.0 and not avoidable via `VLLM_USE_DEEP_GEMM=0`. Revisit only if a
   future vLLM/flashinfer/DeepGEMM release specifically claims SM120 mHC
   support.
+- **2026-08-19T08:04:27Z**: Keep the Task 1.4 unblock work inside `feat-1`
+  rather than opening a new feature — it is in-flight remediation of the
+  existing `blocked` Task 1.4, adds no new REQ/ACC, and continues the
+  `bin/00`-`bin/15` runbook (repo convention: single source of truth per
+  feature, edit tasks in place, recover history via `git log -p`).
+- **2026-08-19T08:04:27Z**: Task 1.4 next-step order fixed as fp8-kv-cache
+  test (Track A, cheapest) in parallel with an upstream re-verify; upstream
+  issue is DRAFT-ONLY, not posted (user instruction).
+- **2026-08-19T08:04:27Z**: If dropping fp8 KV cache produces coherent
+  output, adopt non-fp8 KV cache as the working fix and proceed; dig further
+  only if quality/context proves unacceptable (user instruction). Re-check
+  Task 1.6 context headroom at restore, since non-fp8 KV cache ~doubles KV
+  memory.
+- **2026-08-19T08:04:27Z**: The clean-venv contamination test builds a
+  side-by-side `/data/vllm/.venv-clean` and leaves the existing `.venv`
+  untouched as rollback (user instruction), rather than rebuilding in place.
 
 ### Related PRs / Commits
 

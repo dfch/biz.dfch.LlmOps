@@ -7,18 +7,30 @@ Host OS:
 Kernel:
 - 6.8.0-117-generic
 
-GPU state:
+GPU state (updated 2026-08-19T08:04:27Z to match feat-1 Task 0.2 live check):
 - nvidia-smi works after reboot
-- Detected GPUs: 3 (note: 4th GPU requires power cable fix)
+- Detected GPUs: 4 (all 4 now detected; the earlier "3 GPUs / 4th needs
+  power cable fix" state below is historical, resolved 2026-08-18)
+- Driver Version: 610.57.04
+- CUDA Version reported by nvidia-smi: 13.3
+- Total VRAM: 384 GB (4x 96 GB)
+- Driver type: NVIDIA Open Kernel Module
+- GRUB + modprobe fixes applied (see feat-1 Task 0.2); GPU 0 may show
+  ollama residency (~43 GB) when a model is loaded, GPUs 1-3 free.
+
+Historical GPU state (superseded — kept for the driver-source lesson below):
+- Detected GPUs: 3 (note: 4th GPU required power cable fix)
 - Driver Version: 595.71.05
 - CUDA Version reported by nvidia-smi: 13.2
-- Driver type: NVIDIA Open Kernel Module
 
 Active NVIDIA package source:
 - NVIDIA CUDA repository:
   https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64
 
-Installed working NVIDIA packages from NVIDIA CUDA repo:
+Installed working NVIDIA packages from NVIDIA CUDA repo
+(versions below reflect the historical 595.71.05 stack; the live driver is
+now 610.57.04 per the GPU state above — re-capture exact package versions
+from the Dell box with `dpkg -l | grep nvidia` before relying on them):
 - nvidia-dkms-open           595.71.05-1ubuntu1
 - nvidia-firmware            595.71.05-1ubuntu1
 - nvidia-kernel-common       595.71.05-1ubuntu1
