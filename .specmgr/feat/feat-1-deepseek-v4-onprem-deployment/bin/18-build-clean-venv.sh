@@ -64,28 +64,80 @@ fi
 echo "== 4. Install pinned vLLM + flashinfer (same versions as the baseline) =="
 "${PIP[@]}" install "vllm==${VLLM_VERSION}" "flashinfer-python==${FLASHINFER_VERSION}"
 
+echo "== 4b. Install packages that are runtime dependencies but NOT pulled in"
+echo "       automatically by vllm/flashinfer's own metadata, plus two"
+echo "       transitively-resolved packages pinned to match production"
+echo "       exactly because they sit close to the actual compute path =="
+# fastokens: the unit sets VLLM_USE_FASTOKENS=1; vllm hard-requires
+# fastokens>=0.2.0 to be importable when that's set (fatal ImportError at
+# tokenizer/renderer construction otherwise -- confirmed the hard way when
+# bin/19's first clean-venv test crashed before even reaching model load).
+# transformers: fastokens patches transformers internals directly
+# ("successfully patched transformers v5.14.1" in the production log) --
+# pin the exact version it was verified against, not whatever's newest.
+# quack-kernels: Required-by: vllm (an actual CUDA-kernel package vLLM
+# depends on, not a bystander) -- pin to match production exactly.
+# IMPORTANT: install these BEFORE the CUDA-toolkit pin step below.
+# quack-kernels' own dependency resolution pulls nvidia-cuda-runtime/
+# -nvrtc/-cupti back down to a stale 13.0.x line if installed afterward --
+# confirmed by reproducing the skew live during this script's own
+# debugging. The CUDA-toolkit pin step below must run LAST so it's the one
+# that wins.
+"${PIP[@]}" install "fastokens==0.3.1" "transformers==5.14.1" "quack-kernels==0.6.1"
+
+echo "== 4c. Pin ml_dtypes to match production =="
+# Required-by: tilelang, which runs live JIT kernels during inference for
+# DeepSeek-V4's mHC layers (confirmed in production logs: "TileLang JIT
+# compilation during inference: mhc_fused_tilelang") -- close enough to the
+# actual compute path to pin exactly rather than let it drift.
+"${PIP[@]}" install "ml_dtypes==0.5.4"
+
 echo "== 5. Enforce a single CUDA-toolkit line (${CUDA_LINE}.x) to avoid the"
 echo "      Task 1.3 fix #4 / bin/15 wheel skew =="
-# Pin the six CUDA component wheels that previously drifted apart to the same
-# ${CUDA_LINE} line. Exact patch is resolved by pip within that minor.
+# Pin the six CUDA component wheels that previously drifted apart to the
+# EXACT versions confirmed working in the production baseline
+# (bin/baselines/2026-08-19T09:10:23Z-degenerate.txt's pip freeze). Prior
+# attempt used incorrect package names (a spurious "-cu13" suffix that does
+# not exist on PyPI for these packages -- only nvidia-cuda-nvcc,
+# nvidia-cuda-crt, etc., no suffix), which silently failed and left
+# nvidia-cuda-runtime/-nvrtc/-cupti on a stale 13.0.x line while
+# nvidia-cuda-nvcc/-crt/-cccl (pulled in transitively by vllm/flashinfer)
+# resolved to 13.3.x -- reproducing the exact skew this step exists to
+# prevent. Pinning exact versions (not just the ${CUDA_LINE} line via ~=)
+# removes any dependence on pip's resolver picking the same transitive
+# versions on a future rebuild.
 "${PIP[@]}" install --upgrade \
-  "nvidia-cuda-nvcc-cu13~=${CUDA_LINE}.0" \
-  "nvidia-cuda-crt-cu13~=${CUDA_LINE}.0" \
-  "nvidia-cuda-cccl-cu13~=${CUDA_LINE}.0" \
-  "nvidia-cuda-runtime-cu13~=${CUDA_LINE}.0" \
-  "nvidia-cuda-nvrtc-cu13~=${CUDA_LINE}.0" \
-  "nvidia-cuda-cupti-cu13~=${CUDA_LINE}.0" || \
+  "nvidia-cuda-nvcc==13.3.73" \
+  "nvidia-cuda-crt==13.3.73" \
+  "nvidia-cuda-cccl==13.3.3.4.1" \
+  "nvidia-cuda-runtime==13.3.29" \
+  "nvidia-cuda-nvrtc==13.3.33" \
+  "nvidia-cuda-cupti==13.3.75" \
+  "nvidia-cuda-nvdisasm==13.3.73" || \
   echo "WARN: pin step reported an issue -- verify wheel lines manually with pip freeze before starting the service."
 
 echo "== 6. Bake in the cudart symlinks (Task 1.3 fix #7 / bin/07) =="
-CU13_LIB="$CLEAN_VENV/lib/python3.12/site-packages/nvidia/cu13/lib"
+# Must match bin/07-fix-cudart-symlinks.sh's actual layout exactly:
+#   cu13/lib64 -> lib          (sibling-level symlink, NOT a self-link
+#                                inside lib/ itself -- FlashInfer's JIT
+#                                linker resolves cuda_home as
+#                                dirname(dirname(which nvcc)) == cu13, then
+#                                links -L$cuda_home/lib64 -lcudart, so
+#                                cu13/lib64 must exist as its own entry)
+#   cu13/lib/libcudart.so -> libcudart.so.13   (inside lib/, unversioned
+#                                                dev symlink the runtime
+#                                                wheel doesn't ship)
+# A previous version of this script created a useless self-referential
+# cu13/lib/lib64 -> . (i.e. inside lib/, pointing at itself) instead --
+# wrong location AND wrong target, which does not satisfy the linker at
+# all and silently reproduces the original bin/07 bug.
+CU13="$CLEAN_VENV/lib/python3.12/site-packages/nvidia/cu13"
+CU13_LIB="$CU13/lib"
 if [ -d "$CU13_LIB" ]; then
-  ( cd "$CU13_LIB"
-    [ -e lib64 ] || ln -s . lib64
-    if [ -e libcudart.so.13 ] && [ ! -e libcudart.so ]; then
-      ln -s libcudart.so.13 libcudart.so
-    fi
-  )
+  [ -e "$CU13/lib64" ] || ln -s lib "$CU13/lib64"
+  if [ -e "$CU13_LIB/libcudart.so.13" ] && [ ! -e "$CU13_LIB/libcudart.so" ]; then
+    ln -s libcudart.so.13 "$CU13_LIB/libcudart.so"
+  fi
   echo "   symlinks ensured under $CU13_LIB"
 else
   echo "WARN: expected CUDA lib dir not found at $CU13_LIB -- layout may differ;"
