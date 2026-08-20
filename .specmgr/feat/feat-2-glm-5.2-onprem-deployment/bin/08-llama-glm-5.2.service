@@ -1,29 +1,93 @@
 # Task 2.3 draft systemd unit -- GLM-5.2 via llama.cpp/llama-server.
 #
-# STATUS: DRAFT, not yet installed. Do not `systemctl start` until:
-#   1. Track A (bin/07-measure-kv-cache-768-896.sh, running separately as of
-#      2026-08-20) confirms whether 768K/896K really hold up in practice
-#      (per-GPU margins), and
-#   2. The --tensor-split/--n-cpu-moe rebalancing discussion (PCIe
+# DECIDED 2026-08-20: this is a systemd --USER unit (per-user, installed
+# under ~/.config/systemd/user/), NOT a system-wide unit under
+# /etc/systemd/system/ -- deliberately different from feat-1's
+# vllm-deepseek-v4-flash.service. Rationale (full discussion in the
+# feature README, Decisions Made): day-to-day `start`/`stop`/`restart`
+# during iterative testing should not require sudo/an interactive
+# password each time.
+#
+# REVISED 2026-08-20 (later): the requirement is actually "keep running
+# even when no user is logged in" (NOT "autostart at boot right now" --
+# those are two different things). This needs BOTH of the following,
+# deliberately split apart:
+#   1. Lingering IS enabled (`bin/13-enable-user-lingering.sh`,
+#      `loginctl enable-linger`, no sudo needed) -- this keeps `user`'s
+#      systemd --user manager instance alive/running with zero active
+#      login sessions, so a service started under it survives logout.
+#   2. This unit is installed but deliberately NOT `systemctl --user
+#      enable`d (see bin/09) -- with lingering on, an ENABLED unit WOULD
+#      autostart at every boot (the user manager reaches default.target
+#      on its own once lingering is active), which is explicitly NOT
+#      wanted yet. Left disabled, it only ever runs when someone
+#      explicitly runs `systemctl --user start llama-glm-5.2` -- but
+#      once started that way, it keeps running across logout (per
+#      lingering above) and simply does not come back on its own after a
+#      reboot until started again manually.
+# To opt into autostart-at-boot later, the only additional step is
+# `systemctl --user enable llama-glm-5.2.service`; nothing else about
+# this unit or lingering needs to change for that.
+#
+# Also decided: run `bin/12-setup-user-systemd-groups.sh` once (adds
+# `user` to the `video`/`render` groups) as defense-in-depth for GPU
+# device access -- not currently required since /dev/nvidia* on this box
+# are world-writable, but this should not be relied upon to stay true.
+#
+# STATUS: DRAFT, not yet installed. Do not `systemctl --user start` until:
+#   1. The --tensor-split/--n-cpu-moe rebalancing discussion (PCIe
 #      topology: GPU0/GPU2 are PCIe 5.0 x16, GPU1/GPU3 are PCIe 4.0 x16,
 #      confirmed via `nvidia-smi --query-gpu=pcie.link.gen.max`) is
-#      resolved -- CTX_SIZE and/or TENSOR_SPLIT below may still change.
+#      resolved -- TENSOR_SPLIT/N_CPU_MOE below may still change.
+#   2. Task 2.2.1's --load-mode benchmark result is now IN and DECIDED
+#      (see below) -- this is the only one of the two gates that has
+#      landed so far.
 #
-# Placeholder for this draft: --ctx-size 524288 (512K) -- the largest size
-# Task 2.1 DIRECTLY measured as `status=ok` (not extrapolated), comfortable
-# per-GPU margin on all 4 GPUs. Swap to whatever Track A confirms is the
-# real safe ceiling once that data is in (see Task 2.3/2.4 in the feature
-# README for the swap step).
+# --load-mode none -- DECIDED 2026-08-20 (Task 2.2.1,
+# bin/11-benchmark-load-mode.sh, one completed A/B pair at --ctx-size
+# 896000 after 3 earlier attempts were killed by an unrelated RAID10
+# consistency-check I/O contention on /data's md126 array, since fully
+# resolved -- see feature README, Current Status/Decisions Made for the
+# full incident). Measured: --load-mode none loaded in 1694s (~28.2m)
+# vs. mmap-default's 1842s (~30.7m) -- 8% faster, ~2.5 min saved per cold
+# load. Per-GPU memory footprint identical between the two modes (as
+# expected -- --load-mode only affects the CPU-side tensor-loading path,
+# not GPU placement). Caveat carried into the decision, not hidden: the
+# script does not drop the page cache between probes and mmap-default ran
+# first, so some of that 8% could reflect residual cache warmth from the
+# first probe rather than a purely structural effect -- judged not worth
+# a further ~1h re-test to fully rule out, given the trade this was always
+# about (recovering a slice of a recurring ~9%-of-workday daily cold-load
+# cost, see bin/11's header) is directionally satisfied either way.
+#
+# --ctx-size 768000 (768K) -- DECIDED 2026-08-20 (Track A,
+# bin/07-measure-kv-cache-768-896.sh, both 768K/896K measured `status=ok`).
+# 768K clears the adopted >=15%-free-or->=10-GiB-absolute per-GPU
+# safety-margin policy on every GPU (worst case CUDA0: 22,569 MiB free,
+# 23.2%). 896K was also measured and rejected FOR NOW: its worst GPU
+# (CUDA0) measures 14,079 MiB free (14.47%) against a 14,593 MiB (15%)
+# requirement -- a ~514 MiB shortfall, though it still clears the flat
+# >=10 GiB leg. 896K is a flagged revisit candidate, not discarded -- see
+# the feature README's Decisions Made (2026-08-20, "production context
+# size: 768K chosen, 896K flagged as a revisit candidate") for the full
+# rationale, including why the pending --tensor-split rebalancing above
+# could plausibly close that gap. Both comfortably exceed REQ-003's
+# 350-370K target either way.
 #
 # Conventions copied from feat-1's installed (though currently inactive)
 # vllm-deepseek-v4-flash.service / vllm-deepseek-v4-flash-clean.service on
-# this same box, for consistency across features: User/Group=user,
+# this same box, for consistency across features where they still apply:
 # --host 0.0.0.0 (REQ-008: unauthenticated, internal-network-only is
 # enforced at the network/firewall layer, not by binding to loopback),
 # Restart=on-failure, RestartSec=10, KillMode=control-group,
-# LimitNOFILE=65536, LimitMEMLOCK=infinity, [Install] WantedBy=multi-user.target.
+# LimitNOFILE=65536, LimitMEMLOCK=infinity.
 #
 # Deliberate differences from the vLLM units:
+#   - No User=/Group=/[Install] WantedBy=multi-user.target -- this is a
+#     systemd --user unit (see the top-of-file note), which always runs
+#     as the invoking user; User=/Group= are meaningless/rejected there,
+#     and the user manager's equivalent of "boot target" is
+#     default.target, not multi-user.target (see [Install] below).
 #   - Type=simple, not Type=notify -- llama-server does not implement the
 #     systemd sd_notify READY protocol vLLM uses, so Type=notify would
 #     just time out waiting for a notification that never arrives.
@@ -41,10 +105,21 @@
 #     nvidia-smi order).
 #   - No --api-key flag: REQ-008 (anonymous, unauthenticated) is
 #     intentional, not an oversight -- see ACC-007.
+#   - --alias glm-5.2:UD-Q5_K_XL: without it, llama-server reports its own
+#     identity in /v1/models and in every response's "model" field as the
+#     FULL ABSOLUTE GGUF PATH (confirmed empirically from an early spike
+#     response, bin/logs/2026-08-19T113231Z-spike-result.json: server
+#     replied with ".../GLM-5.2-GGUF/UD-IQ1_S/GLM-5.2-UD-IQ1_S-00001-of-
+#     00006.gguf" even though the CLIENT request's "model" field said
+#     something else entirely -- llama-server does not validate/echo the
+#     request's model field when only one model is loaded, it just always
+#     reports its own). The alias gives OpenWebUI/OpenCode a clean, stable
+#     model id (matches the "glm-5.2:UD-Q5_K_XL" key used in the OpenCode
+#     opencode.jsonc snippet drafted for Task 2.6) instead of an ugly path.
 #   - -lv (verbose log level) omitted: -lv 4 in bin/06-/07- was a
 #     diagnostic-only verbosity for the measurement spikes; default level
-#     is enough for production, captured via journald (`journalctl -u
-#     llama-glm-5.2`).
+#     is enough for production, captured via journald (`journalctl
+#     --user-unit llama-glm-5.2`).
 #
 # Model: unsloth/GLM-5.2-GGUF, UD-Q5_K_XL, pinned revision
 # abc55e72527792c6e77069c99b4cb7de16fa9f23 (Task 0.5/ACC-006). Base model
@@ -52,12 +127,15 @@
 # (Task 0.4) -- not downloaded/used directly, the GGUF path only needs the
 # quant.
 #
-# Install (NOT run automatically by this draft):
-#   sudo cp 08-llama-glm-5.2.service /etc/systemd/system/llama-glm-5.2.service
-#   sudo systemctl daemon-reload
-#   sudo systemctl enable llama-glm-5.2.service
-#   # (systemctl start is Task 2.4, done separately with a curl smoke test
-#   # right after, not as part of Task 2.3's "install" step)
+# Install (NOT run automatically by this draft; no sudo needed --
+# this is a systemd --user unit):
+#   mkdir -p ~/.config/systemd/user
+#   cp 08-llama-glm-5.2.service ~/.config/systemd/user/llama-glm-5.2.service
+#   systemctl --user daemon-reload
+#   systemctl --user enable llama-glm-5.2.service
+#   # (systemctl --user start is Task 2.4, done separately with a curl
+#   # smoke test right after, not as part of Task 2.3's "install" step)
+# See bin/09-install-llama-glm-service.sh, which does exactly this.
 
 [Unit]
 Description=llama.cpp GLM-5.2 (UD-Q5_K_XL) OpenAI-compatible API
@@ -66,18 +144,22 @@ Wants=network.target
 
 [Service]
 Type=simple
-User=user
-Group=user
 WorkingDirectory=/data/llama.cpp-dsa
+# systemd --user services do NOT inherit the login shell's environment
+# (no ~/.bashrc/~/.profile sourcing) -- both PATH and CUDA_VISIBLE_DEVICES
+# are set explicitly here rather than assumed.
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=CUDA_VISIBLE_DEVICES=0,1,2,3
 ExecStart=/data/llama.cpp-dsa/build/bin/llama-server \
     --model /data/llama_cpp/models/GLM-5.2-GGUF/UD-Q5_K_XL/GLM-5.2-UD-Q5_K_XL-00001-of-00013.gguf \
+    --alias glm-5.2:UD-Q5_K_XL \
     --host 0.0.0.0 \
     --port 8092 \
-    --ctx-size 524288 \
+    --ctx-size 768000 \
     --n-gpu-layers 999 \
     --n-cpu-moe 54 \
     --tensor-split 54,9,8,8 \
+    --load-mode none \
     --parallel 1 \
     --jinja
 KillMode=control-group
@@ -89,4 +171,4 @@ LimitNOFILE=65536
 LimitMEMLOCK=infinity
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

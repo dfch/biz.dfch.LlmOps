@@ -1,0 +1,24 @@
+GLM-5.2 --load-mode benchmark -- Task 2.2.1
+ctx: 896000
+model: /data/llama_cpp/models/GLM-5.2-GGUF/UD-Q5_K_XL/GLM-5.2-UD-Q5_K_XL-00001-of-00013.gguf
+quant: UD-Q5_K_XL
+started (UTC): 2026-08-20T081824Z
+
+mode             status      gpu_mib    ram_kib      load_secs
+baseline (idle): gpu=8 MiB, ram=11746212 KiB
+
+mmap-default     ok           283712   13595088           1842
+load-mode-none   ok           286424   24000968           1694
+
+== Comparison ==
+  load-mode-none   load=1694s (~28.2m)  ram_used=~22.9 GiB
+  mmap-default     load=1842s (~30.7m)  ram_used=~13.0 GiB
+
+Fastest: load-mode-none (1694s) -- 8% faster than mmap-default (1842s)
+
+RECOMMENDATION: adopt --load-mode matching 'load-mode-none' in bin/08-llama-glm-5.2.service before Task 2.3 install.
+Note: RAM-used figures above are a secondary cross-check, not the deciding
+metric -- 'load-mode-none' is expected to show much higher resident RAM
+(close to the full ~350 GiB CPU-side portion) than 'mmap-default' (which
+only pages in what this specific cold-start/health-check actually touches),
+per the mmap-laziness discussion in the README's Decisions Made.

@@ -96,8 +96,7 @@ minimums (their reference config runs the 2-bit quant on a single 24 GB GPU
   coherent, structured reasoning trace with no frozen-token pattern, just
   still truncated (GLM-5.2 defaults to `reasoning_effort: max`, needs an
   even larger budget or an explicit lower effort level to finish — separate
-  from REQ-010 correctness). `OVERALL: no degenerate/suspicious/
-  non-deterministic results found`
+  from REQ-010 correctness). `OVERALL: no degenerate/suspicious/ non-deterministic results found`
 - [ ] ACC-003: Verifies REQ-003 — empirical test confirms the endpoint
   handles a 350-370K-token coding prompt without OOM
 - [ ] ACC-004: Verifies REQ-004/REQ-011 — tool-call verified via curl smoke
@@ -110,8 +109,7 @@ minimums (their reference config runs the 2-bit quant on a single 24 GB GPU
   why it is the highest-quality option that still meets REQ-003's context
   target on this hardware (both are near-lossless per unsloth's KLD data)
   — PASS 2026-08-20 (Task 2.2): **`UD-Q5_K_XL` confirmed as the production
-  quant.** Rationale: under the validated `--n-cpu-moe 54 --tensor-split
-  54,9,8,8` placement, Task 2.1 directly measured `ctx=524,288` (512K
+  quant.** Rationale: under the validated `--n-cpu-moe 54 --tensor-split 54,9,8,8` placement, Task 2.1 directly measured `ctx=524,288` (512K
   tokens, > REQ-003's 370K upper bound) succeeding with ≥25.5 GiB (≥26.9%
   of 97,288 MiB) free on the worst-margined GPU (CUDA1) — a measured floor
   that, by monotonicity of context-size memory use, guarantees at least
@@ -282,47 +280,49 @@ What is explicitly out of scope:
   896 GB (384 GB VRAM + 512 GB RAM) pool, and system RAM stayed flat at
   ~11.6-11.8 GiB throughout (the `--tensor-split 54,9,8,8` placement keeps
   nearly everything on GPU/VRAM). Full data: `bin/logs/2026-08-19T220559Z-kv-cache-sweep.{txt,json}` and per-context server logs `bin/logs/2026-08-19T220559Z-kv-ctx*.log`.
- - [x] Task 2.2: Confirm the highest-quality quant that reliably supports 350-370K context with safe margin, based on Task 2.1 (start from UD-Q5_K_XL @ 570 GB in the 896 GB pool; step to UD-Q4_K_XL only if KV headroom demands) — depends on: Task 2.1 — status: done — 2026-08-20. Task 2.1's aggregate numbers (~233-235 GiB @ 350-370K vs the 896 GB pool) are necessary but not sufficient, since `--tensor-split 54,9,8,8` splits model weight AND KV-cache growth unevenly per GPU (each hard-capped at 97,288 MiB) — so the real gate is per-GPU headroom, not the pool sum. Per-GPU `memory breakdown` lines were pulled from all 5 Task 2.1 logs.
 
-  **Primary evidence — measured floor, no extrapolation needed:** Task 2.1
-  already directly measured `ctx=524,288` (512K tokens, `status=ok` on all
-  4 GPUs), and 524,288 > 370,000 (REQ-003's upper bound). Since
-  KV-cache/compute-buffer memory use is monotonically non-decreasing in
-  context size, the *measured* per-GPU margin at 512K is a guaranteed
-  floor for the actual 350-370K target — stronger evidence than a
-  projection past the tested range:
+- [x] Task 2.2: Confirm the highest-quality quant that reliably supports 350-370K context with safe margin, based on Task 2.1 (start from UD-Q5_K_XL @ 570 GB in the 896 GB pool; step to UD-Q4_K_XL only if KV headroom demands) — depends on: Task 2.1 — status: done — 2026-08-20. Task 2.1's aggregate numbers (~233-235 GiB @ 350-370K vs the 896 GB pool) are necessary but not sufficient, since `--tensor-split 54,9,8,8` splits model weight AND KV-cache growth unevenly per GPU (each hard-capped at 97,288 MiB) — so the real gate is per-GPU headroom, not the pool sum. Per-GPU `memory breakdown` lines were pulled from all 5 Task 2.1 logs.
 
-  | GPU | free @ ctx=524,288 (measured) | % free |
-  |---|---|---|
-  | CUDA0 | 38,717 MiB (~37.8 GiB) | 39.80% |
-  | **CUDA1 (worst)** | **26,153 MiB (~25.5 GiB)** | **26.89%** |
-  | CUDA2 | 33,686 MiB (~32.9 GiB) | 34.63% |
-  | CUDA3 | 45,727 MiB (~44.7 GiB) | 47.00% |
+**Primary evidence — measured floor, no extrapolation needed:** Task 2.1
+already directly measured `ctx=524,288` (512K tokens, `status=ok` on all
+4 GPUs), and 524,288 > 370,000 (REQ-003's upper bound). Since
+KV-cache/compute-buffer memory use is monotonically non-decreasing in
+context size, the *measured* per-GPU margin at 512K is a guaranteed
+floor for the actual 350-370K target — stronger evidence than a
+projection past the tested range:
 
-  Worst case CUDA1 (holds the most static MoE weight, 62,690 MiB) still
-  retains ~26.9% (~25.5 GiB) free at a context size *larger* than the
-  target — so the true 370K margin is guaranteed to be at least this good.
+| GPU | free @ ctx=524,288 (measured) | % free |
+|---|---|---|
+| CUDA0 | 38,717 MiB (~37.8 GiB) | 39.80% |
+| **CUDA1 (worst)** | **26,153 MiB (~25.5 GiB)** | **26.89%** |
+| CUDA2 | 33,686 MiB (~32.9 GiB) | 34.63% |
+| CUDA3 | 45,727 MiB (~44.7 GiB) | 47.00% |
 
-  **Secondary evidence — linear regression, for color only:** the same 5
-  log points, regressed (free MiB vs ctx) per GPU, project CUDA1's margin
-  at the *actual* 370K target at ~27.7 GiB (~28%) free — consistent with
-  (and, as expected, slightly better than) the measured 512K floor above,
-  confirming monotonicity. CUDA0 (assigned the largest KV-cache growth
-  share) closes its margin fastest as context grows but stays ahead of
-  CUDA1 throughout the tested range.
+Worst case CUDA1 (holds the most static MoE weight, 62,690 MiB) still
+retains ~26.9% (~25.5 GiB) free at a context size *larger* than the
+target — so the true 370K margin is guaranteed to be at least this good.
 
-  Both figures comfortably clear an adopted safety-margin policy of
-  **≥15% free VRAM per GPU, or ≥10 GiB absolute, whichever is greater**,
-  at the 350-370K target (covers production extras Task 2.1's load-only
-  probe didn't exercise: larger batch sizes, the prompt cache seen enabled
-  at 8,192 MiB, OpenCode tool-call payloads, OS/driver overhead).
-  **Decision: keep `UD-Q5_K_XL`** (near-lossless, 99.9% KLD) as the
-  production quant under the validated `--n-cpu-moe 54 --tensor-split
-  54,9,8,8` placement; `UD-Q4_K_XL` fallback is not needed for this
-  hardware/placement combo (see ACC-005 for the recorded rationale, and
-   Decisions Made for the safety-margin policy).
-- [ ] Task 2.2.1: Benchmark `--load-mode none` (direct/eager read) vs the `mmap` default for `UD-Q5_K_XL` cold-load wall-clock time — run BEFORE Task 2.3's install, via the same kind of ad-hoc probe script used for Task 2.1/2.2 (not the installed systemd service), so the winning mode is baked into `bin/08-llama-glm-5.2.service` from the start instead of requiring an edit-and-reinstall cycle after the fact. Does not need to wait on Track A/PCIe rebalancing or the finalized production context size: the `--load-mode` difference is about the tensor-loading phase (reading/mapping the ~524 GiB GGUF file), which is essentially independent of `--ctx-size` (KV-cache allocation is a separate, fast step after tensor loading) — so this can run at any convenient context size (e.g. reuse the small `ctx=4096` probe shape from Task 2.1). Motivated by this box being power-cycled at the start of each ~8.4h working day, where the measured ~45-minute mmap cold load (`bin/logs/2026-08-20T055618Z-kv-ctx768000.log`) already costs ~9% of the day. Acceptable to trade mmap's lazy CPU-RAM residency for a faster eager read here since this box runs GLM-5.2 exclusively with no other RAM consumers once in production use (see Decisions Made for the full reasoning/tradeoff discussion). Adopt whichever mode loads faster; feed the winning value into Task 2.3's `bin/08-llama-glm-5.2.service` alongside the finalized `--ctx-size`/`--tensor-split`/`--n-cpu-moe` values — depends on: Task 2.2 — status: not-started
-- [ ] Task 2.3: Install the engine + GLM-5.2 as a systemd service with the chosen quant and GPU/CPU-RAM placement — depends on: Task 2.2, Task 2.2.1 — status: in-progress — 2026-08-20: draft artifacts created — `bin/08-llama-glm-5.2.service` (systemd unit, placeholder `--ctx-size 524288` / `--n-cpu-moe 54 --tensor-split 54,9,8,8`, port 8092, follows feat-1's `vllm-deepseek-v4-flash.service` conventions already installed on this box: `User=user`, `--host 0.0.0.0`, `Restart=on-failure`, etc.) and `bin/09-install-llama-glm-service.sh` (installer: copy + `daemon-reload` + `enable`, deliberately NOT `start` — that's Task 2.4). **Not yet installed** — gated on three open items running/pending in parallel: (1) a follow-up empirical probe at `ctx=768,000`/`896,000` (`bin/07-measure-kv-cache-768-896.sh`, copied from `bin/06`, hardcoded to just these 2 sizes — user is running it separately, already confirmed live on the box as of 2026-08-20: `llama-server --ctx-size 768000 ...` loading under tmux session `glm-kv-768-986`), motivated by a "go for 1M context" ask whose math didn't hold up (see below); (2) a `--tensor-split`/`--n-cpu-moe` rebalancing discussion informed by PCIe topology, confirmed via `nvidia-smi --query-gpu=index,pcie.link.gen.max`: **GPU0 and GPU2 are PCIe 5.0 x16, GPU1 and GPU3 are PCIe 4.0 x16** (Gen5 ≈ 2x Gen4 bandwidth/lane) — relevant because CUDA0 (currently the disproportionately KV-cache-heavy GPU under the validated split) happens to sit on the faster bus, while CUDA1 (heaviest static MoE weight) sits on a slower one; whether/how to lean on that asymmetry when rebalancing is still open; (3) Task 2.2.1's `--load-mode` benchmark result. Once all three land, swap `--ctx-size`/`--tensor-split`/`--n-cpu-moe`/`--load-mode` in `bin/08-*.service` to the finalized values, then run `bin/09-install-llama-glm-service.sh`.
+**Secondary evidence — linear regression, for color only:** the same 5
+log points, regressed (free MiB vs ctx) per GPU, project CUDA1's margin
+at the *actual* 370K target at ~27.7 GiB (~28%) free — consistent with
+(and, as expected, slightly better than) the measured 512K floor above,
+confirming monotonicity. CUDA0 (assigned the largest KV-cache growth
+share) closes its margin fastest as context grows but stays ahead of
+CUDA1 throughout the tested range.
+
+Both figures comfortably clear an adopted safety-margin policy of
+**≥15% free VRAM per GPU, or ≥10 GiB absolute, whichever is greater**,
+at the 350-370K target (covers production extras Task 2.1's load-only
+probe didn't exercise: larger batch sizes, the prompt cache seen enabled
+at 8,192 MiB, OpenCode tool-call payloads, OS/driver overhead).
+**Decision: keep `UD-Q5_K_XL`** (near-lossless, 99.9% KLD) as the
+production quant under the validated `--n-cpu-moe 54 --tensor-split   54,9,8,8` placement; `UD-Q4_K_XL` fallback is not needed for this
+hardware/placement combo (see ACC-005 for the recorded rationale, and
+Decisions Made for the safety-margin policy).
+
+- [x] Task 2.2.1: Benchmark `--load-mode none` (direct/eager read) vs the `mmap` default for `UD-Q5_K_XL` cold-load wall-clock time — run BEFORE Task 2.3's install, via the same kind of ad-hoc probe script used for Task 2.1/2.2 (not the installed systemd service), so the winning mode is baked into `bin/08-llama-glm-5.2.service` from the start instead of requiring an edit-and-reinstall cycle after the fact. Motivated by this box being power-cycled at the start of each ~8.4h working day, where the measured ~45-minute mmap cold load (`bin/logs/2026-08-20T055618Z-kv-ctx768000.log`) already costs ~9% of the day — depends on: Task 2.2 — status: done. **Result (2026-08-20, `bin/11-benchmark-load-mode.sh`, `bin/logs/2026-08-20T081824Z-load-mode-bench.{txt,json}`):** `--load-mode none` loaded in 1694s (~28.2m) vs. `mmap-default`'s 1842s (~30.7m) — **8% faster**, ~2.5 min saved per cold load. Per-GPU memory footprint (`common_memory_breakdown_print`) identical between modes, as expected — `--load-mode` only affects the CPU-side tensor-loading path, not GPU placement. **3 earlier attempts** (`07:23`, `09:40`, `10:12`) were killed within seconds each, before the silent tensor-copy phase even started — not a loader hang, just impatience meeting a loader with zero progress feedback for a multi-hundred-GB copy, compounded by a genuine confound: an `mdadm` RAID10 consistency check on `/data`'s `md126` array was competing for disk I/O (see Current Status/Decisions Made for the full incident); confirmed fully resolved by the time of the successful run (`sync_action: idle`, `mismatch_cnt: 0`) — nothing left to resume. **Caveat carried into the decision, not hidden:** the script doesn't drop the page cache between the two probes, and `mmap-default` ran first — some of the 8% gap could reflect residual cache warmth on the second probe rather than a purely structural effect; judged not worth a further ~1h re-test given the modest, directionally-expected result and the trade this was always about (recovering a slice of a recurring daily cold-load cost). **DECIDED: adopt `--load-mode none`** — already added to `bin/08-llama-glm-5.2.service`'s `ExecStart`.
+
+- [x] Task 2.3: Install the engine + GLM-5.2 as a systemd service with the chosen quant and GPU/CPU-RAM placement — depends on: Task 2.2, Task 2.2.1 — status: done — 2026-08-20: draft artifacts created — `bin/08-llama-glm-5.2.service` (systemd unit, `--ctx-size 768000` / `--n-cpu-moe 54 --tensor-split 54,9,8,8 --load-mode none`, port 8092, `--host 0.0.0.0`, `Restart=on-failure`, etc., mostly following feat-1's `vllm-deepseek-v4-flash.service` conventions where they still apply) and `bin/09-install-llama-glm-service.sh` (installer: copy + `daemon-reload`, deliberately NOT `enable` and NOT `start` — enabling is skipped on purpose, see below; starting is Task 2.4). **DECIDED (2026-08-20): install as a systemd `--user` unit** (`~/.config/systemd/user/llama-glm-5.2.service`, `systemctl --user ...`), NOT a system-wide unit — unlike `feat-1`'s vLLM service, so no `User=`/`Group=` and `sudo` is never needed for day-to-day `start`/`stop`/`restart`. **REVISED same day:** the real requirement is "keep running with no user logged in" (NOT "autostart at boot right now") — those need different, independently-controlled mechanisms: lingering (`loginctl enable-linger`, now **enabled** via `bin/13-enable-user-lingering.sh`) keeps `user`'s systemd --user manager alive without a session, while the unit itself is deliberately left **NOT enabled** so it does not autostart at boot (lingering + an enabled unit together WOULD autostart it — caught and corrected live on the box, see Decisions Made "lingering + no autostart" for the full incident/rationale). Once manually started (Task 2.4), it persists across logout; after a reboot it must be started again by hand. New **Task 2.3.2** (`bin/12-setup-user-systemd-groups.sh`, video/render groups, requires logout/login) and **Task 2.3.3** (`bin/13-enable-user-lingering.sh`, lingering — DONE, confirmed `Linger=yes`) added. **Not yet installed for production use** (loaded via `bin/09` as a dry-run check, but disabled/inactive) — **all three original gating items are now resolved, Task 2.3 is unblocked:** (1) **DONE (2026-08-20 ~10:30 CEST):** the follow-up empirical probe at `ctx=768,000`/`896,000` (`bin/07-measure-kv-cache-768-896.sh`) completed — both sizes `status=ok`; measured worst-case-GPU (CUDA0) free memory: 768K → 22,569 MiB (~22.0 GiB, 23.2%, passes comfortably), 896K → 14,079 MiB (~13.75 GiB, 14.47%, narrowly misses the 15% leg of the ≥15%/≥10 GiB policy — a ~514 MiB shortfall — though it still clears the flat ≥10 GiB leg) — near-exact match to the pre-computed projection table below, confirming the regression's reliability. Full data: `bin/logs/2026-08-20T055618Z-kv-cache-768-896.{txt,json}` and per-context `*-kv-ctx768000.log`/`*-kv-ctx896000.log`. **DECIDED (2026-08-20): production `--ctx-size` = 768,000** (already updated in `bin/08-*.service`). (2) **DECIDED (2026-08-20): NOT rebalancing `--tensor-split`/`--n-cpu-moe` before install.** The rebalancing discussion (PCIe topology: GPU0/GPU2 are PCIe 5.0 x16, GPU1/GPU3 are PCIe 4.0 x16) was only ever relevant to reclaiming 896K, not to 768K's safety — 768K already clears the margin policy comfortably and exceeds REQ-003 by 2x+, so there is no requirements pressure to rebalance. **Moved to Phase 3 as new Task 3.3** (see below), explicitly gated on Task 2.5.1's decode-throughput baseline first — rebalancing to relieve CUDA0's KV-cache pressure risks shifting CPU-offloaded-expert PCIe traffic onto a slower Gen4 GPU, which could regress decode speed in a way we currently have no baseline to even detect. 896K remains flagged as a revisit candidate, not discarded — just deferred, non-blocking. (3) **DONE (2026-08-20):** Task 2.2.1's `--load-mode` benchmark result landed — `--load-mode none` measured 8% faster than `mmap-default` (1694s vs 1842s); already added to `bin/08-*.service`'s `ExecStart` (see Task 2.2.1 above for the full result and its cache-warmth caveat). **`bin/08-llama-glm-5.2.service` is now fully finalized** (`--ctx-size 768000 --n-cpu-moe 54 --tensor-split 54,9,8,8 --load-mode none`). **INSTALLED on the box (2026-08-20):** `bin/09-install-llama-glm-service.sh` run successfully — `systemctl --user status llama-glm-5.2.service` confirms `Loaded: loaded (...; disabled; vendor preset: enabled)`, `Active: inactive (dead)`, exactly the intended state (won't autostart, ready for an explicit `start`); installed file confirmed byte-identical to `bin/08-llama-glm-5.2.service` via `diff`. **Task 2.3 is DONE.** Next up: Task 2.4 (`systemctl --user start`, then curl smoke test).
 
   **Why the follow-up probe exists — "go for 1M" checked against the math first:** extending Task 2.2's per-GPU linear regressions to `ctx=1,048,576` (1M, GLM-5.2's advertised max) projects CUDA0 (the GPU with the steepest KV-cache-growth slope, ~66.3 MiB/1K tokens) down to only ~3.89 GiB (~4.1%) free — clearly below the adopted ≥15%/≥10 GiB safety-margin policy, and this is ~2x beyond the largest size Task 2.1 actually measured (524,288), so it's genuine extrapolation risk, not just a policy breach. Extending the same regression to intermediate sizes:
 
@@ -334,16 +334,30 @@ What is explicitly out of scope:
   | 1,048,576 | ~3.9 GiB (~4.1%) | fails clearly |
 
   768K and 896K were picked for the follow-up probe as the genuinely informative gray zone (960K/1M were dropped — the math already says "no" clearly enough not to burn a ~20-30 min load cycle on them).
-- [x] Task 2.3.1: Prepare a script to tune `vm.swappiness` down (target `1`, not `0`) via `/etc/sysctl.d/` (persisted across reboots) on the Dell 7960T — keep swap enabled as a last-resort safety net for genuine memory-pressure emergencies, but stop the kernel from proactively swapping anonymous pages during normal operation (default `swappiness=60` is tuned for general-purpose workloads, not this single dedicated, capacity-planned appliance). Explicitly NOT disabling swap outright — see Decisions Made for the full rationale (mmap'd GGUF weight pages are file-backed/cleanly-reclaimable and don't depend on swap at all; swap only covers anonymous memory, and its gradual growth has already served as a useful early-warning canary during Task 2.1's incidents, which a hard OOM-kill would not) — depends on: none — status: done — 2026-08-20: `bin/10-tune-vm-swappiness.sh` created (idempotent: checks current value + persisted file before writing, writes `/etc/sysctl.d/99-glm-swappiness.conf`, applies immediately via `sudo sysctl --system` so no reboot is required, verifies the resulting value and warns if a conflicting sysctl file wins). Requires sudo on the box, same as `bin/09`. **Run on the actual box 2026-08-20** — succeeded: `vm.swappiness` confirmed `60 -> 1`, persisted at `/etc/sysctl.d/99-glm-swappiness.conf`. Two unrelated `sysctl: setting key ... Invalid argument` warnings appeared for pre-existing `net.ipv4.conf.all.accept_source_route`/`promote_secondaries` keys — harmless, caused by `sudo sysctl --system` re-applying every existing sysctl file on the box, not by `99-glm-swappiness.conf` (confirmed by the final readback showing `vm.swappiness` at the correct target value). Also surfaced an important new finding, logged as Task 3.1: `/swapfile` is only 2 GiB total and already ~1.8 GiB (~90%) used — see Decisions Made and Task 3.1 for why this changes the swap-policy premise
-- [ ] Task 2.4: `systemctl start` the service; curl smoke test against `/v1/chat/completions`, verify tool-calls and all 3 reasoning modes (reasoning_effort max/high, enable_thinking:false). If engine is llama.cpp, explicitly verify OpenAI-compatible tool-calling works for OpenCode (REQ-011 risk) — depends on: Task 2.3 — status: not-started
-- [ ] Task 2.5: Validate the finalized production context size (768K or 896K — see Task 2.3's Track A result; both comfortably exceed REQ-003's 350-370K minimum bar) works without OOM — depends on: Task 2.4 — status: not-started
+
+  **DECISION (2026-08-20): production `--ctx-size` = 768,000.** With both probes now measured (not just projected), 768K clears the ≥15%/≥10 GiB safety-margin policy on every GPU with real room to spare (worst case CUDA0 at 23.2% free), while 896K's worst GPU (CUDA0) measures 14,079 MiB free (14.47%) against a 14,593 MiB (15%) requirement — a ~514 MiB shortfall on the primary leg of the policy, even though it still clears the flat ≥10 GiB leg. Rather than ship on a config that already trips one leg of its own adopted safety policy before accounting for batch size, prompt cache, and OpenCode tool-call payloads (the exact production extras the policy was sized to cover, per Task 2.2), 768K is the safer choice, and it still comfortably exceeds REQ-003's 350-370K target by more than 2x. **896K is not discarded — it is flagged as a revisit candidate** (see Decisions Made) once the pending `--tensor-split`/PCIe-topology rebalancing lands, since shifting some of CUDA0's KV-cache share onto its faster PCIe 5.0 bus or onto another GPU could plausibly close that ~514 MiB gap.
+
+- [x] Task 2.3.1: Prepare a script to tune `vm.swappiness` down (target `1`, not `0`) via `/etc/sysctl.d/` (persisted across reboots) on the Dell 7960T — keep swap enabled as a last-resort safety net for genuine memory-pressure emergencies, but stop the kernel from proactively swapping anonymous pages during normal operation (default `swappiness=60` is tuned for general-purpose workloads, not this single dedicated, capacity-planned appliance). Explicitly NOT disabling swap outright — see Decisions Made for the full rationale (mmap'd GGUF weight pages are file-backed/cleanly-reclaimable and don't depend on swap at all; swap only covers anonymous memory, and its gradual growth has already served as a useful early-warning canary during Task 2.1's incidents, which a hard OOM-kill would not) — depends on: none — status: done — 2026-08-20: `bin/10-tune-vm-swappiness.sh` created (idempotent: checks current value + persisted file before writing, writes `/etc/sysctl.d/99-glm-swappiness.conf`, applies immediately via `sudo sysctl --system` so no reboot is required, verifies the resulting value and warns if a conflicting sysctl file wins). Requires sudo on the box. **Run on the actual box 2026-08-20** — succeeded: `vm.swappiness` confirmed `60 -> 1`, persisted at `/etc/sysctl.d/99-glm-swappiness.conf`. Two unrelated `sysctl: setting key ... Invalid argument` warnings appeared for pre-existing `net.ipv4.conf.all.accept_source_route`/`promote_secondaries` keys — harmless, caused by `sudo sysctl --system` re-applying every existing sysctl file on the box, not by `99-glm-swappiness.conf` (confirmed by the final readback showing `vm.swappiness` at the correct target value). Also surfaced an important new finding, logged as Task 3.1: `/swapfile` is only 2 GiB total and already ~1.8 GiB (~90%) used — see Decisions Made and Task 3.1 for why this changes the swap-policy premise
+
+- [x] Task 2.3.2: Add `user` to the `video`/`render` groups as defense-in-depth for GPU device access under the systemd `--user` unit decided for Task 2.3 — not currently required since `/dev/nvidia*` on this box are world-writable (`crw-rw-rw-`), but this should not be relied upon to stay true (a driver update or udev rule change could tighten it) — depends on: none — status: done — `bin/12-setup-user-systemd-groups.sh` created (idempotent, checks current group membership first, requires interactive sudo like `bin/10`). **Bug found and fixed during rollout:** the script originally derived its target user from `$USER`, which resolves to `root` when the script itself is invoked via `sudo` (`sudo bash 12-setup-user-systemd-groups.sh`) — a first run silently added `root` (already a no-op, `root` was already in both groups) instead of `user`. Fixed to take the target user as an optional first argument, defaulting to `user` (`bash 12-setup-user-systemd-groups.sh [target-user]`), and re-run correctly as `sudo bash 12-setup-user-systemd-groups.sh user`. **Done (2026-08-20):** confirmed via `id user` — `video`(44)/`render`(110) both present, groups took effect immediately without a fresh login being required beyond the one already in progress. **Also done manually (per explicit decision, deliberately NOT scripted):** `root` removed from both groups (`sudo delgroup root video`, `sudo delgroup root render`) — `/etc/group` now shows `video:x:44:user` / `render:x:110:user`, `user` only.
+
+- [x] Task 2.3.3: Enable lingering (`loginctl enable-linger`) for `user` so `llama-glm-5.2.service` can keep running with no user logged in, WITHOUT autostarting at boot — the actual requirement turned out to be "survive logout", not "autostart now", and those need lingering-on + unit-NOT-enabled together, not lingering alone (see Decisions Made "lingering + no autostart" for the full incident where this was caught and corrected live on the box) — depends on: none — status: done — 2026-08-20: `bin/13-enable-user-lingering.sh` created (idempotent, no sudo needed — verified `loginctl enable-linger` succeeds for `user` without a password prompt on this box) and run: `Linger=yes` confirmed via `loginctl show-user user -p Linger`. **Incident found and fixed in the same check:** `bin/09-install-llama-glm-service.sh` had already been run once (separately) and had `enable`d the unit — with lingering now on, that combination would have auto-started it at the next boot. Caught immediately (`systemctl --user status llama-glm-5.2` showed `enabled`), fixed via `systemctl --user disable llama-glm-5.2` (confirmed `disabled`/`inactive`), and `bin/09` itself rewritten to never call `enable` (it now also defensively re-disables the unit if it finds it enabled from a prior run, so re-running the installer can't silently reintroduce this).
+
+- [ ] Task 2.4: `systemctl --user start` the service (no sudo); curl smoke test against `/v1/chat/completions`, verify tool-calls and all 3 reasoning modes (reasoning_effort max/high, enable_thinking:false). If engine is llama.cpp, explicitly verify OpenAI-compatible tool-calling works for OpenCode (REQ-011 risk) — depends on: Task 2.3, Task 2.3.2, Task 2.3.3 — status: in-progress — 2026-08-20 11:58:20 CEST: `systemctl --user start llama-glm-5.2.service` issued by user. **Cold load in progress, healthy, do not assume a hang.** Last checked ~11:05 (6m54s elapsed): `Active: active (running)`, `/health` correctly `503` (loading), disk read progress via `/proc/<pid>/io`: ~75.9 GiB / 524 GiB read (**~14.5%**), no errors in `journalctl --user-unit llama-glm-5.2.service` (only benign `W model has unused tensor blk.78...ignoring` lines, expected from `--n-cpu-moe`/tensor-split leaving some tensors GPU-unused by design). At the ~325 MB/s `--load-mode none` rate measured in Task 2.2.1's benchmark, full load is expected to take a similar ~28 min order of magnitude — **check back via `systemctl --user status llama-glm-5.2.service` / `curl http://localhost:8092/health` once, do not poll tick-by-tick.** Once `/health` returns `200`: run the curl smoke test against `/v1/chat/completions`, verify tool-calls and all 3 reasoning modes (`reasoning_effort: max/high`, `enable_thinking: false`), then mark this task done.
+
+- [ ] Task 2.5: Validate the finalized production context size (**768K**, decided in Task 2.3 — see Track A result; comfortably exceeds REQ-003's 350-370K minimum bar by 2x+. 896K remains a flagged revisit candidate pending the tensor-split rebalancing, see Decisions Made, but is not the current target) works without OOM — depends on: Task 2.4 — status: not-started
+
 - [ ] Task 2.5.1: Measure actual generation throughput (tokens/min in and tokens/min out, or tok/s) for `UD-Q5_K_XL` in the production config (`--n-cpu-moe 54 --tensor-split 54,9,8,8`), at the finalized production context size — Task 2.1/2.2 were model-load/VRAM-allocation probes only, not decode-speed benchmarks; the only speed figure on record (~39 tok/s, Task 1.2) is for the much lighter `UD-IQ1_S` spike quant and is not representative, since `UD-Q5_K_XL` streams the majority of MoE expert weight from CPU RAM per decode step (`--n-cpu-moe 54`), which is structurally slower. Runs against the already-installed service, which already has Task 2.2.1's winning `--load-mode` baked in — no second cold-load-mode comparison needed here — depends on: Task 2.5 — status: not-started
-- [ ] Task 2.6: Connect OpenWebUI and OpenCode to the GLM-5.2 endpoint as a separate model entry — depends on: Task 2.5 — status: not-started
+
+- [ ] Task 2.6: Connect OpenWebUI and OpenCode to the GLM-5.2 endpoint as a separate model entry — depends on: Task 2.5 — status: not-started — OpenCode side drafted ahead of time (2026-08-20): `opencode-provider-snippet-glm-5.2.jsonc` (feature folder root) holds a `provider.llama-cpp-sys0` entry using `@ai-sdk/openai-compatible`, `baseURL: http://<sys0-LAN-IP>:8092/v1`, model key `glm-5.2:UD-Q5_K_XL` with `limit.context: 768000` (matching Task 2.3's decided production context size) — mirrors the box's existing `ollama-sys0` provider entry in shape. Deliberately NOT written into any actual `opencode.jsonc` on this box (that file belongs to a different system) — it's a standalone paste-able fragment for the user to merge into their own config's `provider` object once Task 2.4 confirms the endpoint is actually up. Motivated the `--alias glm-5.2:UD-Q5_K_XL` addition to `bin/08-llama-glm-5.2.service` (see its header comment) so the model id OpenCode/OpenWebUI would show isn't the raw GGUF file path. See Task 3.2 (Phase 3) for the still-open question of driving `--chat-template-kwargs` reasoning-mode toggles from OpenCode itself.
+
 - [ ] Task 2.7: User runs the SAME coding-task examples from feat-1 (Task 1.7 / ACC-010) against this endpoint for a direct quality comparison — depends on: Task 2.6 — status: not-started
 
 #### Phase 3: Optimisations (nice-to-have, non-blocking on Phase 2)
 
 - [ ] Task 3.1: Evaluate/resize the `/swapfile` swap device. Discovered while actually running Task 2.3.1's `bin/10-tune-vm-swappiness.sh` on the box (2026-08-20): the swap device is only **2 GiB total, already ~1.8 GiB (~90%) used** — much smaller than assumed when the swap-policy decision was made. This meaningfully changes that decision's premise: at 2 GiB against a 512 GiB RAM pool, swap cannot absorb anything close to the multi-hundred-GB-scale anonymous-memory incidents already seen in Task 2.1 (Incident #1 alone consumed ~1.4 GiB of this same 2 GiB device in well under a minute — ~70% of its entire capacity from one transient event). At this size swap functions as an early trip-wire signal, not a real capacity cushion — `vm.swappiness=1` (Task 2.3.1) still correctly reduces *proactive* swapping, but does not fix the fact that any genuine pressure event would exhaust this device almost immediately and fall through to the OOM-killer anyway, safety-net or not. Decide whether to enlarge the swapfile (and to what size) to make it a meaningful buffer, or explicitly accept it as trip-wire-only and document that — depends on: Task 2.3.1 — status: not-started
+- [ ] Task 3.2: Work out how to drive GLM-5.2's `--chat-template-kwargs` reasoning-mode toggles (`reasoning_effort: max`/`high`, or `enable_thinking: false` — REQ-004) from an OpenCode client session, not just from raw curl smoke tests. Surfaced while drafting the OpenCode `opencode.jsonc` provider snippet for this endpoint (`@ai-sdk/openai-compatible`, pointed at `http://<sys0-host>:8092/v1`): OpenCode's documented config schema for a custom OpenAI-compatible provider (`provider.<id>.models.<id>.{name,limit.context,limit.output}`) has no obvious per-model or per-request hook for injecting arbitrary extra body fields like `chat_template_kwargs` into the request OpenCode sends. Options to evaluate: (a) an OpenCode plugin that injects the field (similar in spirit to `opencode-helicone-session`'s header injection, but for a body field instead of a header); (b) exposing each reasoning mode as a SEPARATE model entry in `opencode.jsonc` pointed at the SAME `baseURL`/model, if the AI SDK's `providerOptions`/`options` surface turns out to support a static extra-body passthrough per model entry (needs verification against the actual `@ai-sdk/openai-compatible` package, not just the opencode.jsonc doc examples seen so far); (c) worst case, accept that OpenCode sessions run GLM-5.2 in its default mode only (`reasoning_effort: max` per unsloth's defaults) and reserve explicit low/no-thinking-mode testing for direct curl/API smoke tests outside OpenCode (Task 2.4/ACC-004 already covers that path). Not a blocker for Task 2.4/ACC-004 (which verifies the modes via curl, per REQ-004's own wording), but does affect how usable the reasoning-mode flexibility actually is day-to-day once OpenCode is wired up (Task 2.6) — depends on: Task 2.6 — status: not-started
+- [ ] Task 3.3: Revisit the `--tensor-split`/`--n-cpu-moe` split to see whether 896K context can be reclaimed, informed by the box's PCIe topology (`nvidia-smi --query-gpu=index,pcie.link.gen.max`: GPU0/GPU2 are PCIe 5.0 x16, GPU1/GPU3 are PCIe 4.0 x16). **Moved here from being an embedded Task 2.3 gating item (2026-08-20)** — it never actually blocked shipping at 768K (which already clears the safety-margin policy on every GPU and exceeds REQ-003's 350-370K target by 2x+); it only matters for the 896K stretch goal, which is explicitly "flagged as a revisit candidate, not discarded" rather than required. Context for the revisit: at ctx=896,000 under the current validated split (`--n-cpu-moe 54 --tensor-split 54,9,8,8`), CUDA0 is the binding constraint (14,079 MiB / 14.5% free, ~514 MiB short of the 15% leg) despite holding the *smallest* static model weight of the four GPUs (19,485 MiB) — it appears the layers assigned to CUDA0 by the tensor-split ratio (54/79 ≈ 68%) are the same ones `--n-cpu-moe 54` offloads experts from, so CUDA0 ends up "hollowed out" of static weight but loaded with a proportional (71%) share of the KV-cache instead, which is what makes it tight as context grows. **A real risk, not just an optimization detail:** CUDA0 also happens to sit on the fast PCIe 5.0 bus, which is currently a good pairing (CPU-offloaded experts stream across PCIe every decode step, and that traffic is landing on the faster bus) — shrinking CUDA0's tensor-split ratio to relieve KV-cache pressure could inadvertently shift that expert-streaming traffic onto a Gen4 GPU instead, regressing decode throughput to gain KV-cache margin. **Do not attempt this rebalancing before Task 2.5.1 (decode tok/s baseline) has run** — without a throughput baseline first, a rebalance's downside (slower decode) would be invisible until after the fact. If pursued: re-validate both KV-cache margin (`bin/07-measure-kv-cache-768-896.sh`-style, at ctx=896000) AND decode throughput (Task 2.5.1-style) for any candidate split, not just the former — depends on: Task 2.5.1 — status: not-started
 
 **Note:** If a task's scope changes mid-flight, edit its description in place;
 rely on git history (`git log -p` on this file) to recover what was
@@ -377,8 +391,7 @@ before trusting the ETA). GPUs are currently idle/free.
 
 **Task 2.1 (KV-cache measurement) is now also done.** `bin/06-measure-kv-cache.sh`'s
 adaptive ramp (4K→32K→128K→256K→512K) on `UD-Q5_K_XL` succeeded at all 5
-sizes after two unsafe-MoE-placement incidents were fixed (`--n-cpu-moe 54
---tensor-split 54,9,8,8`, see Decisions Made). Result: ~186-239 GiB total
+sizes after two unsafe-MoE-placement incidents were fixed (`--n-cpu-moe 54 --tensor-split 54,9,8,8`, see Decisions Made). Result: ~186-239 GiB total
 GPU memory across the 4K→512K range, system RAM flat at ~11.6-11.8 GiB,
 derived rate **~0.104 GiB KV cache per 1K context tokens** on a **~197.3
 GiB fixed footprint**, extrapolating to ~233-235 GiB total at the
@@ -402,6 +415,7 @@ tracks.** A "go for the full 1M context" idea was checked against the
 per-GPU regressions first: it fails (CUDA0 projects to ~4.1% free at 1M),
 but the projections for 768K/896K looked genuinely uncertain rather than
 clearly pass/fail, so:
+
 - **Track A (empirical, running now, not by the assistant):** a hardcoded
   two-size copy of the measurement script, `bin/07-measure-kv-cache-768-896.sh`
   (768K/896K only, no adaptive ramp/bisection), confirmed live on the box
@@ -421,24 +435,40 @@ clearly pass/fail, so:
   per-context `*-kv-ctx768000.log`/`*-kv-ctx896000.log` files once it's
   done, rather than re-running `nvidia-smi`/`ps` in a loop.
 - **Track B (installation plan, drafted in parallel):** `bin/08-llama-glm-5.2.service`
-  (systemd unit, placeholder `--ctx-size 524288`/512K — the largest size
-  Task 2.1 directly measured, not extrapolated — and the validated
+  (systemd unit, `--ctx-size 768000`/768K — updated from the original
+  524288/512K placeholder now that Track A's data has settled the
+  context-size decision (see below) — and the validated
   `--n-cpu-moe 54 --tensor-split 54,9,8,8`, port 8092 to avoid colliding
   with the ad-hoc measurement-script port 8091 or feat-1's vLLM port
-  8000) and `bin/09-install-llama-glm-service.sh` (installer: copy +
+  8000\) and `bin/09-install-llama-glm-service.sh` (installer: copy +
   `daemon-reload` + `enable`, deliberately NOT `start`). Both follow the
   `User=user`/`--host 0.0.0.0`/`Restart=on-failure`/etc. conventions of
   feat-1's already-installed (currently inactive) `vllm-deepseek-v4-flash.service`
-  on this same box. **Not installed yet** — pending Track A's results and
-  a `--tensor-split` rebalancing discussion.
-- **New info feeding that rebalancing discussion:** `nvidia-smi
-  --query-gpu=index,pcie.link.gen.max` confirms **GPU0/GPU2 are PCIe 5.0
+  on this same box. **Not installed yet** — pending the `--tensor-split`
+  rebalancing discussion and Task 2.2.1's `--load-mode` result.
+- **New info feeding that rebalancing discussion:** `nvidia-smi --query-gpu=index,pcie.link.gen.max` confirms **GPU0/GPU2 are PCIe 5.0
   x16, GPU1/GPU3 are PCIe 4.0 x16**. CUDA0 (the GPU with the steepest
   KV-cache-growth slope under the current split, and thus the binding
   constraint at high context) happens to already sit on the faster bus;
   CUDA1 (heaviest static MoE weight) sits on a slower one. Whether/how to
   use that asymmetry when rebalancing is the next discussion, once Track
   A's data is in.
+
+**DECISION (2026-08-20): production context size = 768K.** Track A's data
+is now in (see Task 2.3 for the full per-GPU tables): 768K clears the
+≥15%/≥10 GiB safety-margin policy on every GPU (worst case CUDA0, 23.2%
+free); 896K's worst GPU (CUDA0) narrowly misses the 15% leg (14.47% free
+vs. a 15% requirement, a ~514 MiB shortfall) though it clears the flat
+≥10 GiB leg. `bin/08-llama-glm-5.2.service`'s `--ctx-size` has been
+updated from the 512K placeholder to **768000**. **896K is flagged as a
+revisit candidate, not discarded** — a possible `--tensor-split`
+rebalancing (CUDA0 sits on the faster PCIe 5.0 bus but currently also
+carries the largest KV-cache share) could plausibly close that gap; see
+Decisions Made for the full rationale. **DECIDED: not rebalancing before
+install** — moved to Phase 3 as Task 3.3, gated on a decode-throughput
+baseline first (Task 2.5.1). **Track B is now fully done** — both its
+items (768K/896K probe, `--load-mode` result) have landed and nothing
+further blocks Task 2.3's install.
 
 **Task 2.3.1 (swap tuning) is done — actually run on the real box, not
 just scripted.** `bin/10-tune-vm-swappiness.sh` executed successfully:
@@ -452,8 +482,7 @@ as new **Task 3.1** in a new **Phase 3: Optimisations** (non-blocking on
 Phase 2).
 
 **Task 2.2.1 (load-mode benchmark) is in progress.** `bin/11-benchmark-load-mode.sh`
-created (compares `mmap` default vs. `--load-mode none` at `--ctx-size
-896000`, fixed per instruction). **First attempt (2026-08-20) was killed
+created (compares `mmap` default vs. `--load-mode none` at `--ctx-size 896000`, fixed per instruction). **First attempt (2026-08-20) was killed
 mid-run** after live observation (using `/proc/<pid>/io` deltas, 3 samples
 over ~3.5 min) showed disk-read throughput degrading from ~120 MB/s down
 to ~53 MB/s — a real, measured slowdown, not perception. Root cause
@@ -469,64 +498,130 @@ check was paused (`echo idle | sudo tee /sys/block/md126/md/sync_action`
 `/proc/mdstat`). **User is restarting `bin/11` under clean I/O conditions
 as of session end** — next session should pick up its result once done,
 and remember the RAID check is currently PAUSED, not cancelled or
-finished (resume later with `echo check | sudo tee
-/sys/block/md126/md/sync_action`, or it may auto-resume via the next
+finished (resume later with `echo check | sudo tee /sys/block/md126/md/sync_action`, or it may auto-resume via the next
 `mdcheck_continue.timer` fire — do not forget it was paused for this
 reason).
 
+**UPDATE (same day, ~10:30 CEST) — a "very slow progress" report on the
+restart was investigated and explained; not a new problem.** The manual
+pause above did NOT survive the system stop/start in between sessions:
+`mdcheck_continue.timer` re-fired a fresh continuation scrub
+(`05:14:02Z`–`09:42:05Z`, confirmed via `journalctl`), which really was
+slow to compete with. Three quick `bin/11` restarts during/just after
+that window (`09:23`, `09:40`, `10:12`) were each killed within seconds,
+before `llama.cpp`'s silent (no log output) tensor-copy phase ever got
+going — not the loader hanging, just impatience meeting a loader that
+gives zero progress feedback for the multi-hundred-GB copy. The 4th
+attempt (`10:18:24Z`) is confirmed healthy: RAID scrub done
+(`sync_action: idle`, `mismatch_cnt: 0`), clean GPU baseline, sustained
+**~289 MB/s** disk read (two independent `/proc/<pid>/io` samples), ~33%
+through the 524 GiB file at check time, `/health` correctly `503 Loading model`. **Action: let it finish uninterrupted** (ETA ~20 more min at
+check time); judge progress via `/proc/<pid>/io` `read_bytes` or
+`/health`, not GPU-memory/log appearance. Full writeup in Recent Updates
+and Blockers.
+
+**UPDATE (same day) — Task 2.2.1 is DONE, result decided.** The 4th
+attempt (`10:18:24Z`) completed both probes cleanly:
+`bin/logs/2026-08-20T081824Z-load-mode-bench.{txt,json}` show
+`--load-mode none` at 1694s (~28.2m) vs. `mmap-default` at 1842s
+(~30.7m) — **8% faster**. Per-GPU `common_memory_breakdown_print`
+identical between the two runs, as expected. **DECIDED: adopt
+`--load-mode none`** — already added to `bin/08-llama-glm-5.2.service`'s
+`ExecStart`. The RAID10 consistency check that caused the earlier
+restarts is confirmed fully finished, not just paused (`sync_action: idle`, `mismatch_cnt: 0`) — nothing left to resume. One caveat
+carried into the decision, not hidden: the script doesn't drop the page
+cache between probes and `mmap-default` ran first, so part of the 8%
+gap could reflect cache warmth on the second probe rather than a purely
+structural effect; judged not worth a further ~1h re-test given the
+modest, directionally-expected result. Track B's remaining open item is
+now only the `--tensor-split`/`--n-cpu-moe` rebalancing discussion (see
+above) — once that lands, `bin/09-install-llama-glm-service.sh` can run.
+
 ### Next Steps
 
-1. **Task 2.1 and Task 2.2 are both done**; **Task 2.3 is in progress**
-   (two parallel tracks — see Current Status). **Do not poll Track A
-   tick-by-tick in a new assistant session** — it's a long unattended job
-   (still loading `ctx=768000` as of the last check, 2026-08-20T06:05Z;
-   two probes total, each potentially 20-45+ min); let it run under tmux
-   session `glm-kv-768-986` and just read the finished
-   `bin/logs/2026-08-20T055618Z-kv-cache-768-896.txt`/`.json` (or whatever
-   later timestamp if re-run) and the per-context
-   `*-kv-ctx768000.log`/`*-kv-ctx896000.log` for per-GPU
-   `common_memory_breakdown_print` results once it's actually done.
-2. **Task 2.2.1 is IN PROGRESS, restarting now.** `bin/11-benchmark-load-mode.sh`
-   exists (fixed at `--ctx-size 896000`). First attempt was killed
-   mid-run due to confirmed RAID-check I/O contention (see Current
-   Status) — the RAID check has now been paused, and the user is
-   restarting `bin/11` under clean conditions. Next session: check
-   whether it finished (`bin/logs/*-load-mode-bench.txt`/`.json`), and if
-   so, read the RECOMMENDATION line to see which `--load-mode` won; feed
-   that into `bin/08-llama-glm-5.2.service` before Task 2.3 install. If
-   still running, do NOT poll it tick-by-tick (same long-unattended-job
-   guidance as Track A) — just check the log file once.
-3. **Remember to resume the paused RAID check** once `bin/11` (and
-   ideally Track A too, if still relevant) are done consuming disk I/O:
-   `echo check | sudo tee /sys/block/md126/md/sync_action` (or it may
-   auto-resume via the next `mdcheck_continue.timer` fire on its own).
-   It was at 84.1% when paused — don't forget it's paused, not finished
-   or cancelled.
-4. Once Track A's results are in: hold the `--tensor-split`/`--n-cpu-moe`
-   rebalancing discussion (PCIe topology — GPU0/GPU2 are PCIe 5.0 x16,
-   GPU1/GPU3 are PCIe 4.0 x16 — is the new input for that), settle on
-   final `--ctx-size`/`--tensor-split`/`--n-cpu-moe`/`--load-mode` values,
-   edit `bin/08-llama-glm-5.2.service` accordingly, then run
-   `bin/09-install-llama-glm-service.sh` to actually install (copy +
-   `daemon-reload` + `enable`, not `start`).
-5. Continue Task 2.4 (`systemctl start`, curl smoke test, tool-calls, all
-   3 reasoning modes) through Task 2.7 (OpenWebUI/OpenCode wiring,
-   real context validation at the finalized 768K/896K target, quality
-   comparison vs. `feat-1`), including Task 2.5.1 (measure actual
-   tok/min-in/tok/min-out throughput for `UD-Q5_K_XL` — currently
-   unmeasured; Task 2.1/2.2 were memory-only probes).
+0. **IMMEDIATE — pick this up first in a fresh session.** Task 2.4 is
+   in-progress: `llama-glm-5.2.service` was started (`systemctl --user start`) at 2026-08-20 11:58:20 CEST and is cold-loading the ~524 GiB
+   model (`--load-mode none`, expected ~28 min total per Task 2.2.1's
+   benchmark). Last checked ~11:05 CEST (~7 min in): `active (running)`,
+   `/health` still `503` (expected), ~14.5% through the disk read, no
+   errors. **Check once** (`systemctl --user status llama-glm-5.2.service`,
+   `curl http://localhost:8092/health`) — do NOT poll repeatedly, this is
+   a long-unattended-job pattern (see AGENTS.md). Once `/health` is `200`:
+   run the curl smoke test against `/v1/chat/completions`, verify
+   tool-calls (REQ-011 risk explicitly called out on Task 2.4) and all 3
+   reasoning modes (`reasoning_effort: max`/`high`, `enable_thinking: false`), then mark Task 2.4 done. If it crashed instead, check
+   `journalctl --user-unit llama-glm-5.2.service` for the failure and
+   compare against the validated config in `bin/08-llama-glm-5.2.service`.
+
+1. **Track A (Task 2.3's 768K/896K probe) is now DONE** — checked
+   2026-08-20 ~10:30 CEST: `bin/logs/2026-08-20T055618Z-kv-cache-768-896.txt`
+   shows both sizes `status=ok`. Actual per-GPU `common_memory_breakdown_print`
+   results (worst case is CUDA0 both times, matching Task 2.3's
+   pre-computed projection almost exactly):
+
+   | ctx (tokens) | CUDA0 free (measured) | % free | vs. ≥15%/≥10 GiB policy |
+   |---|---|---|---|
+   | 768,000 | 22,569 MiB (~22.0 GiB) | 23.2% | passes comfortably |
+   | 896,000 | 14,079 MiB (~13.75 GiB) | 14.5% | borderline — just under 15%, still >10 GiB flat |
+
+   This data is now available for the `--tensor-split`/PCIe-rebalancing
+   discussion and the 768K-vs-896K production-context decision (both
+   still open — this is factual measurement, not the decision itself).
+
+2. **Task 2.2.1 (load-mode benchmark) is DONE.** `bin/11-benchmark-load-mode.sh`'s
+   4th attempt (`10:18:24Z`) completed cleanly after the RAID10
+   consistency-check contention that killed the first 3 was fully
+   resolved: `--load-mode none` measured 8% faster than `mmap-default`
+   (1694s vs 1842s). **DECIDED: adopt `--load-mode none`** — already
+   added to `bin/08-llama-glm-5.2.service`'s `ExecStart`. Nothing further
+   to do here (see Current Status/Decisions Made for the result detail
+   and the page-cache-warmth caveat carried into the decision).
+
+3. **The RAID check does not need resuming — it finished on its own.**
+   Confirmed `sync_action: idle`, `mismatch_cnt: 0` on `/dev/md126` — the
+   earlier "paused, remember to resume" note is now moot; the scrub ran
+   to completion via `mdcheck_continue.timer` before the successful
+   `bin/11` attempt even started.
+
+4. **Task 2.3 is DONE — installed on the box.** All three gating items
+   resolved (`--ctx-size 768000`, `--load-mode none` decided; `--tensor-split`
+   rebalancing decided NOT to happen before install, moved to Phase 3 as
+   Task 3.3, gated on Task 2.5.1's decode-throughput baseline — see
+   Decisions Made for the full rationale). `bin/09-install-llama-glm-service.sh`
+   run successfully: `systemctl --user status llama-glm-5.2.service`
+   confirms `loaded; disabled; inactive (dead)` — installed file verified
+   byte-identical to `bin/08-llama-glm-5.2.service` via `diff`. **Task
+   2.3.2 (groups) and Task 2.3.3 (lingering) were already done before
+   this**, so nothing further is needed before Task 2.4.
+
+5. **Next up: Task 2.4** (`systemctl --user start llama-glm-5.2.service`,
+   no sudo; curl smoke test against `/v1/chat/completions`, verify
+   tool-calls and all 3 reasoning modes). Cold load historically takes
+   20-45+ min for this quant/size (`bin/08`'s own header) — do not assume
+   a hang; follow via `journalctl --user-unit llama-glm-5.2.service -f`
+   or poll `/health`, not tick-by-tick log-watching (same
+   long-unattended-job guidance as Track A/Task 2.2.1 above). Then
+   continue through Task 2.7 (OpenWebUI/OpenCode wiring, real context
+   validation at 768K, quality comparison vs. `feat-1`), including Task
+   2.5.1 (measure actual tok/min-in/tok/min-out throughput for
+   `UD-Q5_K_XL` — currently unmeasured, Task 2.1/2.2 were memory-only
+   probes, and Task 3.3's rebalancing revisit is gated on this landing).
+
 6. **Task 2.3.1 is fully done** — `bin/10-tune-vm-swappiness.sh` actually
    run on the box, `vm.swappiness` confirmed `1`. Follow-up spun off as
    **Task 3.1** (Phase 3: Optimisations) — decide whether to enlarge the
    2 GiB `/swapfile`, not yet started, non-blocking on Phase 2.
+
 7. Let `bin/00-download-glm-quants.sh` keep finishing `UD-Q4_K_XL`
    (fallback, 60.8% at last check) in the background — check progress any
    time with `bin/04-dl-status.sh`. No longer a gate on anything now that
    Task 2.2 has confirmed `UD-Q5_K_XL` as the production quant; can be left
    to finish or abandoned at the user's discretion.
+
 8. Decide whether to post `followup-comment-draft.md` to
    vllm-project/vllm#52938 — drafted and hedged, deliberately left for a
    separate decision, not posted.
+
 9. `feat-1`'s parallel SGLang/vLLM-version diagnostics remain independently
    useful context if they report back, but are no longer a hard dependency
    — this feature already has one confirmed working engine (`llama.cpp`).
@@ -539,25 +634,30 @@ reason).
   `UD-Q5_K_XL`/`UD-Q4_K_XL` downloads — resolved for the target quant
   (`UD-Q5_K_XL` finished, confirmed via `bin/04-dl-status.sh`), and Task
   2.1's KV-cache measurement is now also done (see Task 2.1/Current
-  Status):   `UD-Q5_K_XL` fits 350-370K context with large headroom
+  Status): `UD-Q5_K_XL` fits 350-370K context with large headroom
   (~235 GiB vs the 896 GB pool), and Task 2.2's per-GPU analysis confirms
   `UD-Q5_K_XL` as the production quant (worst-case GPU still ~28% free at
   370K). `UD-Q4_K_XL` (fallback) is still downloading in the background
   (60.8% at last check) but is no longer needed for anything in the
-  current plan. **Soft dependency (not a hard blocker):** Task 2.3's
-  systemd install is drafted but not yet run — waiting on Track A's
-  768K/896K empirical results (running now, separately), the
-  `--tensor-split` rebalancing discussion, and Task 2.2.1's `--load-mode`
-  result before finalizing `bin/08-llama-glm-5.2.service`'s
-  placement/context values.
-- **Maintenance loose end (not a feature blocker, but do not lose track
-  of it):** the box's `/dev/md126` RAID10 consistency check (the array
-  `/data` lives on) is currently PAUSED (`sync_action: idle`), not
-  finished or cancelled — it was at 84.1% when paused to eliminate I/O
-  contention for Task 2.2.1's `bin/11` benchmark. Resume it once `bin/11`
-  (and any other disk-heavy work) is done:
-  `echo check | sudo tee /sys/block/md126/md/sync_action` (or it may
-  auto-resume on its own via the next `mdcheck_continue.timer` fire).
+  current plan. **Soft dependency (not a hard blocker) — down to ONE open
+  item:** Track A's 768K/896K probe and Task 2.2.1's `--load-mode`
+  benchmark are both DONE and DECIDED (`--ctx-size 768000`, `--load-mode none` — both already baked into `bin/08-llama-glm-5.2.service`). The
+  only thing still gating Task 2.3's actual install
+  (`bin/09-install-llama-glm-service.sh`) is the `--tensor-split`/
+  `--n-cpu-moe` rebalancing discussion informed by the PCIe-topology
+  finding (GPU0/GPU2 = PCIe 5.0 x16, GPU1/GPU3 = PCIe 4.0 x16) — not yet
+  held.
+- **RAID maintenance loose end — RESOLVED, but not the way expected.**
+  The manually-paused `/dev/md126` check from earlier did NOT stay
+  paused: the system stop/start (reboot) around the same time let
+  `mdcheck_continue.timer` re-fire a fresh continuation run
+  (`journalctl -u mdcheck_continue.service`: started 2026-08-20T05:14:02Z,
+  finished 2026-08-20T09:42:05Z, "Deactivated successfully"). Confirmed
+  now via `/sys/block/md126/md/sync_action` = `idle` and `mismatch_cnt` =
+  `0` — the scrub completed cleanly on its own; no manual resume command
+  is needed. This 4.5h window DID cause real, measured I/O contention
+  (see Task 2.2.1 below) for anything disk-heavy started while it ran —
+  now fully clear.
 
 ### Recent Updates
 
@@ -565,10 +665,8 @@ reason).
 
 - Completed: Implemented Task 2.3.1 — `bin/10-tune-vm-swappiness.sh`
   created (idempotent, persists `vm.swappiness=1` via
-  `/etc/sysctl.d/99-glm-swappiness.conf`, applies immediately via `sudo
-  sysctl --system`). User ran it on the actual box: succeeded,
-  `vm.swappiness` confirmed `60 -> 1`. Two unrelated `sysctl: ... Invalid
-  argument` warnings for pre-existing `net.ipv4.conf.all.*` keys appeared
+  `/etc/sysctl.d/99-glm-swappiness.conf`, applies immediately via `sudo sysctl --system`). User ran it on the actual box: succeeded,
+  `vm.swappiness` confirmed `60 -> 1`. Two unrelated `sysctl: ... Invalid argument` warnings for pre-existing `net.ipv4.conf.all.*` keys appeared
   (harmless — caused by `sysctl --system` re-applying every existing
   sysctl file, not ours).
 - Found: running Task 2.3.1 surfaced that `/swapfile` is only 2 GiB total
@@ -613,6 +711,48 @@ reason).
   `bin/08-llama-glm-5.2.service` before Task 2.3 install. Remember to
   resume the paused RAID check afterward (see Blockers) — it is paused,
   not finished or cancelled.
+
+#### 2026-08-20 (later same day, ~10:30 CEST) — investigated a "very slow progress" report
+
+- Found: the manual RAID-check pause from earlier did NOT survive the
+  system stop/start (reboot) — `mdcheck_continue.timer` re-fired a
+  **fresh, unpaused** continuation scrub on `/dev/md126`, confirmed via
+  `journalctl -u mdcheck_continue.service`: started `2026-08-20T05:14:02Z`,
+  finished `2026-08-20T09:42:05Z` ("Deactivated successfully"). Confirmed
+  finished now: `sync_action`=`idle`, `mismatch_cnt`=`0`. This was a
+  genuine, ~4.5h I/O-contention window for anything disk-heavy started
+  during it — not user error, and now fully resolved. The Blockers
+  section's "remember to resume the paused RAID check" note is stale —
+  no manual resume needed, it already completed on its own trigger.
+- Found: three `bin/11` restart attempts this morning
+  (`09:23:47`, `09:40:51`, `10:12:43`) each got killed within ~2-3 seconds
+  of starting — every log stops at the identical point (right after the
+  `blk.78` "unused tensor" metadata warnings), before `llama.cpp`'s
+  tensor-copy phase begins, which prints nothing until the model is fully
+  loaded. Read: these were restarted believing "no new log output" meant
+  hung, when this loader is simply silent for the entire multi-hundred-GB
+  copy phase. The `10:12:43` attempt additionally started with a
+  contaminated baseline (162,064 MiB already "in use" on GPU — a
+  stale-teardown artifact from the prior kill not yet fully released).
+- Found: the 4th attempt (started `10:18:24Z`, still running at check
+  time) is healthy — clean baseline, RAID scrub already finished before
+  it started, and a sustained **~289 MB/s** disk-read rate verified via
+  two independent `/proc/<pid>/io` `read_bytes` samples ~90s apart (no
+  degradation). At check time: 186.8 GiB / 524 GiB read (~33%), ETA
+  ~20-22 more minutes — consistent with Task 2.1's historical 20-45 min
+  cold-load range. `curl http://127.0.0.1:8091/health` correctly returned
+  `503 Loading model` (not crashed/hung).
+- Lesson recorded for future sessions: judge a cold-load's progress by
+  `/proc/<pid>/io`'s `read_bytes` growth (or `/health` status) — NOT by
+  GPU-memory appearing idle or by log silence, both of which look
+  identical whether the load is healthy or actually stuck. Also: a
+  reboot can silently un-pause a previously-paused RAID scrub via its
+  systemd timer, so re-check `/proc/mdstat`/`sync_action` after any
+  power-cycle before blaming a slow load on something else.
+- Next: let the current `bin/11` run (PID 8615 at check time) finish
+  uninterrupted; do not kill/restart it again. Then proceed as previously
+  planned (read the RECOMMENDATION line, feed `--load-mode` into
+  `bin/08-llama-glm-5.2.service`, Task 2.3 install).
 
 #### 2026-08-19
 
@@ -806,8 +946,7 @@ reason).
   empirically compare `--load-mode none` (direct/eager read) against the
   `mmap` default for `UD-Q5_K_XL` cold-load wall-clock time. Sequenced
   BEFORE Task 2.3's systemd install (not after Task 2.4 start, as first
-  drafted) — the `--load-mode` decision is an input to `bin/08-llama-glm-
-  5.2.service`, same as the finalized `--ctx-size`/`--tensor-split` values,
+  drafted) — the `--load-mode` decision is an input to `bin/08-llama-glm- 5.2.service`, same as the finalized `--ctx-size`/`--tensor-split` values,
   so it should be resolved before the service is installed rather than
   requiring an edit-and-reinstall cycle afterward. It also doesn't need to
   wait on Track A/PCIe rebalancing or the finalized context size at all,
@@ -889,6 +1028,43 @@ reason).
   `/swapfile` is now open as its own question — tracked as Task 3.1 in a
   new "Phase 3: Optimisations" rather than blocking Phase 2's deployment
   work.
+- **2026-08-20 (production context size: 768K chosen, 896K flagged as a
+  revisit candidate)**: With Track A's `bin/07-measure-kv-cache-768-896.sh`
+  results in (both `ctx=768,000` and `ctx=896,000` measured `status=ok`,
+  see Task 2.3), the per-GPU numbers settle the context-size question in
+  favor of **768K as the production `--ctx-size`**: every GPU clears the
+  adopted ≥15%-free-or-≥10-GiB-absolute safety-margin policy with room to
+  spare (worst case CUDA0 at 22,569 MiB free / 23.2%). **896K does not
+  clear the same bar**: its worst GPU (CUDA0) measures 14,079 MiB free
+  (14.47%) against a 14,593 MiB (15% of its 97,288 MiB total) requirement —
+  a ~514 MiB (~0.5 GiB) shortfall on the stricter leg of the policy, even
+  though it still clears the flat ≥10 GiB leg (13.75 GiB > 10 GiB). Given
+  the policy was deliberately sized to leave headroom for production
+  extras Task 2.1/Track A's load-only probes don't exercise (larger batch
+  sizes, prompt cache, OpenCode tool-call payloads, OS/driver overhead —
+  see Task 2.2), shipping on a config that already trips one leg of its
+  own safety policy before any of those extras are added is judged too
+  thin a margin for a first production deployment. 768K still exceeds
+  REQ-003's 350-370K target by more than 2x, so there is no requirements
+  pressure to take the risk.
+  **896K is explicitly NOT discarded — it is flagged as a candidate to
+  revisit later**, for at least two reasons: (1) it is CUDA0's margin
+  specifically that fails, and CUDA0 is also the GPU identified (Task 2.3,
+  PCIe-topology finding) as sitting on the box's faster PCIe 5.0 bus while
+  carrying the largest KV-cache-growth share under the current
+  `--tensor-split 54,9,8,8` split — the pending rebalancing discussion
+  could plausibly shift enough of that share off CUDA0 (or onto the other
+  Gen5 GPU, CUDA2, which has ~28-30 GiB free at both sizes) to close the
+  ~514 MiB gap without giving up any margin elsewhere; (2) the ~514 MiB
+  shortfall itself is small relative to the ~14-23 GiB range these GPUs are
+  operating in, i.e. this is a placement/tuning problem, not a fundamental
+  capacity one. If/when the rebalancing lands and a re-measurement shows
+  896K clearing the policy, this decision can be revisited without
+  re-running the 768K/896K probe again (the data already exists in
+  `bin/logs/2026-08-20T055618Z-kv-cache-768-896.{txt,json}` and the
+  per-context `*-kv-ctx768000.log`/`*-kv-ctx896000.log` files) — only the
+  rebalanced config would need re-testing. Until then, 768K is what ships
+  in `bin/08-llama-glm-5.2.service`.
 
 #### 2026-08-20 (Task 2.1 KV-cache sweep — result analysis)
 
@@ -985,13 +1161,11 @@ reason).
   hardcoded to exactly `ctx=768000` and `ctx=896000` (no CLI args, no
   adaptive ramp/bisection), same engine/quant/placement as the validated
   Task 2.1 run. Handed off to the user to run separately (per instruction)
-  — confirmed live on the box shortly after (`llama-server --ctx-size
-  768000 ...` loading under tmux session `glm-kv-768-986`, PID 137131).
+  — confirmed live on the box shortly after (`llama-server --ctx-size 768000 ...` loading under tmux session `glm-kv-768-986`, PID 137131).
 - Completed (in parallel, Track B): drafted `bin/08-llama-glm-5.2.service`
   (systemd unit for `llama-server` + GLM-5.2/`UD-Q5_K_XL`, placeholder
   `--ctx-size 524288`/512K — the largest DIRECTLY measured size, not the
-  extrapolated one — and the validated `--n-cpu-moe 54 --tensor-split
-  54,9,8,8`; port 8092, chosen to avoid the ad-hoc measurement port 8091
+  extrapolated one — and the validated `--n-cpu-moe 54 --tensor-split 54,9,8,8`; port 8092, chosen to avoid the ad-hoc measurement port 8091
   and feat-1's vLLM port 8000) and `bin/09-install-llama-glm-service.sh`
   (copy + `daemon-reload` + `enable`, explicitly not `start` — that stays
   Task 2.4). Conventions copied from feat-1's already-installed (currently
@@ -1027,6 +1201,252 @@ reason).
   both probes, then proceed with the `--tensor-split` rebalancing
   discussion (PCIe topology already captured above) before touching
   `bin/08-llama-glm-5.2.service`/`bin/09-install-llama-glm-service.sh`.
+
+#### 2026-08-20 (user-level systemd for Task 2.3)
+
+- **Decision: `llama-glm-5.2.service` will be installed as a systemd
+  `--user` unit** (`~/.config/systemd/user/llama-glm-5.2.service`,
+  managed entirely via `systemctl --user ...`), NOT a system-wide unit
+  under `/etc/systemd/system/` like `feat-1`'s
+  `vllm-deepseek-v4-flash.service`. Rationale: this service is expected
+  to be started/stopped/restarted repeatedly during iterative testing
+  (Tasks 2.4-2.7 and beyond), and requiring an interactive `sudo`
+  password for every one of those cycles is friction with no real
+  security benefit here — the box's `user` account already has `sudo`,
+  REQ-008 already accepts an anonymous/unauthenticated network posture,
+  and REQ-009 only requires "a managed service (systemd unit or
+  equivalent)", which `systemctl --user` satisfies exactly as well as a
+  system unit (still no ad-hoc foreground processes, still start/stop
+  exclusively via `systemctl`, just with `--user` added).
+- **Trade-off explicitly accepted: lingering (`loginctl enable-linger`)
+  is deliberately NOT enabled.** Consequence: the service only runs
+  while `user` has an active login session; it will NOT auto-start on
+  boot and will NOT survive past the last session closing. Chosen
+  because this box's actual workflow is already "power-cycle, then
+  manually kick off testing" (see AGENTS.md/Task 2.2.1's own note about
+  the daily power-cycle) — a manual `systemctl --user start` after each
+  boot/login fits that workflow with no added step, whereas lingering
+  would add a persistence guarantee nothing here currently needs. This is
+  revisitable: if unattended 24/7 uptime across reboots ever becomes a
+  requirement (e.g. once this moves from iterative testing to a
+  standing production endpoint that other users/services depend on),
+  `loginctl enable-linger` is the one additional command needed — no
+  changes to the unit file itself.
+  **CORRECTED later the same day** — this bullet's framing of the
+  requirement was wrong; see "lingering + no autostart" below for the
+  corrected decision and the incident it caught.
+- **Decision: add `user` to the `video`/`render` groups** (new **Task
+  2.3.2**, `bin/12-setup-user-systemd-groups.sh`) as defense-in-depth for
+  GPU device access, even though it is not currently required — this
+  box's `/dev/nvidia*` device files are presently world-writable
+  (`crw-rw-rw-`), so a systemd `--user` service can already open them
+  without any group membership. Explicit group membership is the
+  standard, portable mechanism for this and should not be skipped just
+  because a permissive (and possibly incidental/overridable) device
+  permission happens to make it unnecessary today.
+- **Practical consequences for the unit file** (`bin/08-llama-glm-5.2.service`,
+  already updated): no `User=`/`Group=` (meaningless for a `--user`
+  unit), `[Install] WantedBy=default.target` instead of
+  `multi-user.target` (the user manager's equivalent target), and
+  explicit `Environment=PATH=...`/`Environment=CUDA_VISIBLE_DEVICES=...`
+  since `systemd --user` does not source the login shell's
+  `~/.bashrc`/`~/.profile`. `bin/09-install-llama-glm-service.sh` updated
+  to install to `~/.config/systemd/user/` via `systemctl --user daemon-reload` — deliberately NOT `enable` (see "lingering + no
+  autostart" below for why), with no `sudo` anywhere in that script.
+
+#### 2026-08-20 (lingering + no autostart — correction + live incident)
+
+- **Corrected requirement:** the actual ask was "keep `llama-glm-5.2.service`
+  running even when no user is logged in", NOT "autostart at boot right
+  now" — these are two different systemd mechanisms and the original
+  same-day decision above conflated them (it assumed "no lingering" was
+  the right choice for "no autostart yet", which is wrong: without
+  lingering, the service dies the moment the last login session closes,
+  autostart or not).
+- **Decision (superseding the earlier one): enable lingering, but do NOT
+  enable the unit.** The two together give exactly the wanted behavior:
+  - Lingering ON (`loginctl enable-linger`, no sudo needed for a user
+    enabling their own lingering — verified on this box) keeps `user`'s
+    `systemd --user` manager instance alive/running with zero active
+    login sessions (and starts it at boot, ahead of any login), so a
+    service started under it survives logout.
+  - The unit stays **disabled** (never `systemctl --user enable`d) —
+    critically, enabling a unit is what causes it to auto-start when the
+    user manager reaches `default.target`, which now happens at boot
+    once lingering is on. Leaving it disabled means it only ever runs
+    when someone explicitly runs `systemctl --user start llama-glm-5.2` — but once started that way, it keeps running across
+    logout (because of lingering) and simply does not come back on its
+    own after a reboot until started again by hand.
+  - To opt into full autostart-at-boot later, the only additional step
+    is `systemctl --user enable llama-glm-5.2.service`; nothing else
+    (lingering, the unit file itself) needs to change for that.
+- **Live incident caught and fixed while implementing this:** checking
+  lingering status on the box found that `bin/09-install-llama-glm-service.sh`
+  had already been run once (by the user, separately, per this feature's
+  established parallel-work pattern) and had `enable`d the unit as that
+  script was originally written. With lingering freshly turned on in the
+  very same check, that enabled unit was one boot away from silently
+  auto-starting `llama-glm-5.2` — a 570 GB model load across all 4
+  GPUs — the exact "autostart at this time" outcome explicitly ruled
+  out. Caught immediately (`systemctl --user status llama-glm-5.2`
+  showed `enabled`), fixed via `systemctl --user disable llama-glm-5.2`
+  (confirmed back to `disabled`/`inactive (dead)`, GPUs unaffected — the
+  GPU memory in use at check time was independently accounted for by
+  Task 2.2.1's own `bin/11` load-mode benchmark, not by an accidental
+  start of this unit). Tracked as **Task 2.3.3** (done) alongside Task
+  2.3.2.
+- **Fixes applied so this can't silently recur:** `bin/09-install-llama-glm-service.sh`
+  rewritten to never call `systemctl --user enable`, and to defensively
+  `disable` the unit again if it finds it already enabled from a prior
+  run (e.g. from before this correction) every time the script is
+  re-run. New `bin/13-enable-user-lingering.sh` created (idempotent) to
+  make the lingering step itself scripted/reproducible rather than a
+  one-off manual command. `bin/08-llama-glm-5.2.service`'s header comment
+  rewritten to describe the corrected lingering + not-enabled combination
+  instead of the superseded "no lingering" framing.
+
+#### 2026-08-20 (Task 2.3.2 rollout — `$USER`-under-`sudo` bug + manual `root` removal)
+
+- **Bug found while rolling out Task 2.3.2:** `bin/12-setup-user-systemd-groups.sh`
+  originally derived its target account from `$USER`. Invoked as `sudo bash 12-setup-user-systemd-groups.sh`, `$USER` resolved to `root`
+  (the account `sudo` actually runs as), so the script happily reported
+  "already a member of video/render" for `root` — which was true and
+  therefore silently made no changes — rather than adding the intended
+  `user` account. No harm done (idempotent, no-op on the wrong target),
+  but the real work hadn't happened.
+- **Fix:** changed the script to take the target user as an optional
+  first positional argument (`TARGET_USER="${1:-user}"`), defaulting to
+  `user`, with the header comment updated to warn against relying on
+  `$USER` under `sudo` and to show the corrected invocation:
+  `sudo bash 12-setup-user-systemd-groups.sh user`.
+- **Done (2026-08-20):** re-run with the fix; confirmed via `id user` —
+  `video`(44) and `render`(110) both present in `user`'s group list, no
+  fresh login needed beyond the session already active at the time.
+- **Decision: remove `root` from `video`/`render`, but do this manually,
+  NOT as part of the script.** Rationale: `root` doesn't need group
+  membership for device access (it has it unconditionally), and having
+  it there is very likely an artifact of the driver/base-image setup
+  rather than an intentional choice for this feature — tightening it is
+  reasonable, but doing so automatically from a script whose stated
+  purpose is "add `user`" would be a scope-creeping, easy-to-miss side
+  effect on a shared system group. Executed manually: `sudo delgroup root video`, `sudo delgroup root render`. Confirmed: `/etc/group` now
+  shows `video:x:44:user` / `render:x:110:user` — `user` only, no `root`.
+
+#### 2026-08-20 (session wrap-up — Task 2.2.1 landed, OpenCode config drafted, context budget)
+
+- **Completed: Task 2.2.1 (`--load-mode` benchmark) confirmed DONE and
+  DECIDED this session** (the 4th `bin/11-benchmark-load-mode.sh` attempt,
+  killed/restarted three times earlier the same day due to RAID10-scrub
+  I/O contention, finished cleanly): `--load-mode none` measured 1694s
+  (~28.2m) vs. `mmap-default`'s 1842s (~30.7m) — **8% faster**. Verified
+  directly from `bin/logs/2026-08-20T081824Z-load-mode-bench.{txt,json}`
+  and cross-checked that no `llama-server` process was still running.
+  `--load-mode none` is now baked into `bin/08-llama-glm-5.2.service`'s
+  `ExecStart`, alongside the already-decided `--ctx-size 768000`. Also
+  re-confirmed `/dev/md126`'s RAID10 consistency check is genuinely
+  finished (`sync_action: idle`, `mismatch_cnt: 0`), not merely paused —
+  the earlier "remember to resume it" note is stale/moot.
+- **Completed: drafted the OpenCode client-side config for this endpoint**
+  (Task 2.6, done ahead of time since Task 2.3/2.4 aren't finished yet):
+  - Added `--alias glm-5.2:UD-Q5_K_XL` to `bin/08-llama-glm-5.2.service`.
+    Without it, `llama-server` reports its own identity as the raw
+    absolute GGUF file path in `/v1/models` and in every response's
+    `"model"` field — confirmed empirically from an early spike response
+    (`bin/logs/2026-08-19T113231Z-spike-result.json`: the client sent one
+    `"model"` value, the server echoed back a completely different one,
+    its own full path — `llama-server` does not validate/echo the
+    request's `model` field when only one model is loaded).
+  - Created `opencode-provider-snippet-glm-5.2.jsonc` (feature folder
+    root, alongside `followup-comment-draft.md`) — a standalone,
+    paste-able `provider` fragment for a **different** system's
+    `opencode.jsonc` (explicitly NOT written into this box's own
+    `~/.config/opencode/opencode.jsonc`, per user instruction). Mirrors
+    the box's existing `ollama-sys0` provider shape:
+    `@ai-sdk/openai-compatible`, `baseURL: http://<sys0-LAN-IP>:8092/v1`,
+    model key `glm-5.2:UD-Q5_K_XL`, `limit.context: 768000`,
+    `limit.output: 32768` (a placeholder cap, not a measured value —
+    chosen to comfortably clear the truncation seen in one ACC-002 spike
+    case where a 600-token budget wasn't enough for GLM-5.2's default
+    `reasoning_effort: max` mode).
+  - Added **Task 3.2** (Phase 3: Optimisations) to track a gap surfaced
+    while drafting that snippet: OpenCode's documented config schema has
+    no obvious way to inject `--chat-template-kwargs`-equivalent extra
+    body fields (`reasoning_effort`/`enable_thinking`) per model, so
+    OpenCode sessions against this endpoint would run GLM-5.2 in its
+    default mode only until that's resolved. Not a blocker for
+    Task 2.4/ACC-004 (verified via curl instead, per REQ-004's own
+    wording).
+- **Completed: fixed a stale line in Blockers** — it still referenced
+  Track A/load-mode as open/running; corrected to reflect both are done
+  and decided, leaving the `--tensor-split`/`--n-cpu-moe` rebalancing
+  discussion as the ONLY remaining gate before Task 2.3's actual install.
+- **Session wrap-up (context budget, ending here for a fresh session):**
+  nothing else was touched on the box this session beyond what's recorded
+  above (no GPU/model state changed, no other files outside this feature
+  folder). Clean resumption point for the next session:
+  1. Hold the `--tensor-split`/`--n-cpu-moe` PCIe-rebalancing discussion
+     (GPU0/GPU2 = PCIe 5.0 x16, GPU1/GPU3 = PCIe 4.0 x16; CUDA0 is both
+     the GPU that decided 768K-over-896K in Task 2.3 AND the one on the
+     faster bus — rebalancing could reopen the 896K question, see
+     Decisions Made). This is the single open item blocking install.
+  2. Once decided, edit `bin/08-llama-glm-5.2.service`'s
+     `--tensor-split`/`--n-cpu-moe` (everything else — `--ctx-size`,
+     `--load-mode`, `--alias` — is already final), then run
+     `bin/09-install-llama-glm-service.sh` (copy + `daemon-reload` only,
+     a `systemctl --user` install, no sudo).
+  3. Task 2.4 (`systemctl --user start`, curl smoke test, tool-calls, all
+     3 reasoning modes) through Task 2.7 (OpenWebUI/OpenCode wiring using
+     `opencode-provider-snippet-glm-5.2.jsonc`, real 768K context
+     validation, quality comparison vs. `feat-1`) remain not-started.
+  4. `UD-Q4_K_XL` fallback download may still be finishing in the
+     background (`bin/04-dl-status.sh`) — no longer needed for anything,
+     safe to ignore or let finish.
+  5. Task 3.1 (swapfile resize), Task 3.2 (`--chat-template-kwargs`
+     from OpenCode), and Task 3.3 (`--tensor-split`/`--n-cpu-moe`
+     rebalancing, revisiting 896K) are all open, non-blocking Phase 3
+     items — Task 3.3 additionally depends on Task 2.5.1 landing first.
+
+#### 2026-08-20 (rebalancing reframed as non-blocking, moved to Phase 3)
+
+- **Reframing decision:** the `--tensor-split`/`--n-cpu-moe` rebalancing
+  discussion was being tracked as an embedded gating item inside Task
+  2.3's description, phrased as "the only remaining gate" before install.
+  On review, that framing was imprecise: rebalancing was never actually
+  needed for 768K's safety (768K already clears the adopted ≥15%/≥10 GiB
+  safety-margin policy on every GPU with real room to spare, and exceeds
+  REQ-003's 350-370K target by 2x+) — it was only ever relevant to
+  reclaiming the 896K stretch goal, which was already independently
+  flagged as "a revisit candidate, not discarded" rather than required.
+  Conflating the two made Task 2.3 look blocked when it wasn't.
+- **Decision: do not rebalance before installing at 768K.** Stripped the
+  rebalancing item out of Task 2.3's gating list entirely (all three
+  original gates — 768K/896K probe, `--load-mode`, and now this — are
+  resolved; Task 2.3 is unblocked). Moved the discussion to a new **Task
+  3.3** in **Phase 3: Optimisations**, explicitly gated on **Task 2.5.1**
+  (decode tok/s baseline) landing first — not just deferred for
+  scheduling convenience. Rationale: the current split's KV-cache
+  imbalance on CUDA0 appears tied to which layers `--n-cpu-moe 54`
+  offloads experts from (CUDA0 holds the *smallest* static model weight
+  of the four GPUs, 19,485 MiB, yet 71% of the total KV-cache) — CUDA0
+  also happens to sit on the box's faster PCIe 5.0 bus, which is
+  currently a good pairing for that offloaded-expert traffic (streamed
+  across PCIe every decode step). Shrinking CUDA0's tensor-split ratio to
+  free KV-cache margin could inadvertently shift that traffic onto a
+  slower Gen4 GPU instead, regressing decode throughput to gain context
+  headroom — a trade-off invisible without a throughput baseline to
+  compare against, hence the explicit Task 2.5.1 dependency.
+- **Practical effect:** `bin/08-llama-glm-5.2.service` is now considered
+  fully finalized (`--ctx-size 768000 --n-cpu-moe 54 --tensor-split 54,9,8,8 --load-mode none`); `bin/09-install-llama-glm-service.sh` can
+  be run at any time without waiting on anything further.
+
+#### 2026-08-20 (Task 2.3 installed)
+
+- **Task 2.3 is DONE.** `bin/09-install-llama-glm-service.sh` run
+  successfully on the box: `systemctl --user status llama-glm-5.2.service`
+  confirms `Loaded: loaded (/home/user/.config/systemd/user/llama-glm-5.2.service; disabled; vendor preset: enabled)`, `Active: inactive (dead)` — exactly the intended state (see "lingering + no autostart"
+  above): won't autostart at boot, ready for an explicit `systemctl --user start`. Installed unit file confirmed byte-identical to
+  `bin/08-llama-glm-5.2.service` via `diff`. Task 2.4 (`start` + curl
+  smoke test) is next.
 
 ### Related PRs / Commits
 

@@ -1,0 +1,17 @@
+[
+{
+  "mode": "mmap-default",
+  "status": "ok",
+  "gpu_mem_used_mib": 283712,
+  "ram_used_kib": 13595088,
+  "load_secs": 1842,
+  "log": "/home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-20T081824Z-load-mode-mmap-default.log"
+},
+{
+  "mode": "load-mode-none",
+  "status": "ok",
+  "gpu_mem_used_mib": 286424,
+  "ram_used_kib": 24000968,
+  "load_secs": 1694,
+  "log": "/home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-20T081824Z-load-mode-load-mode-none.log"
+}]

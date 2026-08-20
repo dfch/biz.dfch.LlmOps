@@ -1,0 +1,64 @@
+// GLM-5.2 (llama.cpp / UD-Q5_K_XL) OpenCode provider snippet
+// feat-2-glm-5.2-onprem-deployment, Task 2.6
+//
+// This is NOT a complete opencode.jsonc -- it is the "provider" entry to
+// merge into an EXISTING opencode.jsonc on a DIFFERENT system than sys0
+// (the Dell 7960T this feature deploys to). Paste the object below into
+// that file's top-level "provider" object, alongside any other providers
+// already there (e.g. "abacus", "ollama-sys0"), and replace <sys0-LAN-IP>
+// with sys0's actual LAN address reachable from that other system (the
+// same host/IP already used for that system's "ollama-sys0" entry, just a
+// different port).
+//
+// Prerequisites (see this feature's Task 2.3/2.4 -- NOT done yet as of
+// 2026-08-20): the llama.cpp GLM-5.2 systemd --user service on sys0
+// (bin/08-llama-glm-5.2.service) must be installed AND started
+// (`systemctl --user start llama-glm-5.2`) before this endpoint responds.
+// Until then, http://<sys0-LAN-IP>:8092/v1 simply refuses connections.
+//
+// Model id `glm-5.2:UD-Q5_K_XL` matches the `--alias` flag added to
+// bin/08-llama-glm-5.2.service -- without that alias, llama-server would
+// instead report its own identity as the raw absolute GGUF file path in
+// /v1/models and in every response's "model" field (confirmed empirically
+// from an early spike response; see bin/08-llama-glm-5.2.service's header
+// comment for the evidence).
+//
+// `limit.context: 768000` matches Task 2.3's decided production context
+// size (768K, not the 896K candidate still flagged for revisit -- see the
+// feature README's Decisions Made). `limit.output: 32768` is a reasonable
+// placeholder cap, not a measured value -- adjust once real usage patterns
+// are known (GLM-5.2's reasoning mode can consume a lot of tokens on
+// `reasoning_content` alone).
+//
+// Known open item (Task 3.2, Phase 3): there is currently no confirmed way
+// to drive GLM-5.2's --chat-template-kwargs reasoning-mode toggles
+// (reasoning_effort: max/high, or enable_thinking: false -- REQ-004) from
+// an OpenCode session through opencode.jsonc alone. Until Task 3.2
+// resolves that, sessions through this provider run GLM-5.2 in its default
+// mode (reasoning_effort: max, per unsloth's defaults) -- explicit
+// low/no-thinking-mode testing happens via direct curl/API calls instead
+// (Task 2.4/ACC-004).
+//
+// If OpenCode errors on a missing API key, add "apiKey": "not-needed"
+// under "options" below -- REQ-008 means this endpoint has no real auth,
+// but the AI SDK's openai-compatible provider may still want a non-empty
+// placeholder string.
+
+{
+        "llama-cpp-sys0": {
+            "npm": "@ai-sdk/openai-compatible",
+            "name": "llama.cpp GLM-5.2 (SYS0)",
+            "options": {
+                "baseURL": "http://sys0:8092/v1"
+            },
+            "models": {
+                "glm-5.2:UD-Q5_K_XL": {
+                    "name": "GLM-5.2 (UD-Q5_K_XL)",
+                    "limit": {
+                        "context": 768000,
+                        "output": 65536
+                    }
+                }
+            }
+        }
+}
