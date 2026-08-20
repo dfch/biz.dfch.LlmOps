@@ -105,10 +105,23 @@ minimums (their reference config runs the 2-bit quant on a single 24 GB GPU
   (`reasoning_effort` max/high and `enable_thinking:false`) confirmed to
   toggle correctly. If the engine is llama.cpp, tool-calling is explicitly
   re-verified (REQ-011 risk)
-- [ ] ACC-005: Verifies REQ-005/REQ-006 — the chosen quant is recorded
+- [x] ACC-005: Verifies REQ-005/REQ-006 — the chosen quant is recorded
   (target `UD-Q5_K_XL`, else `UD-Q4_K_XL`), with a one-line rationale for
   why it is the highest-quality option that still meets REQ-003's context
   target on this hardware (both are near-lossless per unsloth's KLD data)
+  — PASS 2026-08-20 (Task 2.2): **`UD-Q5_K_XL` confirmed as the production
+  quant.** Rationale: under the validated `--n-cpu-moe 54 --tensor-split
+  54,9,8,8` placement, Task 2.1 directly measured `ctx=524,288` (512K
+  tokens, > REQ-003's 370K upper bound) succeeding with ≥25.5 GiB (≥26.9%
+  of 97,288 MiB) free on the worst-margined GPU (CUDA1) — a measured floor
+  that, by monotonicity of context-size memory use, guarantees at least
+  as much headroom at the actual 350-370K target (a linear-fit projection
+  puts it slightly higher, ~27.7 GiB/~28%, consistent with this floor).
+  Both comfortably clear a ≥15%-or-≥10 GiB per-GPU safety-margin policy —
+  so the highest-quality near-lossless
+  option fits with room to spare and there is no need to drop to the
+  lossier `UD-Q4_K_XL` fallback. See Task 2.2 for the full per-GPU
+  extrapolation.
 - [ ] ACC-006: Verifies REQ-007 — deployment config records the exact HF
   revision/commit hash used for the base model and for the quant used
 - [ ] ACC-007: Verifies REQ-008 — endpoint reachable without credentials
@@ -269,8 +282,57 @@ What is explicitly out of scope:
   896 GB (384 GB VRAM + 512 GB RAM) pool, and system RAM stayed flat at
   ~11.6-11.8 GiB throughout (the `--tensor-split 54,9,8,8` placement keeps
   nearly everything on GPU/VRAM). Full data: `bin/logs/2026-08-19T220559Z-kv-cache-sweep.{txt,json}` and per-context server logs `bin/logs/2026-08-19T220559Z-kv-ctx*.log`.
-- [ ] Task 2.2: Confirm the highest-quality quant that reliably supports 350-370K context with safe margin, based on Task 2.1 (start from UD-Q5_K_XL @ 570 GB in the 896 GB pool; step to UD-Q4_K_XL only if KV headroom demands) — depends on: Task 2.1 — status: not-started
-- [ ] Task 2.3: Install the engine + GLM-5.2 as a systemd service with the chosen quant and GPU/CPU-RAM placement — depends on: Task 2.2 — status: not-started
+ - [x] Task 2.2: Confirm the highest-quality quant that reliably supports 350-370K context with safe margin, based on Task 2.1 (start from UD-Q5_K_XL @ 570 GB in the 896 GB pool; step to UD-Q4_K_XL only if KV headroom demands) — depends on: Task 2.1 — status: done — 2026-08-20. Task 2.1's aggregate numbers (~233-235 GiB @ 350-370K vs the 896 GB pool) are necessary but not sufficient, since `--tensor-split 54,9,8,8` splits model weight AND KV-cache growth unevenly per GPU (each hard-capped at 97,288 MiB) — so the real gate is per-GPU headroom, not the pool sum. Per-GPU `memory breakdown` lines were pulled from all 5 Task 2.1 logs.
+
+  **Primary evidence — measured floor, no extrapolation needed:** Task 2.1
+  already directly measured `ctx=524,288` (512K tokens, `status=ok` on all
+  4 GPUs), and 524,288 > 370,000 (REQ-003's upper bound). Since
+  KV-cache/compute-buffer memory use is monotonically non-decreasing in
+  context size, the *measured* per-GPU margin at 512K is a guaranteed
+  floor for the actual 350-370K target — stronger evidence than a
+  projection past the tested range:
+
+  | GPU | free @ ctx=524,288 (measured) | % free |
+  |---|---|---|
+  | CUDA0 | 38,717 MiB (~37.8 GiB) | 39.80% |
+  | **CUDA1 (worst)** | **26,153 MiB (~25.5 GiB)** | **26.89%** |
+  | CUDA2 | 33,686 MiB (~32.9 GiB) | 34.63% |
+  | CUDA3 | 45,727 MiB (~44.7 GiB) | 47.00% |
+
+  Worst case CUDA1 (holds the most static MoE weight, 62,690 MiB) still
+  retains ~26.9% (~25.5 GiB) free at a context size *larger* than the
+  target — so the true 370K margin is guaranteed to be at least this good.
+
+  **Secondary evidence — linear regression, for color only:** the same 5
+  log points, regressed (free MiB vs ctx) per GPU, project CUDA1's margin
+  at the *actual* 370K target at ~27.7 GiB (~28%) free — consistent with
+  (and, as expected, slightly better than) the measured 512K floor above,
+  confirming monotonicity. CUDA0 (assigned the largest KV-cache growth
+  share) closes its margin fastest as context grows but stays ahead of
+  CUDA1 throughout the tested range.
+
+  Both figures comfortably clear an adopted safety-margin policy of
+  **≥15% free VRAM per GPU, or ≥10 GiB absolute, whichever is greater**,
+  at the 350-370K target (covers production extras Task 2.1's load-only
+  probe didn't exercise: larger batch sizes, the prompt cache seen enabled
+  at 8,192 MiB, OpenCode tool-call payloads, OS/driver overhead).
+  **Decision: keep `UD-Q5_K_XL`** (near-lossless, 99.9% KLD) as the
+  production quant under the validated `--n-cpu-moe 54 --tensor-split
+  54,9,8,8` placement; `UD-Q4_K_XL` fallback is not needed for this
+  hardware/placement combo (see ACC-005 for the recorded rationale, and
+  Decisions Made for the safety-margin policy).
+- [ ] Task 2.3: Install the engine + GLM-5.2 as a systemd service with the chosen quant and GPU/CPU-RAM placement — depends on: Task 2.2 — status: in-progress — 2026-08-20: draft artifacts created — `bin/08-llama-glm-5.2.service` (systemd unit, placeholder `--ctx-size 524288` / `--n-cpu-moe 54 --tensor-split 54,9,8,8`, port 8092, follows feat-1's `vllm-deepseek-v4-flash.service` conventions already installed on this box: `User=user`, `--host 0.0.0.0`, `Restart=on-failure`, etc.) and `bin/09-install-llama-glm-service.sh` (installer: copy + `daemon-reload` + `enable`, deliberately NOT `start` — that's Task 2.4). **Not yet installed** — gated on two open items running/pending in parallel: (1) a follow-up empirical probe at `ctx=768,000`/`896,000` (`bin/07-measure-kv-cache-768-896.sh`, copied from `bin/06`, hardcoded to just these 2 sizes — user is running it separately, already confirmed live on the box as of 2026-08-20: `llama-server --ctx-size 768000 ...` loading under tmux session `glm-kv-768-986`), motivated by a "go for 1M context" ask whose math didn't hold up (see below); (2) a `--tensor-split`/`--n-cpu-moe` rebalancing discussion informed by PCIe topology, confirmed via `nvidia-smi --query-gpu=index,pcie.link.gen.max`: **GPU0 and GPU2 are PCIe 5.0 x16, GPU1 and GPU3 are PCIe 4.0 x16** (Gen5 ≈ 2x Gen4 bandwidth/lane) — relevant because CUDA0 (currently the disproportionately KV-cache-heavy GPU under the validated split) happens to sit on the faster bus, while CUDA1 (heaviest static MoE weight) sits on a slower one; whether/how to lean on that asymmetry when rebalancing is still open. Once both land, swap `--ctx-size`/`--tensor-split`/`--n-cpu-moe` in `bin/08-*.service` to the finalized values, then run `bin/09-install-llama-glm-service.sh`.
+
+  **Why the follow-up probe exists — "go for 1M" checked against the math first:** extending Task 2.2's per-GPU linear regressions to `ctx=1,048,576` (1M, GLM-5.2's advertised max) projects CUDA0 (the GPU with the steepest KV-cache-growth slope, ~66.3 MiB/1K tokens) down to only ~3.89 GiB (~4.1%) free — clearly below the adopted ≥15%/≥10 GiB safety-margin policy, and this is ~2x beyond the largest size Task 2.1 actually measured (524,288), so it's genuine extrapolation risk, not just a policy breach. Extending the same regression to intermediate sizes:
+
+  | ctx (tokens) | CUDA0 free (projected) | vs. ≥15%/≥10 GiB policy |
+  |---|---|---|
+  | 768,000 | ~22.0 GiB (~23.2%) | passes comfortably |
+  | 896,000 | ~13.8 GiB (~14.5%) | borderline — just under 15%, still >10 GiB flat |
+  | 960,000 | ~9.6 GiB (~10.1%) | fails both thresholds, though still mathematically positive |
+  | 1,048,576 | ~3.9 GiB (~4.1%) | fails clearly |
+
+  768K and 896K were picked for the follow-up probe as the genuinely informative gray zone (960K/1M were dropped — the math already says "no" clearly enough not to burn a ~20-30 min load cycle on them).
 - [ ] Task 2.4: `systemctl start` the service; curl smoke test against `/v1/chat/completions`, verify tool-calls and all 3 reasoning modes (reasoning_effort max/high, enable_thinking:false). If engine is llama.cpp, explicitly verify OpenAI-compatible tool-calling works for OpenCode (REQ-011 risk) — depends on: Task 2.3 — status: not-started
 - [ ] Task 2.5: Validate 350-370K-token context works without OOM — depends on: Task 2.4 — status: not-started
 - [ ] Task 2.6: Connect OpenWebUI and OpenCode to the GLM-5.2 endpoint as a separate model entry — depends on: Task 2.5 — status: not-started
@@ -318,26 +380,90 @@ context-size ceiling found up to 524K tokens (the tested range's upper
 bound, not a hard limit). See Task 2.1 for the full per-context table and
 log references.
 
+**Task 2.2 (quant confirmation) is now also done.** Task 2.1's aggregate
+number wasn't sufficient on its own (the `54,9,8,8` tensor-split splits
+weight/KV growth unevenly per GPU, each capped at 97,288 MiB), so a
+per-GPU linear regression was run against the same 5 log points. Worst
+case at the 370K upper bound is CUDA1 with ~27.7 GiB (~28%) free —
+comfortably clearing an adopted ≥15%-or-≥10 GiB per-GPU safety margin.
+**Decision: `UD-Q5_K_XL` confirmed as the production quant**; the
+`UD-Q4_K_XL` fallback is not needed for this hardware/placement. See Task
+2.2/ACC-005 for the full per-GPU table and rationale.
+
+**Task 2.3 (systemd install) is in progress, split into two parallel
+tracks.** A "go for the full 1M context" idea was checked against the
+per-GPU regressions first: it fails (CUDA0 projects to ~4.1% free at 1M),
+but the projections for 768K/896K looked genuinely uncertain rather than
+clearly pass/fail, so:
+- **Track A (empirical, running now, not by the assistant):** a hardcoded
+  two-size copy of the measurement script, `bin/07-measure-kv-cache-768-896.sh`
+  (768K/896K only, no adaptive ramp/bisection), confirmed live on the box
+  as of 2026-08-20 — `llama-server --ctx-size 768000 ...` loading under
+  tmux session `glm-kv-768-986` (PID 137131 at check time). **Last checked
+  2026-08-20T06:05Z**: still loading the first probe (`ctx=768000`), GPU
+  memory still at idle baseline (~562-570 MiB/GPU) — the ~562 GB quant's
+  cold load is disk-bound (historically 20-45+ min per load, see
+  `bin/06-measure-kv-cache.sh`'s header), so this is expected, not a hang.
+  Result file: `bin/logs/2026-08-20T055618Z-kv-cache-768-896.txt`
+  (currently just the header/baseline line — no probe result recorded
+  yet). Per this repo's own long-running-job guidance (see AGENTS.md /
+  `feat-1`'s Task 2.1 incident), this run should be left to the user's own
+  monitoring (tmux session already attached) rather than polled
+  tick-by-tick from an assistant session — the next session should just
+  read the finished `bin/logs/*-kv-cache-768-896.txt`/`.json` and the two
+  per-context `*-kv-ctx768000.log`/`*-kv-ctx896000.log` files once it's
+  done, rather than re-running `nvidia-smi`/`ps` in a loop.
+- **Track B (installation plan, drafted in parallel):** `bin/08-llama-glm-5.2.service`
+  (systemd unit, placeholder `--ctx-size 524288`/512K — the largest size
+  Task 2.1 directly measured, not extrapolated — and the validated
+  `--n-cpu-moe 54 --tensor-split 54,9,8,8`, port 8092 to avoid colliding
+  with the ad-hoc measurement-script port 8091 or feat-1's vLLM port
+  8000) and `bin/09-install-llama-glm-service.sh` (installer: copy +
+  `daemon-reload` + `enable`, deliberately NOT `start`). Both follow the
+  `User=user`/`--host 0.0.0.0`/`Restart=on-failure`/etc. conventions of
+  feat-1's already-installed (currently inactive) `vllm-deepseek-v4-flash.service`
+  on this same box. **Not installed yet** — pending Track A's results and
+  a `--tensor-split` rebalancing discussion.
+- **New info feeding that rebalancing discussion:** `nvidia-smi
+  --query-gpu=index,pcie.link.gen.max` confirms **GPU0/GPU2 are PCIe 5.0
+  x16, GPU1/GPU3 are PCIe 4.0 x16**. CUDA0 (the GPU with the steepest
+  KV-cache-growth slope under the current split, and thus the binding
+  constraint at high context) happens to already sit on the faster bus;
+  CUDA1 (heaviest static MoE weight) sits on a slower one. Whether/how to
+  use that asymmetry when rebalancing is the next discussion, once Track
+  A's data is in.
+
 ### Next Steps
 
-1. **Task 2.1 is done.** The fixed-config sweep (`2026-08-19T220559Z`)
-   succeeded at all 5 ramp sizes up to 524,288 tokens with large headroom
-   (~239 GiB at 512K ctx vs the 896 GB pool) — see Task 2.1 for the full
-   table and the derived ~0.104 GiB/1K-tokens KV-cache rate.
-2. Do Task 2.2 (confirm `UD-Q5_K_XL` vs `UD-Q4_K_XL` for the 350-370K
-   target — Task 2.1's numbers strongly favor keeping `UD-Q5_K_XL`, no
-   headroom pressure found) through Task 2.7 (systemd service,
-   OpenWebUI/OpenCode wiring, context validation, quality comparison vs.
-   `feat-1`).
-3. Let `bin/00-download-glm-quants.sh` keep finishing `UD-Q4_K_XL`
+1. **Task 2.1 and Task 2.2 are both done**; **Task 2.3 is in progress**
+   (two parallel tracks — see Current Status). **Do not poll Track A
+   tick-by-tick in a new assistant session** — it's a long unattended job
+   (still loading `ctx=768000` as of the last check, 2026-08-20T06:05Z;
+   two probes total, each potentially 20-45+ min); let it run under tmux
+   session `glm-kv-768-986` and just read the finished
+   `bin/logs/2026-08-20T055618Z-kv-cache-768-896.txt`/`.json` (or whatever
+   later timestamp if re-run) and the per-context
+   `*-kv-ctx768000.log`/`*-kv-ctx896000.log` for per-GPU
+   `common_memory_breakdown_print` results once it's actually done.
+2. Once Track A's results are in: hold the `--tensor-split`/`--n-cpu-moe`
+   rebalancing discussion (PCIe topology — GPU0/GPU2 are PCIe 5.0 x16,
+   GPU1/GPU3 are PCIe 4.0 x16 — is the new input for that), settle on
+   final `--ctx-size`/`--tensor-split`/`--n-cpu-moe` values, edit
+   `bin/08-llama-glm-5.2.service` accordingly, then run
+   `bin/09-install-llama-glm-service.sh` to actually install (copy +
+   `daemon-reload` + `enable`, not `start`).
+3. Continue Task 2.4 (`systemctl start`, curl smoke test, tool-calls, all
+   3 reasoning modes) through Task 2.7 (OpenWebUI/OpenCode wiring,
+   350-370K real context validation, quality comparison vs. `feat-1`).
+4. Let `bin/00-download-glm-quants.sh` keep finishing `UD-Q4_K_XL`
    (fallback, 60.8% at last check) in the background — check progress any
-   time with `bin/04-dl-status.sh`. Not a gate on Task 2.2+ unless
-   something downstream (e.g. Task 2.5's real filled-context run) forces a
-   step-down.
-4. Decide whether to post `followup-comment-draft.md` to
+   time with `bin/04-dl-status.sh`. No longer a gate on anything now that
+   Task 2.2 has confirmed `UD-Q5_K_XL` as the production quant; can be left
+   to finish or abandoned at the user's discretion.
+5. Decide whether to post `followup-comment-draft.md` to
    vllm-project/vllm#52938 — drafted and hedged, deliberately left for a
    separate decision, not posted.
-5. `feat-1`'s parallel SGLang/vLLM-version diagnostics remain independently
+6. `feat-1`'s parallel SGLang/vLLM-version diagnostics remain independently
    useful context if they report back, but are no longer a hard dependency
    — this feature already has one confirmed working engine (`llama.cpp`).
 
@@ -349,10 +475,16 @@ log references.
   `UD-Q5_K_XL`/`UD-Q4_K_XL` downloads — resolved for the target quant
   (`UD-Q5_K_XL` finished, confirmed via `bin/04-dl-status.sh`), and Task
   2.1's KV-cache measurement is now also done (see Task 2.1/Current
-  Status): `UD-Q5_K_XL` fits 350-370K context with large headroom
-  (~235 GiB vs the 896 GB pool). `UD-Q4_K_XL` (fallback) is still
-  downloading in the background (60.8% at last check) but is not required
-  for Task 2.2+.
+  Status):   `UD-Q5_K_XL` fits 350-370K context with large headroom
+  (~235 GiB vs the 896 GB pool), and Task 2.2's per-GPU analysis confirms
+  `UD-Q5_K_XL` as the production quant (worst-case GPU still ~28% free at
+  370K). `UD-Q4_K_XL` (fallback) is still downloading in the background
+  (60.8% at last check) but is no longer needed for anything in the
+  current plan. **Soft dependency (not a hard blocker):** Task 2.3's
+  systemd install is drafted but not yet run — waiting on Track A's
+  768K/896K empirical results (running now, separately) and the
+  `--tensor-split` rebalancing discussion before finalizing
+  `bin/08-llama-glm-5.2.service`'s placement/context values.
 
 ### Recent Updates
 
@@ -577,6 +709,111 @@ log references.
 - Next: Task 2.2 (confirm `UD-Q5_K_XL` as the production quant — Task
   2.1's headroom strongly supports keeping it over `UD-Q4_K_XL`) through
   Task 2.7.
+
+#### 2026-08-20 (Task 2.2 — quant confirmation)
+
+- Completed: Determined that Task 2.1's aggregate GPU+RAM total
+  (~233-235 GiB @ 350-370K vs the 896 GB pool) was necessary but not
+  sufficient to confirm the quant choice, since `--tensor-split 54,9,8,8`
+  splits both model weight and KV-cache growth unevenly across the 4 GPUs
+  (each hard-capped at 97,288 MiB) — the real gate is per-GPU headroom.
+- Completed: Pulled the per-GPU `common_memory_breakdown_print` lines from
+  all 5 Task 2.1 logs (`2026-08-19T220559Z-kv-ctx*.log`) and ran a linear
+  regression (free MiB vs ctx) per GPU. CUDA1 (holds the most static MoE
+  weight, 62,690 MiB) is worst-margined across the whole tested range;
+  CUDA0 (assigned the largest KV-cache growth share) loses free memory
+  fastest but stays ahead of CUDA1 within 4K-512K tokens.
+- Found: extrapolating to REQ-003's 370K-token upper bound, the
+  worst-margined GPU (CUDA1) still has ~27.7 GiB (~28% of its 97,288 MiB)
+  free.
+- Decided: adopted a safety-margin policy of **≥15% free VRAM per GPU, or
+  ≥10 GiB absolute, whichever is greater**, at the 350-370K target (covers
+  production extras the load-only Task 2.1 probe didn't exercise: larger
+  batch sizes, the prompt cache, OpenCode tool-call payloads, OS/driver
+  overhead). CUDA1's ~28% clears this with room to spare.
+- Decided: **`UD-Q5_K_XL` confirmed as the production quant** — the
+  highest-quality near-lossless option, and it fits the 350-370K target
+  with large per-GPU margin under the validated
+  `--n-cpu-moe 54 --tensor-split 54,9,8,8` placement. `UD-Q4_K_XL`
+  fallback is not required for this hardware/placement combo.
+- Completed: Marked Task 2.2 and ACC-005 `done`/`[x]` with the full
+  per-GPU table and rationale; updated Current Status/Next Steps
+  accordingly.
+- Next: Task 2.3 — install the engine + GLM-5.2 as a systemd service using
+  `UD-Q5_K_XL` and the validated GPU/CPU-RAM placement.
+- Revised (same day, before moving to Task 2.3): reworked ACC-005/Task
+  2.2's rationale to lead with a stronger argument. Task 2.1 already
+  directly measured `ctx=524,288` (512K, `status=ok`) — since that's
+  larger than REQ-003's 370K target and memory use is monotonically
+  non-decreasing in context size, the *measured* margin at 512K (worst
+  case CUDA1: ~25.5 GiB/~26.9% free) is a guaranteed floor for the actual
+  370K target, not an extrapolation. The earlier linear-regression
+  projection (~27.7 GiB/~28%) is kept only as consistency-checking color
+  (it's slightly higher, as monotonicity predicts) — the decision itself
+  (`UD-Q5_K_XL` confirmed) is unchanged.
+
+#### 2026-08-20 (Task 2.3 kickoff — "go for 1M" checked, two parallel tracks started)
+
+- Found: extending Task 2.2's per-GPU regressions to `ctx=1,048,576` (1M,
+  GLM-5.2's advertised max context) in response to a "go for 1M" ask
+  projects CUDA0 (steepest KV-cache-growth slope, ~66.3 MiB/1K tokens)
+  down to only ~3.89 GiB (~4.1%) free — clearly below the adopted
+  ≥15%/≥10 GiB safety-margin policy, and ~2x beyond the largest context
+  Task 2.1 actually measured (524,288), so real behavior could plausibly
+  be worse than the straight-line projection. Extending the same
+  regression to intermediate round sizes identified 768K as
+  comfortably-projected-safe, 896K as a genuine borderline case (~14.5%,
+  just under the 15% line but still >10 GiB flat), and 960K as
+  failing-the-policy-but-still-mathematically-positive (~10.1%) — 960K
+  and the full 1M were dropped from the follow-up test list (the math
+  already says "no" clearly enough).
+- Completed: copied `bin/06-measure-kv-cache.sh` to
+  `bin/07-measure-kv-cache-768-896.sh`, stripped down to FIXED mode only,
+  hardcoded to exactly `ctx=768000` and `ctx=896000` (no CLI args, no
+  adaptive ramp/bisection), same engine/quant/placement as the validated
+  Task 2.1 run. Handed off to the user to run separately (per instruction)
+  — confirmed live on the box shortly after (`llama-server --ctx-size
+  768000 ...` loading under tmux session `glm-kv-768-986`, PID 137131).
+- Completed (in parallel, Track B): drafted `bin/08-llama-glm-5.2.service`
+  (systemd unit for `llama-server` + GLM-5.2/`UD-Q5_K_XL`, placeholder
+  `--ctx-size 524288`/512K — the largest DIRECTLY measured size, not the
+  extrapolated one — and the validated `--n-cpu-moe 54 --tensor-split
+  54,9,8,8`; port 8092, chosen to avoid the ad-hoc measurement port 8091
+  and feat-1's vLLM port 8000) and `bin/09-install-llama-glm-service.sh`
+  (copy + `daemon-reload` + `enable`, explicitly not `start` — that stays
+  Task 2.4). Conventions copied from feat-1's already-installed (currently
+  inactive) `vllm-deepseek-v4-flash.service` on this same box for
+  cross-feature consistency: `User=user`/`Group=user`, `--host 0.0.0.0`,
+  `Restart=on-failure`/`RestartSec=10`, `KillMode=control-group`,
+  `LimitNOFILE=65536`/`LimitMEMLOCK=infinity`,
+  `WantedBy=multi-user.target`. Deliberately NOT installed yet (unit is a
+  draft with placeholder values pending Track A + rebalancing).
+- Found: `nvidia-smi --query-gpu=index,pcie.link.gen.max` confirms the
+  user-supplied PCIe topology — **GPU0 and GPU2 are PCIe 5.0 x16, GPU1 and
+  GPU3 are PCIe 4.0 x16**. Notable because CUDA0 (already the
+  disproportionately KV-cache-heavy GPU under the current
+  `--tensor-split`) sits on the faster bus, while CUDA1 (heaviest static
+  MoE weight) sits on a slower one — this is new input for the
+  `--tensor-split` rebalancing discussion, not yet acted on.
+- Next: wait for Track A's 768K/896K results, then hold the rebalancing
+  discussion (informed by the PCIe finding), finalize
+  `bin/08-llama-glm-5.2.service`'s placement values, and run
+  `bin/09-install-llama-glm-service.sh`.
+- Session wrap-up (context-budget reasons, same rationale as `feat-1`'s
+  Task 2.1 incident and this repo's AGENTS.md guidance): confirmed Track A
+  still healthy and loading (`ctx=768000` probe, GPU memory still at idle
+  baseline ~562-570 MiB/GPU, ~9 min elapsed as of 2026-08-20T06:05Z — not
+  a hang, this quant's cold load is disk-bound and historically takes
+  20-45+ min) before handing monitoring back to the user rather than
+  polling `nvidia-smi`/`ps`/tmux tick-by-tick in this session. Nothing
+  else changed on the box this session beyond what's recorded above (no
+  GPU/model state touched, no files outside this feature folder). Clean
+  resumption point for the next session: read
+  `bin/logs/2026-08-20T055618Z-kv-cache-768-896.txt`/`.json` (or a later
+  timestamp if the run was restarted) once Track A has actually finished
+  both probes, then proceed with the `--tensor-split` rebalancing
+  discussion (PCIe topology already captured above) before touching
+  `bin/08-llama-glm-5.2.service`/`bin/09-install-llama-glm-service.sh`.
 
 ### Related PRs / Commits
 

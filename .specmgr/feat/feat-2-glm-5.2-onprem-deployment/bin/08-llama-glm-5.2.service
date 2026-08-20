@@ -1,0 +1,92 @@
+# Task 2.3 draft systemd unit -- GLM-5.2 via llama.cpp/llama-server.
+#
+# STATUS: DRAFT, not yet installed. Do not `systemctl start` until:
+#   1. Track A (bin/07-measure-kv-cache-768-896.sh, running separately as of
+#      2026-08-20) confirms whether 768K/896K really hold up in practice
+#      (per-GPU margins), and
+#   2. The --tensor-split/--n-cpu-moe rebalancing discussion (PCIe
+#      topology: GPU0/GPU2 are PCIe 5.0 x16, GPU1/GPU3 are PCIe 4.0 x16,
+#      confirmed via `nvidia-smi --query-gpu=pcie.link.gen.max`) is
+#      resolved -- CTX_SIZE and/or TENSOR_SPLIT below may still change.
+#
+# Placeholder for this draft: --ctx-size 524288 (512K) -- the largest size
+# Task 2.1 DIRECTLY measured as `status=ok` (not extrapolated), comfortable
+# per-GPU margin on all 4 GPUs. Swap to whatever Track A confirms is the
+# real safe ceiling once that data is in (see Task 2.3/2.4 in the feature
+# README for the swap step).
+#
+# Conventions copied from feat-1's installed (though currently inactive)
+# vllm-deepseek-v4-flash.service / vllm-deepseek-v4-flash-clean.service on
+# this same box, for consistency across features: User/Group=user,
+# --host 0.0.0.0 (REQ-008: unauthenticated, internal-network-only is
+# enforced at the network/firewall layer, not by binding to loopback),
+# Restart=on-failure, RestartSec=10, KillMode=control-group,
+# LimitNOFILE=65536, LimitMEMLOCK=infinity, [Install] WantedBy=multi-user.target.
+#
+# Deliberate differences from the vLLM units:
+#   - Type=simple, not Type=notify -- llama-server does not implement the
+#     systemd sd_notify READY protocol vLLM uses, so Type=notify would
+#     just time out waiting for a notification that never arrives.
+#     "active (running)" here means the process started, NOT that the
+#     model has finished loading/is healthy -- that's Task 2.4's curl
+#     /health smoke test, done separately after `systemctl start`.
+#   - No ExecReload -- llama-server has no known SIGHUP-based reload;
+#     use `systemctl restart` instead.
+#   - Port 8092, not 8091 -- 8091 is the ad-hoc port used by the
+#     Task 2.1/2.2 measurement scripts (bin/06-*, bin/07-*) and is
+#     currently in active use by the separately-running Track A test;
+#     8000 is feat-1's vLLM DeepSeek-V4-Flash port. 8092 avoids both.
+#   - CUDA_VISIBLE_DEVICES=0,1,2,3 explicit, matching feat-1's convention,
+#     to lock in device ordering (--tensor-split assumes GPU index 0-3 in
+#     nvidia-smi order).
+#   - No --api-key flag: REQ-008 (anonymous, unauthenticated) is
+#     intentional, not an oversight -- see ACC-007.
+#   - -lv (verbose log level) omitted: -lv 4 in bin/06-/07- was a
+#     diagnostic-only verbosity for the measurement spikes; default level
+#     is enough for production, captured via journald (`journalctl -u
+#     llama-glm-5.2`).
+#
+# Model: unsloth/GLM-5.2-GGUF, UD-Q5_K_XL, pinned revision
+# abc55e72527792c6e77069c99b4cb7de16fa9f23 (Task 0.5/ACC-006). Base model
+# zai-org/GLM-5.2 pinned to b4734de4facf877f85769a911abafc5283eab3d9
+# (Task 0.4) -- not downloaded/used directly, the GGUF path only needs the
+# quant.
+#
+# Install (NOT run automatically by this draft):
+#   sudo cp 08-llama-glm-5.2.service /etc/systemd/system/llama-glm-5.2.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable llama-glm-5.2.service
+#   # (systemctl start is Task 2.4, done separately with a curl smoke test
+#   # right after, not as part of Task 2.3's "install" step)
+
+[Unit]
+Description=llama.cpp GLM-5.2 (UD-Q5_K_XL) OpenAI-compatible API
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=user
+Group=user
+WorkingDirectory=/data/llama.cpp-dsa
+Environment=CUDA_VISIBLE_DEVICES=0,1,2,3
+ExecStart=/data/llama.cpp-dsa/build/bin/llama-server \
+    --model /data/llama_cpp/models/GLM-5.2-GGUF/UD-Q5_K_XL/GLM-5.2-UD-Q5_K_XL-00001-of-00013.gguf \
+    --host 0.0.0.0 \
+    --port 8092 \
+    --ctx-size 524288 \
+    --n-gpu-layers 999 \
+    --n-cpu-moe 54 \
+    --tensor-split 54,9,8,8 \
+    --parallel 1 \
+    --jinja
+KillMode=control-group
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=3600
+TimeoutStopSec=60
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target
