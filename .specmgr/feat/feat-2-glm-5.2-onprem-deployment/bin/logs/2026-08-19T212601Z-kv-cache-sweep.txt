@@ -1,0 +1,15 @@
+GLM-5.2 KV-cache / max-context probe -- Task 2.1
+mode: adaptive
+model: /data/llama_cpp/models/GLM-5.2-GGUF/UD-Q5_K_XL/GLM-5.2-UD-Q5_K_XL-00001-of-00013.gguf
+quant: UD-Q5_K_XL
+started (UTC): 2026-08-19T212601Z
+
+ctx        status      gpu_mib    ram_kib      load_secs
+baseline (idle): gpu=16 MiB, ram=14194020 KiB
+
+4096       crashed           0          0           1433
+Even the smallest ramp size (4096) failed -- investigate before re-running (see log above); skipping bisection.
+
+== Deriving GB-per-1K-tokens from all successful data points ==
+Only 0 successful data point(s) -- need at least 2 to derive a slope.
+Re-run with more/different context sizes, or check the failures above.

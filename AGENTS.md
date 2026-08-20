@@ -34,6 +34,17 @@ On-prem LLM serving for DeepSeek-V4-Flash and DeepSeek-V4-Pro via OpenAI-compati
 3. Update task status in place as you progress
 4. Log decisions + blockers in the feature README
 5. Use `git log -p` on the feature file to recover original task wording if scope shifts
+6. **Long-running unattended jobs** (multi-hour downloads, model-load/probe
+   sweeps, build watches, etc.): don't babysit them tick-by-tick in the
+   main assistant session — repeated `nvidia-smi`/`free`/log-tail polling
+   turns work over many minutes/hours into a lot of low-density context
+   for comparatively little signal. Prefer delegating the actual
+   watch-and-report loop (poll + anomaly detection + summarize back) to a
+   background task/implementation specialist, or hand monitoring off to
+   the user directly, and keep the main session focused on planning/
+   decision work. See `feat-2-glm-5.2-onprem-deployment`'s README,
+   Decisions Made 2026-08-19 ("Task 2.1 KV-cache measurement") for the
+   concrete incident that prompted this.
 
 ## Validation Commands (when implementation starts)
 - `systemctl status <service>` — verify service state

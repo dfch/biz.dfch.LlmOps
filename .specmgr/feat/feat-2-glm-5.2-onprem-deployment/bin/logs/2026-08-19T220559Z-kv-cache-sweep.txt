@@ -1,0 +1,84 @@
+GLM-5.2 KV-cache / max-context probe -- Task 2.1
+mode: adaptive
+model: /data/llama_cpp/models/GLM-5.2-GGUF/UD-Q5_K_XL/GLM-5.2-UD-Q5_K_XL-00001-of-00013.gguf
+quant: UD-Q5_K_XL
+started (UTC): 2026-08-19T220559Z
+
+ctx        status      gpu_mib    ram_kib      load_secs
+baseline (idle): gpu=16 MiB, ram=11234480 KiB
+
+4096       ok           190512   12251256           1302
+  -- KV-related log lines (diagnostic only) --
+    21.16.970.554 I llama_kv_cache_dsa: creating main KV cache, size = 4096 cells
+    21.16.970.906 I llama_kv_cache:      CUDA0 KV buffer size =   247.50 MiB
+    21.16.978.436 I llama_kv_cache:      CUDA1 KV buffer size =    40.50 MiB
+    21.16.978.675 I llama_kv_cache:      CUDA2 KV buffer size =    36.00 MiB
+    21.16.978.872 I llama_kv_cache:      CUDA3 KV buffer size =    27.00 MiB
+    21.16.979.456 I llama_kv_cache_dsa: creating indexer KV cache, size = 4096 cells
+    21.16.979.675 I llama_kv_cache:      CUDA0 KV buffer size =    16.00 MiB
+    21.16.979.887 I llama_kv_cache:      CUDA1 KV buffer size =     2.00 MiB
+    21.16.980.267 I llama_kv_cache:      CUDA2 KV buffer size =     2.00 MiB
+    21.16.980.357 I llama_kv_cache:      CUDA3 KV buffer size =     1.00 MiB
+32768      ok           193520   12223196           1212
+  -- KV-related log lines (diagnostic only) --
+    19.49.588.435 I llama_kv_cache_dsa: creating main KV cache, size = 32768 cells
+    19.49.589.063 I llama_kv_cache:      CUDA0 KV buffer size =  1980.00 MiB
+    19.49.603.491 I llama_kv_cache:      CUDA1 KV buffer size =   324.00 MiB
+    19.49.610.346 I llama_kv_cache:      CUDA2 KV buffer size =   288.00 MiB
+    19.49.610.624 I llama_kv_cache:      CUDA3 KV buffer size =   216.00 MiB
+    19.49.611.179 I llama_kv_cache_dsa: creating indexer KV cache, size = 32768 cells
+    19.49.611.558 I llama_kv_cache:      CUDA0 KV buffer size =   128.00 MiB
+    19.49.611.752 I llama_kv_cache:      CUDA1 KV buffer size =    16.00 MiB
+    19.49.611.861 I llama_kv_cache:      CUDA2 KV buffer size =    16.00 MiB
+    19.49.611.949 I llama_kv_cache:      CUDA3 KV buffer size =     8.00 MiB
+131072     ok           203768   12322364           1112
+  -- KV-related log lines (diagnostic only) --
+    18.00.601.956 I llama_kv_cache_dsa: creating main KV cache, size = 131072 cells
+    18.00.614.072 I llama_kv_cache:      CUDA0 KV buffer size =  7920.00 MiB
+    18.00.626.270 I llama_kv_cache:      CUDA1 KV buffer size =  1296.00 MiB
+    18.00.635.237 I llama_kv_cache:      CUDA2 KV buffer size =  1152.00 MiB
+    18.00.636.095 I llama_kv_cache:      CUDA3 KV buffer size =   864.00 MiB
+    18.00.636.633 I llama_kv_cache_dsa: creating indexer KV cache, size = 131072 cells
+    18.00.637.574 I llama_kv_cache:      CUDA0 KV buffer size =   512.00 MiB
+    18.00.638.006 I llama_kv_cache:      CUDA1 KV buffer size =    64.00 MiB
+    18.00.638.141 I llama_kv_cache:      CUDA2 KV buffer size =    64.00 MiB
+    18.00.638.272 I llama_kv_cache:      CUDA3 KV buffer size =    32.00 MiB
+262144     ok           217462   12147512           1322
+  -- KV-related log lines (diagnostic only) --
+    21.30.531.984 I llama_kv_cache_dsa: creating main KV cache, size = 262144 cells
+    21.30.535.940 I llama_kv_cache:      CUDA0 KV buffer size = 15840.00 MiB
+    21.30.557.702 I llama_kv_cache:      CUDA1 KV buffer size =  2592.00 MiB
+    21.30.559.509 I llama_kv_cache:      CUDA2 KV buffer size =  2304.00 MiB
+    21.30.561.120 I llama_kv_cache:      CUDA3 KV buffer size =  1728.00 MiB
+    21.30.562.236 I llama_kv_cache_dsa: creating indexer KV cache, size = 262144 cells
+    21.30.566.837 I llama_kv_cache:      CUDA0 KV buffer size =  1024.00 MiB
+    21.30.567.612 I llama_kv_cache:      CUDA1 KV buffer size =   128.00 MiB
+    21.30.567.801 I llama_kv_cache:      CUDA2 KV buffer size =   128.00 MiB
+    21.30.567.973 I llama_kv_cache:      CUDA3 KV buffer size =    64.00 MiB
+524288     ok           244864   12202408           1462
+  -- KV-related log lines (diagnostic only) --
+    23.58.510.150 I llama_kv_cache_dsa: creating main KV cache, size = 524288 cells
+    23.58.519.783 I llama_kv_cache:      CUDA0 KV buffer size = 31680.00 MiB
+    23.58.547.500 I llama_kv_cache:      CUDA1 KV buffer size =  5184.00 MiB
+    23.58.562.820 I llama_kv_cache:      CUDA2 KV buffer size =  4608.00 MiB
+    23.58.565.933 I llama_kv_cache:      CUDA3 KV buffer size =  3456.00 MiB
+    23.58.568.145 I llama_kv_cache_dsa: creating indexer KV cache, size = 524288 cells
+    23.58.575.998 I llama_kv_cache:      CUDA0 KV buffer size =  2048.00 MiB
+    23.58.577.409 I llama_kv_cache:      CUDA1 KV buffer size =   256.00 MiB
+    23.58.577.668 I llama_kv_cache:      CUDA2 KV buffer size =   256.00 MiB
+    23.58.577.912 I llama_kv_cache:      CUDA3 KV buffer size =   128.00 MiB
+All ramp sizes succeeded up to 524288 -- no ceiling found in the tested range.
+
+== Deriving GB-per-1K-tokens from all successful data points ==
+Linear fit over 5 points: total_gib ~= 197.3 + 0.000102 * ctx_size
+=> KV cache cost: ~0.104 GiB per 1K context tokens
+=> Estimated fixed footprint (weights/runtime, ctx-independent): ~197.3 GiB
+
+Extrapolation to REQ-003 targets (fixed footprint + KV cache only, no safety margin):
+  ctx=350,000: ~233.0 GiB total
+  ctx=370,000: ~235.0 GiB total
+
+Compare against the 896 GB pool (384 GB VRAM + 512 GB RAM) with a safety
+margin for OS/other overhead, AND against the directly-verified max working
+context size (bisection result above, if adaptive mode was used) -- together
+these feed Task 2.2's UD-Q5_K_XL vs UD-Q4_K_XL call.

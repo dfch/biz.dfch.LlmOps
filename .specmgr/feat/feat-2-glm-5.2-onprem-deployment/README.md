@@ -2,7 +2,7 @@
 created: 2026-08-19
 id: feat-2-glm-5.2-onprem-deployment
 status: planning
-updated: 2026-08-19
+updated: 2026-08-20
 version: 1.0.0
 ---
 
@@ -248,7 +248,27 @@ What is explicitly out of scope:
 
 #### Phase 2: Full deployment (only if Phase 1 yields a working engine)
 
-- [ ] Task 2.1: Measure actual KV-cache memory per 1K tokens at real context shapes on the chosen engine/quant — depends on: Task 1.4 — status: not-started
+- [x] Task 2.1: Measure actual KV-cache memory per 1K tokens at real context shapes on the chosen engine/quant — depends on: Task 1.4 — status: done — `bin/06-measure-kv-cache.sh` (adaptive ramp 4K→32K→128K→256K→512K). Two unsafe-config incidents hit and fixed before a run succeeded (see Decisions Made 2026-08-19 "KV-cache measurement MoE placement"): (1) `--cpu-moe` alone pushed ~500 GiB onto the 512 GiB system RAM, causing real swap growth — killed as a precaution (sweep attempt `2026-08-19T203936Z`, crashed at `ctx=4096`, no explicit error in the log — consistent with an external kill); (2) `--n-cpu-moe 41` alone let one GPU (CUDA2) get assigned a full ~132 GiB chunk of MoE weight before the CPU cutoff was applied, causing `cudaMalloc failed: out of memory ... buffer of size 138774596736` (sweep attempt `2026-08-19T212601Z`, crashed at `ctx=4096`). **Fixed run (`2026-08-19T220559Z`) succeeded on ALL 5 ramp sizes** with `--n-cpu-moe 54 --tensor-split 54,9,8,8`, no bisection needed:
+
+  | ctx (tokens) | status | GPU mem (4 GPUs) | RAM used | load time |
+  |---|---|---|---|---|
+  | 4,096 | ok | 190,512 MiB (~186.1 GiB) | ~11.68 GiB | 1302 s |
+  | 32,768 | ok | 193,520 MiB (~189.0 GiB) | ~11.66 GiB | 1212 s |
+  | 131,072 | ok | 203,768 MiB (~199.0 GiB) | ~11.75 GiB | 1112 s |
+  | 262,144 | ok | 217,462 MiB (~212.4 GiB) | ~11.58 GiB | 1322 s |
+  | 524,288 | ok | 244,864 MiB (~239.1 GiB) | ~11.63 GiB | 1462 s |
+
+  All 5 succeeded up to 524,288 tokens (512K) — well past the 350-370K
+  REQ-003 target — no ceiling found in the tested range (this was a
+  model-load/VRAM-allocation probe per context size, not a filled-context
+  generation run; that end-to-end validation is still Task 2.5). Linear
+  fit across all 5 points: `total_GiB ≈ 197.3 + 0.000102 × ctx_size` →
+  **~0.104 GiB KV cache per 1K context tokens**, fixed
+  (weights+runtime) footprint **~197.3 GiB**. Extrapolated: ctx=350,000 ≈
+  233.0 GiB total, ctx=370,000 ≈ 235.0 GiB total — comfortably inside the
+  896 GB (384 GB VRAM + 512 GB RAM) pool, and system RAM stayed flat at
+  ~11.6-11.8 GiB throughout (the `--tensor-split 54,9,8,8` placement keeps
+  nearly everything on GPU/VRAM). Full data: `bin/logs/2026-08-19T220559Z-kv-cache-sweep.{txt,json}` and per-context server logs `bin/logs/2026-08-19T220559Z-kv-ctx*.log`.
 - [ ] Task 2.2: Confirm the highest-quality quant that reliably supports 350-370K context with safe margin, based on Task 2.1 (start from UD-Q5_K_XL @ 570 GB in the 896 GB pool; step to UD-Q4_K_XL only if KV headroom demands) — depends on: Task 2.1 — status: not-started
 - [ ] Task 2.3: Install the engine + GLM-5.2 as a systemd service with the chosen quant and GPU/CPU-RAM placement — depends on: Task 2.2 — status: not-started
 - [ ] Task 2.4: `systemctl start` the service; curl smoke test against `/v1/chat/completions`, verify tool-calls and all 3 reasoning modes (reasoning_effort max/high, enable_thinking:false). If engine is llama.cpp, explicitly verify OpenAI-compatible tool-calling works for OpenCode (REQ-011 risk) — depends on: Task 2.3 — status: not-started
@@ -264,7 +284,7 @@ originally planned, rather than keeping a second copy of the task around.
 
 ### Current Status
 
-**As of 2026-08-19 (end of session)**: Phase 1 SM120 correctness spike
+**As of 2026-08-20**: Phase 1 SM120 correctness spike
 **PASSED** — `llama.cpp` (fresh CUDA build at `/data/llama.cpp-dsa`,
 commit `ee4c505a4`) serves GLM-5.2's DSA decode correctly on this box's 4
 SM120 GPUs: coherent, deterministic (byte-identical across repeat runs at
@@ -280,37 +300,59 @@ engine-specific rather than SM120-fundamental — a candidate follow-up
 comment is drafted (NOT posted) at `followup-comment-draft.md`.
 Quant download (`bin/00-download-glm-quants.sh`) was deliberately started
 ahead of the Phase 1 gate passing (user instruction, logged as a Decisions
-Made deviation): `UD-IQ1_S` (spike, 217 GB) finished; `UD-Q5_K_XL` (target,
-562 GB) in progress (~9% at session end); `UD-Q4_K_XL` (467 GB) still
-queued. GPUs are currently idle/free. Phase 2 (real deployment) is
-unblocked in principle but gated on the target/fallback quant downloads
-finishing — Task 2.1's KV-cache measurement needs the real target quant,
-not the 1-bit spike quant.
+Made deviation): `UD-IQ1_S` (spike, 217 GB) finished; **`UD-Q5_K_XL`
+(target, 562 GB) is now DONE** (confirmed via `bin/04-dl-status.sh`,
+100.1%); `UD-Q4_K_XL` (fallback, 467 GB) in progress, 60.8% at last check
+(~13.4 MB/s sampled rate, ETA ~3.8h — bandwidth looked slow, re-check
+before trusting the ETA). GPUs are currently idle/free.
+
+**Task 2.1 (KV-cache measurement) is now also done.** `bin/06-measure-kv-cache.sh`'s
+adaptive ramp (4K→32K→128K→256K→512K) on `UD-Q5_K_XL` succeeded at all 5
+sizes after two unsafe-MoE-placement incidents were fixed (`--n-cpu-moe 54
+--tensor-split 54,9,8,8`, see Decisions Made). Result: ~186-239 GiB total
+GPU memory across the 4K→512K range, system RAM flat at ~11.6-11.8 GiB,
+derived rate **~0.104 GiB KV cache per 1K context tokens** on a **~197.3
+GiB fixed footprint**, extrapolating to ~233-235 GiB total at the
+350-370K REQ-003 target — large headroom inside the 896 GB pool, and no
+context-size ceiling found up to 524K tokens (the tested range's upper
+bound, not a hard limit). See Task 2.1 for the full per-context table and
+log references.
 
 ### Next Steps
 
-1. Let `bin/00-download-glm-quants.sh` finish `UD-Q5_K_XL` then
-   `UD-Q4_K_XL` in the background — check progress any time with
-   `bin/04-dl-status.sh`.
-2. Once `UD-Q5_K_XL` is done: start Phase 2 — Task 2.1 (measure real
-   KV-cache cost per 1K tokens on `llama.cpp` at real context shapes,
-   working toward the 350-370K target) through Task 2.7 (systemd service,
+1. **Task 2.1 is done.** The fixed-config sweep (`2026-08-19T220559Z`)
+   succeeded at all 5 ramp sizes up to 524,288 tokens with large headroom
+   (~239 GiB at 512K ctx vs the 896 GB pool) — see Task 2.1 for the full
+   table and the derived ~0.104 GiB/1K-tokens KV-cache rate.
+2. Do Task 2.2 (confirm `UD-Q5_K_XL` vs `UD-Q4_K_XL` for the 350-370K
+   target — Task 2.1's numbers strongly favor keeping `UD-Q5_K_XL`, no
+   headroom pressure found) through Task 2.7 (systemd service,
    OpenWebUI/OpenCode wiring, context validation, quality comparison vs.
    `feat-1`).
-3. Decide whether to post `followup-comment-draft.md` to
+3. Let `bin/00-download-glm-quants.sh` keep finishing `UD-Q4_K_XL`
+   (fallback, 60.8% at last check) in the background — check progress any
+   time with `bin/04-dl-status.sh`. Not a gate on Task 2.2+ unless
+   something downstream (e.g. Task 2.5's real filled-context run) forces a
+   step-down.
+4. Decide whether to post `followup-comment-draft.md` to
    vllm-project/vllm#52938 — drafted and hedged, deliberately left for a
    separate decision, not posted.
-4. `feat-1`'s parallel SGLang/vLLM-version diagnostics remain independently
-   useful context if they report back before Phase 2 starts, but are no
-   longer a hard dependency — this feature already has one confirmed
-   working engine (`llama.cpp`).
+5. `feat-1`'s parallel SGLang/vLLM-version diagnostics remain independently
+   useful context if they report back, but are no longer a hard dependency
+   — this feature already has one confirmed working engine (`llama.cpp`).
 
 ### Blockers
 
 - None currently open. (Former blocker — REQ-010/GLM-5.2 DSA decode on
-  SM120 unverified — resolved this session via the Phase 1 spike; see
-  Current Status.) Only a soft dependency remains: Phase 2 can't fully
-  start until the `UD-Q5_K_XL`/`UD-Q4_K_XL` downloads finish.
+  SM120 unverified — resolved via the Phase 1 spike; see Current Status.)
+  The former soft dependency — Phase 2 gated on the
+  `UD-Q5_K_XL`/`UD-Q4_K_XL` downloads — resolved for the target quant
+  (`UD-Q5_K_XL` finished, confirmed via `bin/04-dl-status.sh`), and Task
+  2.1's KV-cache measurement is now also done (see Task 2.1/Current
+  Status): `UD-Q5_K_XL` fits 350-370K context with large headroom
+  (~235 GiB vs the 896 GB pool). `UD-Q4_K_XL` (fallback) is still
+  downloading in the background (60.8% at last check) but is not required
+  for Task 2.2+.
 
 ### Recent Updates
 
@@ -383,6 +425,21 @@ not the 1-bit spike quant.
   gated on `UD-Q5_K_XL`/`UD-Q4_K_XL` finishing download (Task 2.1 KV-cache
   measurement needs the real target quant, not the 1-bit spike quant).
 
+#### 2026-08-19 (download status check — target quant confirmed done)
+
+- Completed: Ran `bin/04-dl-status.sh` on the box. Results: `UD-IQ1_S`
+  216.7/217 GB (99.9%), **`UD-Q5_K_XL` 562.5/562 GB (100.1% — done)**,
+  `UD-Q4_K_XL` 284.0/467 GB (60.8%, in progress). Live rate sample on the
+  active `UD-Q4_K_XL` download: ~13.4 MB/s, ETA ~3.8h (looked slow —
+  re-check before trusting the ETA). GPUs idle/free at check time.
+- Found: since the Phase 2 target quant (`UD-Q5_K_XL`) is fully downloaded,
+  the "wait for downloads" gate on Phase 2 is resolved for Task 2.1
+  specifically — it does not need the `UD-Q4_K_XL` fallback, only needed
+  later if Task 2.2's KV-cache headroom check forces a step-down.
+- Next: Start Phase 2 — Task 2.1 (measure real KV-cache cost per 1K tokens
+  on `llama.cpp` at real context shapes) — while `UD-Q4_K_XL` keeps
+  downloading in the background.
+
 ### Decisions Made
 
 - **2026-08-19**: Created as a standalone feature (`feat-2`), separate from
@@ -442,6 +499,84 @@ not the 1-bit spike quant.
   quant (`UD-IQ1_S`) is still downloaded first so Task 1.2 is unblocked
   soonest; deployment (Phase 2) still will not proceed until Phase 1
   actually passes.
+- **2026-08-19 (Task 2.1 KV-cache measurement — MoE placement, two
+  incidents)**: `bin/06-measure-kv-cache.sh`'s llama.cpp MoE weight
+  placement went through two unsafe configs before landing on a safe one,
+  both on a live, monitored run (no data loss, no actual OOM-kill):
+  1. `--cpu-moe` (ALL MoE expert weight on CPU RAM) assumed this would
+     free VRAM for the KV cache under test without affecting the true
+     KV-cache-per-token cost (correct reasoning) — but GLM-5.2 is 744B
+     total/40B active, so nearly all its weight IS MoE experts: `--cpu-moe`
+     pushes ~500 GiB of the ~562 GiB `UD-Q5_K_XL` quant onto this box's
+     512 GiB system RAM alone. Live run showed swap climbing from ~0 to
+     ~1.4 GiB in well under a minute while RSS approached ~500/502 GiB —
+     killed as a precaution.
+  2. `--n-cpu-moe 41` (partial CPU/GPU MoE split, no explicit
+     `--tensor-split`) assumed llama.cpp spreads GPU-offloaded MoE blocks
+     evenly across all 4 GPUs. It doesn't: blocks are assigned to GPUs in
+     contiguous chunks (~20 each) *before* the CPU cutoff is applied, so
+     one GPU (CUDA2) ended up owning a chunk entirely above the cutoff and
+     tried to allocate its full, undiminished MoE weight
+     (`cudaMalloc failed: out of memory ... buffer of size 138774596736`,
+     ~129 GiB on one 96 GiB device).
+  3. **Fix**: `--n-cpu-moe 54` + explicit `--tensor-split 54,9,8,8`,
+     calibrated from the quant's own GGUF metadata (`block_count=79`,
+     `leading_dense_block_count=3`, ~6.6 GiB expert weight/MoE block,
+     cross-checked against incident 2's own failed-allocation byte count).
+     Concentrates all cheap (CPU-side) blocks on device0 (~12.5 GiB,
+     trivial) and evenly caps devices 1-3's GPU-offloaded share at
+     ~53-59 GiB each (well under 96 GiB). First probe (`ctx=4096`)
+     completed cleanly under this config: ~186 GiB total across 4 GPUs,
+     ~11.7 GiB system RAM "used" (the earlier RSS/swap climb during
+     loading turned out to be largely reclaimable mmap page-cache churn,
+     not a genuine capacity crisis — confirmed post-hoc since "available"
+     RAM never actually collapsed in either incident, though the swap
+     growth rate in incident 1 was still a reasonable trigger for caution
+     given the uncertainty at the time).
+  4. **Process note**: monitoring a multi-hour, multi-probe unattended run
+     tick-by-tick from the assistant session consumed significant context
+     budget for comparatively low information density (mostly repeated
+     `nvidia-smi`/`free`/log-tail polling). For future long-running
+     watch-and-report background jobs like this, delegate the actual
+     babysitting (polling loop + anomaly detection + summarizing back) to
+     an implementation/monitoring specialist (e.g. a background agent or a
+     dedicated task) rather than doing it inline turn-by-turn in the main
+     session, to preserve the main session's context for planning/decision
+     work. The user took over live monitoring directly for the remainder
+     of this sweep.
+
+#### 2026-08-20 (Task 2.1 KV-cache sweep — result analysis)
+
+- Completed: Reviewed the full `bin/06-measure-kv-cache.sh` run history in
+  `bin/logs/`. Two earlier sweep attempts (`2026-08-19T203936Z`,
+  `2026-08-19T212601Z`) crashed at the smallest ramp size (`ctx=4096`),
+  matching the two unsafe-MoE-placement incidents already logged under
+  Decisions Made 2026-08-19 ("KV-cache measurement MoE placement"): the
+  first shows no explicit error (consistent with an external kill during
+  the `--cpu-moe` swap-growth incident); the second shows the literal
+  `cudaMalloc failed: out of memory ... buffer of size 138774596736` on
+  CUDA2 (the `--n-cpu-moe 41`-without-`--tensor-split` incident). The
+  third attempt (`2026-08-19T220559Z`), using the fixed
+  `--n-cpu-moe 54 --tensor-split 54,9,8,8` config, completed cleanly
+  across all 5 ramp sizes (4,096 / 32,768 / 131,072 / 262,144 / 524,288
+  tokens), all `status=ok`, no bisection triggered.
+- Found: linear fit across the 5 successful data points gives
+  `total_GiB ≈ 197.3 + 0.000102 × ctx_size` → ~0.104 GiB KV cache per 1K
+  context tokens, ~197.3 GiB fixed (weights+runtime) footprint.
+  Extrapolated cost at REQ-003's target: ~233.0 GiB @ 350K tokens, ~235.0
+  GiB @ 370K tokens — well inside the 896 GB (384 GB VRAM + 512 GB RAM)
+  pool. System RAM stayed essentially flat (~11.6-11.8 GiB) across the
+  whole ramp since the `--tensor-split 54,9,8,8` placement keeps almost
+  all weight/KV-cache on GPU/VRAM.
+- Completed: Marked Task 2.1 `done` in the Task List with the full
+  per-context result table and updated Current Status/Next
+  Steps/Blockers accordingly.
+- Note: this was a model-load/VRAM-allocation probe per context size
+  (confirms the memory budget), not an end-to-end filled-context
+  generation run — that remains Task 2.5 (REQ-003/ACC-003 real validation).
+- Next: Task 2.2 (confirm `UD-Q5_K_XL` as the production quant — Task
+  2.1's headroom strongly supports keeping it over `UD-Q4_K_XL`) through
+  Task 2.7.
 
 ### Related PRs / Commits
 

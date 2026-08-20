@@ -1,0 +1,9 @@
+[
+{
+  "ctx_size": 4096,
+  "status": "crashed",
+  "gpu_mem_used_mib": 0,
+  "ram_used_kib": 0,
+  "load_secs": 2012,
+  "log": "/home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-19T203936Z-kv-ctx4096.log"
+}]

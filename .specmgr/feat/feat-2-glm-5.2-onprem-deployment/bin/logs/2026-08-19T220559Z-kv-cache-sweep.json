@@ -1,0 +1,41 @@
+[
+{
+  "ctx_size": 4096,
+  "status": "ok",
+  "gpu_mem_used_mib": 190512,
+  "ram_used_kib": 12251256,
+  "load_secs": 1302,
+  "log": "/home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-19T220559Z-kv-ctx4096.log"
+},
+{
+  "ctx_size": 32768,
+  "status": "ok",
+  "gpu_mem_used_mib": 193520,
+  "ram_used_kib": 12223196,
+  "load_secs": 1212,
+  "log": "/home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-19T220559Z-kv-ctx32768.log"
+},
+{
+  "ctx_size": 131072,
+  "status": "ok",
+  "gpu_mem_used_mib": 203768,
+  "ram_used_kib": 12322364,
+  "load_secs": 1112,
+  "log": "/home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-19T220559Z-kv-ctx131072.log"
+},
+{
+  "ctx_size": 262144,
+  "status": "ok",
+  "gpu_mem_used_mib": 217462,
+  "ram_used_kib": 12147512,
+  "load_secs": 1322,
+  "log": "/home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-19T220559Z-kv-ctx262144.log"
+},
+{
+  "ctx_size": 524288,
+  "status": "ok",
+  "gpu_mem_used_mib": 244864,
+  "ram_used_kib": 12202408,
+  "load_secs": 1462,
+  "log": "/home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-19T220559Z-kv-ctx524288.log"
+}]
