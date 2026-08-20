@@ -320,8 +320,9 @@ What is explicitly out of scope:
   production quant under the validated `--n-cpu-moe 54 --tensor-split
   54,9,8,8` placement; `UD-Q4_K_XL` fallback is not needed for this
   hardware/placement combo (see ACC-005 for the recorded rationale, and
-  Decisions Made for the safety-margin policy).
-- [ ] Task 2.3: Install the engine + GLM-5.2 as a systemd service with the chosen quant and GPU/CPU-RAM placement — depends on: Task 2.2 — status: in-progress — 2026-08-20: draft artifacts created — `bin/08-llama-glm-5.2.service` (systemd unit, placeholder `--ctx-size 524288` / `--n-cpu-moe 54 --tensor-split 54,9,8,8`, port 8092, follows feat-1's `vllm-deepseek-v4-flash.service` conventions already installed on this box: `User=user`, `--host 0.0.0.0`, `Restart=on-failure`, etc.) and `bin/09-install-llama-glm-service.sh` (installer: copy + `daemon-reload` + `enable`, deliberately NOT `start` — that's Task 2.4). **Not yet installed** — gated on two open items running/pending in parallel: (1) a follow-up empirical probe at `ctx=768,000`/`896,000` (`bin/07-measure-kv-cache-768-896.sh`, copied from `bin/06`, hardcoded to just these 2 sizes — user is running it separately, already confirmed live on the box as of 2026-08-20: `llama-server --ctx-size 768000 ...` loading under tmux session `glm-kv-768-986`), motivated by a "go for 1M context" ask whose math didn't hold up (see below); (2) a `--tensor-split`/`--n-cpu-moe` rebalancing discussion informed by PCIe topology, confirmed via `nvidia-smi --query-gpu=index,pcie.link.gen.max`: **GPU0 and GPU2 are PCIe 5.0 x16, GPU1 and GPU3 are PCIe 4.0 x16** (Gen5 ≈ 2x Gen4 bandwidth/lane) — relevant because CUDA0 (currently the disproportionately KV-cache-heavy GPU under the validated split) happens to sit on the faster bus, while CUDA1 (heaviest static MoE weight) sits on a slower one; whether/how to lean on that asymmetry when rebalancing is still open. Once both land, swap `--ctx-size`/`--tensor-split`/`--n-cpu-moe` in `bin/08-*.service` to the finalized values, then run `bin/09-install-llama-glm-service.sh`.
+   Decisions Made for the safety-margin policy).
+- [ ] Task 2.2.1: Benchmark `--load-mode none` (direct/eager read) vs the `mmap` default for `UD-Q5_K_XL` cold-load wall-clock time — run BEFORE Task 2.3's install, via the same kind of ad-hoc probe script used for Task 2.1/2.2 (not the installed systemd service), so the winning mode is baked into `bin/08-llama-glm-5.2.service` from the start instead of requiring an edit-and-reinstall cycle after the fact. Does not need to wait on Track A/PCIe rebalancing or the finalized production context size: the `--load-mode` difference is about the tensor-loading phase (reading/mapping the ~524 GiB GGUF file), which is essentially independent of `--ctx-size` (KV-cache allocation is a separate, fast step after tensor loading) — so this can run at any convenient context size (e.g. reuse the small `ctx=4096` probe shape from Task 2.1). Motivated by this box being power-cycled at the start of each ~8.4h working day, where the measured ~45-minute mmap cold load (`bin/logs/2026-08-20T055618Z-kv-ctx768000.log`) already costs ~9% of the day. Acceptable to trade mmap's lazy CPU-RAM residency for a faster eager read here since this box runs GLM-5.2 exclusively with no other RAM consumers once in production use (see Decisions Made for the full reasoning/tradeoff discussion). Adopt whichever mode loads faster; feed the winning value into Task 2.3's `bin/08-llama-glm-5.2.service` alongside the finalized `--ctx-size`/`--tensor-split`/`--n-cpu-moe` values — depends on: Task 2.2 — status: not-started
+- [ ] Task 2.3: Install the engine + GLM-5.2 as a systemd service with the chosen quant and GPU/CPU-RAM placement — depends on: Task 2.2, Task 2.2.1 — status: in-progress — 2026-08-20: draft artifacts created — `bin/08-llama-glm-5.2.service` (systemd unit, placeholder `--ctx-size 524288` / `--n-cpu-moe 54 --tensor-split 54,9,8,8`, port 8092, follows feat-1's `vllm-deepseek-v4-flash.service` conventions already installed on this box: `User=user`, `--host 0.0.0.0`, `Restart=on-failure`, etc.) and `bin/09-install-llama-glm-service.sh` (installer: copy + `daemon-reload` + `enable`, deliberately NOT `start` — that's Task 2.4). **Not yet installed** — gated on three open items running/pending in parallel: (1) a follow-up empirical probe at `ctx=768,000`/`896,000` (`bin/07-measure-kv-cache-768-896.sh`, copied from `bin/06`, hardcoded to just these 2 sizes — user is running it separately, already confirmed live on the box as of 2026-08-20: `llama-server --ctx-size 768000 ...` loading under tmux session `glm-kv-768-986`), motivated by a "go for 1M context" ask whose math didn't hold up (see below); (2) a `--tensor-split`/`--n-cpu-moe` rebalancing discussion informed by PCIe topology, confirmed via `nvidia-smi --query-gpu=index,pcie.link.gen.max`: **GPU0 and GPU2 are PCIe 5.0 x16, GPU1 and GPU3 are PCIe 4.0 x16** (Gen5 ≈ 2x Gen4 bandwidth/lane) — relevant because CUDA0 (currently the disproportionately KV-cache-heavy GPU under the validated split) happens to sit on the faster bus, while CUDA1 (heaviest static MoE weight) sits on a slower one; whether/how to lean on that asymmetry when rebalancing is still open; (3) Task 2.2.1's `--load-mode` benchmark result. Once all three land, swap `--ctx-size`/`--tensor-split`/`--n-cpu-moe`/`--load-mode` in `bin/08-*.service` to the finalized values, then run `bin/09-install-llama-glm-service.sh`.
 
   **Why the follow-up probe exists — "go for 1M" checked against the math first:** extending Task 2.2's per-GPU linear regressions to `ctx=1,048,576` (1M, GLM-5.2's advertised max) projects CUDA0 (the GPU with the steepest KV-cache-growth slope, ~66.3 MiB/1K tokens) down to only ~3.89 GiB (~4.1%) free — clearly below the adopted ≥15%/≥10 GiB safety-margin policy, and this is ~2x beyond the largest size Task 2.1 actually measured (524,288), so it's genuine extrapolation risk, not just a policy breach. Extending the same regression to intermediate sizes:
 
@@ -333,10 +334,16 @@ What is explicitly out of scope:
   | 1,048,576 | ~3.9 GiB (~4.1%) | fails clearly |
 
   768K and 896K were picked for the follow-up probe as the genuinely informative gray zone (960K/1M were dropped — the math already says "no" clearly enough not to burn a ~20-30 min load cycle on them).
+- [x] Task 2.3.1: Prepare a script to tune `vm.swappiness` down (target `1`, not `0`) via `/etc/sysctl.d/` (persisted across reboots) on the Dell 7960T — keep swap enabled as a last-resort safety net for genuine memory-pressure emergencies, but stop the kernel from proactively swapping anonymous pages during normal operation (default `swappiness=60` is tuned for general-purpose workloads, not this single dedicated, capacity-planned appliance). Explicitly NOT disabling swap outright — see Decisions Made for the full rationale (mmap'd GGUF weight pages are file-backed/cleanly-reclaimable and don't depend on swap at all; swap only covers anonymous memory, and its gradual growth has already served as a useful early-warning canary during Task 2.1's incidents, which a hard OOM-kill would not) — depends on: none — status: done — 2026-08-20: `bin/10-tune-vm-swappiness.sh` created (idempotent: checks current value + persisted file before writing, writes `/etc/sysctl.d/99-glm-swappiness.conf`, applies immediately via `sudo sysctl --system` so no reboot is required, verifies the resulting value and warns if a conflicting sysctl file wins). Requires sudo on the box, same as `bin/09`. **Run on the actual box 2026-08-20** — succeeded: `vm.swappiness` confirmed `60 -> 1`, persisted at `/etc/sysctl.d/99-glm-swappiness.conf`. Two unrelated `sysctl: setting key ... Invalid argument` warnings appeared for pre-existing `net.ipv4.conf.all.accept_source_route`/`promote_secondaries` keys — harmless, caused by `sudo sysctl --system` re-applying every existing sysctl file on the box, not by `99-glm-swappiness.conf` (confirmed by the final readback showing `vm.swappiness` at the correct target value). Also surfaced an important new finding, logged as Task 3.1: `/swapfile` is only 2 GiB total and already ~1.8 GiB (~90%) used — see Decisions Made and Task 3.1 for why this changes the swap-policy premise
 - [ ] Task 2.4: `systemctl start` the service; curl smoke test against `/v1/chat/completions`, verify tool-calls and all 3 reasoning modes (reasoning_effort max/high, enable_thinking:false). If engine is llama.cpp, explicitly verify OpenAI-compatible tool-calling works for OpenCode (REQ-011 risk) — depends on: Task 2.3 — status: not-started
-- [ ] Task 2.5: Validate 350-370K-token context works without OOM — depends on: Task 2.4 — status: not-started
+- [ ] Task 2.5: Validate the finalized production context size (768K or 896K — see Task 2.3's Track A result; both comfortably exceed REQ-003's 350-370K minimum bar) works without OOM — depends on: Task 2.4 — status: not-started
+- [ ] Task 2.5.1: Measure actual generation throughput (tokens/min in and tokens/min out, or tok/s) for `UD-Q5_K_XL` in the production config (`--n-cpu-moe 54 --tensor-split 54,9,8,8`), at the finalized production context size — Task 2.1/2.2 were model-load/VRAM-allocation probes only, not decode-speed benchmarks; the only speed figure on record (~39 tok/s, Task 1.2) is for the much lighter `UD-IQ1_S` spike quant and is not representative, since `UD-Q5_K_XL` streams the majority of MoE expert weight from CPU RAM per decode step (`--n-cpu-moe 54`), which is structurally slower. Runs against the already-installed service, which already has Task 2.2.1's winning `--load-mode` baked in — no second cold-load-mode comparison needed here — depends on: Task 2.5 — status: not-started
 - [ ] Task 2.6: Connect OpenWebUI and OpenCode to the GLM-5.2 endpoint as a separate model entry — depends on: Task 2.5 — status: not-started
 - [ ] Task 2.7: User runs the SAME coding-task examples from feat-1 (Task 1.7 / ACC-010) against this endpoint for a direct quality comparison — depends on: Task 2.6 — status: not-started
+
+#### Phase 3: Optimisations (nice-to-have, non-blocking on Phase 2)
+
+- [ ] Task 3.1: Evaluate/resize the `/swapfile` swap device. Discovered while actually running Task 2.3.1's `bin/10-tune-vm-swappiness.sh` on the box (2026-08-20): the swap device is only **2 GiB total, already ~1.8 GiB (~90%) used** — much smaller than assumed when the swap-policy decision was made. This meaningfully changes that decision's premise: at 2 GiB against a 512 GiB RAM pool, swap cannot absorb anything close to the multi-hundred-GB-scale anonymous-memory incidents already seen in Task 2.1 (Incident #1 alone consumed ~1.4 GiB of this same 2 GiB device in well under a minute — ~70% of its entire capacity from one transient event). At this size swap functions as an early trip-wire signal, not a real capacity cushion — `vm.swappiness=1` (Task 2.3.1) still correctly reduces *proactive* swapping, but does not fix the fact that any genuine pressure event would exhaust this device almost immediately and fall through to the OOM-killer anyway, safety-net or not. Decide whether to enlarge the swapfile (and to what size) to make it a meaningful buffer, or explicitly accept it as trip-wire-only and document that — depends on: Task 2.3.1 — status: not-started
 
 **Note:** If a task's scope changes mid-flight, edit its description in place;
 rely on git history (`git log -p` on this file) to recover what was
@@ -433,6 +440,40 @@ clearly pass/fail, so:
   use that asymmetry when rebalancing is the next discussion, once Track
   A's data is in.
 
+**Task 2.3.1 (swap tuning) is done — actually run on the real box, not
+just scripted.** `bin/10-tune-vm-swappiness.sh` executed successfully:
+`vm.swappiness` confirmed `60 -> 1`, persisted at
+`/etc/sysctl.d/99-glm-swappiness.conf`. Surfaced an important new fact not
+known when the swap-policy decision was made: `/swapfile` is only **2 GiB
+total, already ~1.8 GiB (~90%) used** — weakens (does not reverse) the
+"swap as a safety net" argument, since it's too small to absorb anything
+close to the multi-hundred-GB incidents already seen in Task 2.1. Tracked
+as new **Task 3.1** in a new **Phase 3: Optimisations** (non-blocking on
+Phase 2).
+
+**Task 2.2.1 (load-mode benchmark) is in progress.** `bin/11-benchmark-load-mode.sh`
+created (compares `mmap` default vs. `--load-mode none` at `--ctx-size
+896000`, fixed per instruction). **First attempt (2026-08-20) was killed
+mid-run** after live observation (using `/proc/<pid>/io` deltas, 3 samples
+over ~3.5 min) showed disk-read throughput degrading from ~120 MB/s down
+to ~53 MB/s — a real, measured slowdown, not perception. Root cause
+confirmed via `/proc/mdstat`: an active `mdadm` RAID10 consistency check
+on `/dev/md126` (the exact array `/data` lives on; started 2026-08-05,
+84.1% done, resumed 4h21m earlier via `mdcheck_continue.timer`) was
+competing for disk I/O with the model load — a genuine confound for a
+clean load-mode comparison, not just an annoyance. Both the benchmark
+script and its `llama-server` child were killed cleanly (confirmed: GPU
+memory drained to true idle 2-10 MiB/GPU, port 8091 freed), then the RAID
+check was paused (`echo idle | sudo tee /sys/block/md126/md/sync_action`
+— confirmed via `sync_action: idle` and no active `check` line in
+`/proc/mdstat`). **User is restarting `bin/11` under clean I/O conditions
+as of session end** — next session should pick up its result once done,
+and remember the RAID check is currently PAUSED, not cancelled or
+finished (resume later with `echo check | sudo tee
+/sys/block/md126/md/sync_action`, or it may auto-resume via the next
+`mdcheck_continue.timer` fire — do not forget it was paused for this
+reason).
+
 ### Next Steps
 
 1. **Task 2.1 and Task 2.2 are both done**; **Task 2.3 is in progress**
@@ -445,25 +486,48 @@ clearly pass/fail, so:
    later timestamp if re-run) and the per-context
    `*-kv-ctx768000.log`/`*-kv-ctx896000.log` for per-GPU
    `common_memory_breakdown_print` results once it's actually done.
-2. Once Track A's results are in: hold the `--tensor-split`/`--n-cpu-moe`
+2. **Task 2.2.1 is IN PROGRESS, restarting now.** `bin/11-benchmark-load-mode.sh`
+   exists (fixed at `--ctx-size 896000`). First attempt was killed
+   mid-run due to confirmed RAID-check I/O contention (see Current
+   Status) — the RAID check has now been paused, and the user is
+   restarting `bin/11` under clean conditions. Next session: check
+   whether it finished (`bin/logs/*-load-mode-bench.txt`/`.json`), and if
+   so, read the RECOMMENDATION line to see which `--load-mode` won; feed
+   that into `bin/08-llama-glm-5.2.service` before Task 2.3 install. If
+   still running, do NOT poll it tick-by-tick (same long-unattended-job
+   guidance as Track A) — just check the log file once.
+3. **Remember to resume the paused RAID check** once `bin/11` (and
+   ideally Track A too, if still relevant) are done consuming disk I/O:
+   `echo check | sudo tee /sys/block/md126/md/sync_action` (or it may
+   auto-resume via the next `mdcheck_continue.timer` fire on its own).
+   It was at 84.1% when paused — don't forget it's paused, not finished
+   or cancelled.
+4. Once Track A's results are in: hold the `--tensor-split`/`--n-cpu-moe`
    rebalancing discussion (PCIe topology — GPU0/GPU2 are PCIe 5.0 x16,
    GPU1/GPU3 are PCIe 4.0 x16 — is the new input for that), settle on
-   final `--ctx-size`/`--tensor-split`/`--n-cpu-moe` values, edit
-   `bin/08-llama-glm-5.2.service` accordingly, then run
+   final `--ctx-size`/`--tensor-split`/`--n-cpu-moe`/`--load-mode` values,
+   edit `bin/08-llama-glm-5.2.service` accordingly, then run
    `bin/09-install-llama-glm-service.sh` to actually install (copy +
    `daemon-reload` + `enable`, not `start`).
-3. Continue Task 2.4 (`systemctl start`, curl smoke test, tool-calls, all
+5. Continue Task 2.4 (`systemctl start`, curl smoke test, tool-calls, all
    3 reasoning modes) through Task 2.7 (OpenWebUI/OpenCode wiring,
-   350-370K real context validation, quality comparison vs. `feat-1`).
-4. Let `bin/00-download-glm-quants.sh` keep finishing `UD-Q4_K_XL`
+   real context validation at the finalized 768K/896K target, quality
+   comparison vs. `feat-1`), including Task 2.5.1 (measure actual
+   tok/min-in/tok/min-out throughput for `UD-Q5_K_XL` — currently
+   unmeasured; Task 2.1/2.2 were memory-only probes).
+6. **Task 2.3.1 is fully done** — `bin/10-tune-vm-swappiness.sh` actually
+   run on the box, `vm.swappiness` confirmed `1`. Follow-up spun off as
+   **Task 3.1** (Phase 3: Optimisations) — decide whether to enlarge the
+   2 GiB `/swapfile`, not yet started, non-blocking on Phase 2.
+7. Let `bin/00-download-glm-quants.sh` keep finishing `UD-Q4_K_XL`
    (fallback, 60.8% at last check) in the background — check progress any
    time with `bin/04-dl-status.sh`. No longer a gate on anything now that
    Task 2.2 has confirmed `UD-Q5_K_XL` as the production quant; can be left
    to finish or abandoned at the user's discretion.
-5. Decide whether to post `followup-comment-draft.md` to
+8. Decide whether to post `followup-comment-draft.md` to
    vllm-project/vllm#52938 — drafted and hedged, deliberately left for a
    separate decision, not posted.
-6. `feat-1`'s parallel SGLang/vLLM-version diagnostics remain independently
+9. `feat-1`'s parallel SGLang/vLLM-version diagnostics remain independently
    useful context if they report back, but are no longer a hard dependency
    — this feature already has one confirmed working engine (`llama.cpp`).
 
@@ -482,11 +546,73 @@ clearly pass/fail, so:
   (60.8% at last check) but is no longer needed for anything in the
   current plan. **Soft dependency (not a hard blocker):** Task 2.3's
   systemd install is drafted but not yet run — waiting on Track A's
-  768K/896K empirical results (running now, separately) and the
-  `--tensor-split` rebalancing discussion before finalizing
-  `bin/08-llama-glm-5.2.service`'s placement/context values.
+  768K/896K empirical results (running now, separately), the
+  `--tensor-split` rebalancing discussion, and Task 2.2.1's `--load-mode`
+  result before finalizing `bin/08-llama-glm-5.2.service`'s
+  placement/context values.
+- **Maintenance loose end (not a feature blocker, but do not lose track
+  of it):** the box's `/dev/md126` RAID10 consistency check (the array
+  `/data` lives on) is currently PAUSED (`sync_action: idle`), not
+  finished or cancelled — it was at 84.1% when paused to eliminate I/O
+  contention for Task 2.2.1's `bin/11` benchmark. Resume it once `bin/11`
+  (and any other disk-heavy work) is done:
+  `echo check | sudo tee /sys/block/md126/md/sync_action` (or it may
+  auto-resume on its own via the next `mdcheck_continue.timer` fire).
 
 ### Recent Updates
+
+#### 2026-08-20 (Task 2.3.1 real run, Task 2.2.1 creation + RAID-contention incident)
+
+- Completed: Implemented Task 2.3.1 — `bin/10-tune-vm-swappiness.sh`
+  created (idempotent, persists `vm.swappiness=1` via
+  `/etc/sysctl.d/99-glm-swappiness.conf`, applies immediately via `sudo
+  sysctl --system`). User ran it on the actual box: succeeded,
+  `vm.swappiness` confirmed `60 -> 1`. Two unrelated `sysctl: ... Invalid
+  argument` warnings for pre-existing `net.ipv4.conf.all.*` keys appeared
+  (harmless — caused by `sysctl --system` re-applying every existing
+  sysctl file, not ours).
+- Found: running Task 2.3.1 surfaced that `/swapfile` is only 2 GiB total
+  and already ~90% used — much smaller than assumed when the swap-policy
+  decision was made, weakening (not reversing) its "safety net" argument.
+  Logged as a Decisions Made update and spun off as new **Task 3.1** in a
+  new **Phase 3: Optimisations** (non-blocking on Phase 2).
+- Completed: Implemented Task 2.2.1 — `bin/11-benchmark-load-mode.sh`
+  created (compares `--load-mode none` vs. the `mmap` default for
+  `UD-Q5_K_XL` cold-load wall-clock time, fixed at `--ctx-size 896000`
+  per instruction; sequenced to run BEFORE Task 2.3's install rather than
+  after Task 2.4, since the winning mode is an input to
+  `bin/08-llama-glm-5.2.service`).
+- Found (incident): the user's first `bin/11` run appeared to be loading
+  slower than earlier loads. Verified this live and quantitatively — this
+  session has actual shell access to the box (`hostname` = `sys0`, real
+  `nvidia-smi`/GPUs present), not just the repo checkout. Sampled
+  `/proc/<pid>/io`'s `read_bytes` three times over ~3.5 minutes: rate
+  dropped from ~120 MB/s (cumulative average) to ~53 MB/s (most recent
+  window) — a real, measured slowdown, not perception. Root-caused via
+  `/proc/mdstat`: an active `mdadm` RAID10 consistency check on
+  `/dev/md126` (the exact array `/data`/the GGUF file lives on; started
+  2026-08-05, at 84.1%, last resumed via `mdcheck_continue.timer` 4h21m
+  earlier) was competing for disk I/O with the model load. This was also
+  a genuine methodological problem for Task 2.2.1 itself: an uncontrolled,
+  time-varying confound would have made the two `--load-mode` probes
+  incomparable if one ran during active contention and the other didn't.
+- Completed: killed the run cleanly at the user's request — `llama-server`
+  (SIGTERM, exited cleanly) and the wrapper script `bin/11` itself (so it
+  would not auto-advance to the second probe). Confirmed clean teardown:
+  GPU memory drained to true idle (2-10 MiB/GPU), port 8091 freed.
+- Completed: paused the RAID check at the user's request —
+  `echo idle | sudo tee /sys/block/md126/md/sync_action` — but this
+  specific step required `sudo`, and the assistant's shell session had no
+  cached credential and no way to supply an interactive password, so the
+  user ran that one command themselves. Confirmed paused afterward
+  (`sync_action: idle`, `sync_completed: none`, no active `check` line in
+  `/proc/mdstat`).
+- Next: user is restarting `bin/11` under clean I/O conditions. Once it
+  finishes, read `bin/logs/*-load-mode-bench.txt`/`.json`'s
+  RECOMMENDATION line and feed the winning `--load-mode` into
+  `bin/08-llama-glm-5.2.service` before Task 2.3 install. Remember to
+  resume the paused RAID check afterward (see Blockers) — it is paused,
+  not finished or cancelled.
 
 #### 2026-08-19
 
@@ -676,6 +802,93 @@ clearly pass/fail, so:
      session, to preserve the main session's context for planning/decision
      work. The user took over live monitoring directly for the remainder
      of this sweep.
+- **2026-08-20 (load-mode/cold-load-time discussion)**: Added Task 2.2.1 to
+  empirically compare `--load-mode none` (direct/eager read) against the
+  `mmap` default for `UD-Q5_K_XL` cold-load wall-clock time. Sequenced
+  BEFORE Task 2.3's systemd install (not after Task 2.4 start, as first
+  drafted) — the `--load-mode` decision is an input to `bin/08-llama-glm-
+  5.2.service`, same as the finalized `--ctx-size`/`--tensor-split` values,
+  so it should be resolved before the service is installed rather than
+  requiring an edit-and-reinstall cycle afterward. It also doesn't need to
+  wait on Track A/PCIe rebalancing or the finalized context size at all,
+  since the tensor-loading phase this benchmark targets is essentially
+  independent of `--ctx-size` — it can run via the same kind of ad-hoc
+  probe script already used for Task 2.1/2.2. Motivation:
+  this box will be power-cycled at the start of each ~8.4h working day
+  (not left running long-term), so the measured ~45-minute mmap cold load
+  (`bin/logs/2026-08-20T055618Z-kv-ctx768000.log`: ~43 of the ~45.5 min is
+  the tensor-load phase) is a *recurring daily* cost (~9% of the working
+  day), not a one-time/rare-restart cost — a materially different
+  trade-off than initially assumed. `mmap`'s lazy CPU-RAM residency (only
+  actively-routed MoE experts get faulted in, confirmed via the ~11.6-11.8
+  GiB actually-resident figure from Task 2.1 vs. the ~350 GiB logically
+  mapped) is normally the safer default, since clean mmap'd pages are
+  kernel-reclaimable under memory pressure, unlike the non-reclaimable
+  private memory `--load-mode none` would commit instead (the same risk
+  class as the `--cpu-moe` swap-growth incident above). That downside is
+  judged acceptable here specifically because this box will run GLM-5.2
+  *exclusively* once in production use (no other workloads, no downloads,
+  no SSH sessions competing for the 512 GiB pool per the user's own
+  operating model), leaving the usual RAM-headroom objection much weaker
+  than on a general-purpose or long-uptime box. Additionally, since page
+  cache never survives the daily power-cycle anyway, mmap's laziness only
+  partially helps here (every morning re-reads from cold disk either way),
+  and over a full 8.4h day of varied coding traffic most of the CPU-side
+  MoE experts likely get touched regardless — reducing the "wasted read"
+  downside of eagerly loading it all upfront. No hard number exists yet
+  for the expected speedup (depends on this storage medium's
+  random-vs-sequential I/O characteristics, not measured) — Task 2.2.1
+  exists specifically to replace this reasoning with a real measurement.
+  Whichever mode Task 2.2.1 finds faster is baked directly into Task 2.3's
+  `bin/08-llama-glm-5.2.service` before install, so neither Task 2.5 nor
+  Task 2.5.1 need to pay a second cold-load-mode comparison.
+- **2026-08-20 (swap policy)**: Decided to KEEP swap enabled (not disable it
+  outright), but tune `vm.swappiness` down (target `1`) — added as Task
+  2.3.1. Rationale, prompted by the repeated observation that swap fills up
+  during model load: (1) the `mmap`'d GGUF weight pages (the large bulk of
+  this workload's memory footprint) are file-backed and cleanly reclaimable
+  regardless of swap — they can simply be dropped and re-read from disk, so
+  swap was never actually protecting the model weights in the first place;
+  the swap growth actually observed during Task 2.1's `--cpu-moe` incident
+  must therefore have come from some other anonymous-memory consumer (page
+  table overhead for the huge sparse mapping, loader staging buffers, or
+  the kernel's default swappiness heuristics), not from the weights
+  themselves. (2) That gradual swap growth served as a useful early-warning
+  canary in the Task 2.1 incident (it let the run be killed as a
+  precaution before a harder failure) — disabling swap outright removes
+  that signal entirely and replaces it with an immediate OOM-kill as the
+  only remaining escape valve under any unexpected memory-pressure spike.
+  (3) An OOM-kill of `llama-server` is arguably worse for this box's actual
+  operational goal (minimizing the recurring ~45-minute daily cold-load
+  cost, see Task 2.2.1) than a slow-but-survivable swap episode, since a
+  kill forces exactly the expensive reload being optimized against. (4)
+  This project's own track record (two distinct unsafe-MoE-placement
+  incidents in Task 2.1 before landing on a safe config) argues for keeping
+  a safety margin rather than removing it, given capacity planning here has
+  already been wrong twice on the first two attempts. Lowering
+  `vm.swappiness` (rather than leaving the general-purpose default of `60`)
+  addresses the user's actual complaint — wasted cycles from the kernel
+  *proactively* swapping during normal operation — without giving up the
+  emergency safety net for genuine, unexpected pressure spikes.
+- **2026-08-20 (swap policy — real-world update, swap size)**: Running
+  Task 2.3.1's `bin/10-tune-vm-swappiness.sh` on the actual box surfaced a
+  fact not known when the swap-policy decision above was made: `/swapfile`
+  is only **2 GiB total, already ~1.8 GiB (~90%) used**. This meaningfully
+  weakens (without reversing) that decision's "swap as a safety net"
+  argument — at 2 GiB against a 512 GiB RAM pool, swap cannot absorb
+  anything close to the multi-hundred-GB-scale anonymous-memory incidents
+  already seen in Task 2.1 (Incident #1 alone consumed ~1.4 GiB of this
+  same 2 GiB device, ~70% of its entire capacity, in well under a minute).
+  At this size, swap functions as an early trip-wire/diagnostic signal
+  (which is still genuinely useful, per point (2) of the original
+  decision), not a real capacity cushion capable of absorbing a serious
+  overcommit — any such event would exhaust this device almost
+  immediately and fall through to the OOM-killer regardless.
+  `vm.swappiness=1` still stands (it correctly addresses *proactive*
+  swapping, which is size-independent), but whether to also enlarge
+  `/swapfile` is now open as its own question — tracked as Task 3.1 in a
+  new "Phase 3: Optimisations" rather than blocking Phase 2's deployment
+  work.
 
 #### 2026-08-20 (Task 2.1 KV-cache sweep — result analysis)
 

@@ -1,0 +1,9 @@
+GLM-5.2 --load-mode benchmark -- Task 2.2.1
+ctx: 896000
+model: /data/llama_cpp/models/GLM-5.2-GGUF/UD-Q5_K_XL/GLM-5.2-UD-Q5_K_XL-00001-of-00013.gguf
+quant: UD-Q5_K_XL
+started (UTC): 2026-08-20T074051Z
+
+mode             status      gpu_mib    ram_kib      load_secs
+baseline (idle): gpu=16 MiB, ram=11676404 KiB
+

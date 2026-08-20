@@ -7,3 +7,45 @@ started (UTC): 2026-08-20T055618Z
 ctx        status      gpu_mib    ram_kib      load_secs
 baseline (idle): gpu=16 MiB, ram=11621588 KiB
 
+768000     ok           270322   12523588           2735
+  -- KV-related log lines (diagnostic only) --
+    44.18.855.236 I llama_kv_cache_dsa: creating main KV cache, size = 768000 cells
+    44.18.892.114 I llama_kv_cache:      CUDA0 KV buffer size = 46406.25 MiB
+    44.18.931.811 I llama_kv_cache:      CUDA1 KV buffer size =  7593.75 MiB
+    44.18.943.682 I llama_kv_cache:      CUDA2 KV buffer size =  6750.00 MiB
+    44.18.948.568 I llama_kv_cache:      CUDA3 KV buffer size =  5062.50 MiB
+    44.18.952.118 I llama_kv_cache_dsa: creating indexer KV cache, size = 768000 cells
+    44.18.965.402 I llama_kv_cache:      CUDA0 KV buffer size =  3000.00 MiB
+    44.18.967.464 I llama_kv_cache:      CUDA1 KV buffer size =   375.00 MiB
+    44.18.967.822 I llama_kv_cache:      CUDA2 KV buffer size =   375.00 MiB
+    44.18.968.256 I llama_kv_cache:      CUDA3 KV buffer size =   187.50 MiB
+896000     ok           283710   12834480           2074
+  -- KV-related log lines (diagnostic only) --
+    33.39.366.199 I llama_kv_cache_dsa: creating main KV cache, size = 896000 cells
+    33.39.384.763 I llama_kv_cache:      CUDA0 KV buffer size = 54140.62 MiB
+    33.39.427.521 I llama_kv_cache:      CUDA1 KV buffer size =  8859.38 MiB
+    33.39.440.238 I llama_kv_cache:      CUDA2 KV buffer size =  7875.00 MiB
+    33.39.445.607 I llama_kv_cache:      CUDA3 KV buffer size =  5906.25 MiB
+    33.39.449.826 I llama_kv_cache_dsa: creating indexer KV cache, size = 896000 cells
+    33.39.467.168 I llama_kv_cache:      CUDA0 KV buffer size =  3500.00 MiB
+    33.39.469.563 I llama_kv_cache:      CUDA1 KV buffer size =   437.50 MiB
+    33.39.470.070 I llama_kv_cache:      CUDA2 KV buffer size =   437.50 MiB
+    33.39.470.510 I llama_kv_cache:      CUDA3 KV buffer size =   218.75 MiB
+
+== Deriving GB-per-1K-tokens from all successful data points ==
+Linear fit over 2 points: total_gib ~= 195.7 + 0.000104 * ctx_size
+=> KV cache cost: ~0.107 GiB per 1K context tokens
+=> Estimated fixed footprint (weights/runtime, ctx-independent): ~195.7 GiB
+
+Extrapolation to REQ-003 targets (fixed footprint + KV cache only, no safety margin):
+  ctx=350,000: ~232.3 GiB total
+  ctx=370,000: ~234.4 GiB total
+
+This aggregate fit is a cross-check only -- the decision that matters here
+is the PER-GPU memory breakdown in each ctx-specific log
+(kv-ctx768000.log / kv-ctx896000.log), since CUDA0 (largest KV-cache growth
+share under --tensor-split 54,9,8,8) is the projected binding constraint, not
+the pool total. Compare each GPU's `common_memory_breakdown_print` free MiB
+against the adopted safety-margin policy (>=15% free VRAM per GPU, or >=10
+GiB absolute, whichever is greater) to settle whether 768K/896K hold up in
+practice as well as they did in the Task 2.2 extrapolation.

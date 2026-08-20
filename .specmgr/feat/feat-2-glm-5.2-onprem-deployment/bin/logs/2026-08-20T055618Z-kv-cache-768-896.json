@@ -1,1 +1,17 @@
 [
+{
+  "ctx_size": 768000,
+  "status": "ok",
+  "gpu_mem_used_mib": 270322,
+  "ram_used_kib": 12523588,
+  "load_secs": 2735,
+  "log": "/home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-20T055618Z-kv-ctx768000.log"
+},
+{
+  "ctx_size": 896000,
+  "status": "ok",
+  "gpu_mem_used_mib": 283710,
+  "ram_used_kib": 12834480,
+  "load_secs": 2074,
+  "log": "/home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-20T055618Z-kv-ctx896000.log"
+}]
