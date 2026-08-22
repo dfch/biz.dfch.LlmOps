@@ -468,6 +468,38 @@ Decisions Made for the safety-margin policy).
   `bash bin/21-smoke-test-glm-q4-service.sh` once Q4's `/health` (port
   8093\) returns 200.
 
+  **`bin/21` run 2026-08-22 11:18-11:20 CEST against the live Q4 service
+  (cold-loaded via the user's own swap of Q5→Q4 above) — ALL 4 CASES
+  PASSED**, same as Q5's original Task 2.4 run: `nothink.json`
+  (`enable_thinking:false`) returns `"Paris"`, `finish_reason:"stop"`, no
+  `reasoning_content` (correct); `reasoning_high.json` (549 tokens) and
+  `reasoning_max.json` (798 tokens) both return coherent, correct,
+  non-truncated Fibonacci implementations with non-empty
+  `reasoning_content`; `toolcall.json` returns a well-formed
+  `tool_calls[0].function` block (`get_weather`,
+  `{"location":"Paris"}`) — no degenerate/repeated-token output in any
+  case. **Decode throughput comparison** (same prompts/config as Q5's
+  2026-08-20 `bin/14` run, `predicted_per_second` from each response's
+  own `timings`, larger-sample cases only since `nothink`/`toolcall`
+  generate too few tokens — 2/11 — to be meaningful):
+
+  | case | Q5 tok/s | Q4 tok/s | Q4/Q5 |
+  |---|---|---|---|
+  | reasoning_high | 12.91 | 14.40 | +11.5% |
+  | reasoning_max | 12.88 | 14.57 | +13.1% |
+
+  Q4 decodes ~12-13% faster than Q5 in this single-request smoke test —
+  directionally consistent with Q4's smaller per-block footprint
+  (~82.4% of Q5's size) reducing the PCIe-transfer-bound cost identified
+  earlier (Task 2.5.1/PCIe RX saturation finding), though this is one
+  sample per case, not a rigorous throughput benchmark (that's
+  `bin/15-measure-pcie-vs-throughput.sh`/`bin/16-benchmark-q4-vs-q5.sh`,
+  not yet run against the installed Q4 service specifically). Directly
+  relevant to the original complaint that motivated this whole
+  side-by-side effort ("Q5 decode feels slow") — Q4 is measurably
+  faster here, not just theoretically smaller. Full responses:
+  `bin/logs/2026-08-22T091818Z-smoke-test-glm-service/*.json`.
+
 **Note:** If a task's scope changes mid-flight, edit its description in place;
 rely on git history (`git log -p` on this file) to recover what was
 originally planned, rather than keeping a second copy of the task around.
@@ -942,12 +974,28 @@ file).
 - Completed: updated Task 3.4 (new), Current Status, and this entry with
   the full validated results; verified no GPU/RAM conflict occurred at
   any point (checked `nvidia-smi`, `ps aux`, `journalctl` timelines).
-- Next: let the in-progress Q4 cold-load (started by the user) finish;
-  once `/health` on port 8093 returns 200, a curl smoke test
-  (`bin/14`-style, pointed at 8093 with `--alias glm-5.2:UD-Q4_K_XL`)
-  would confirm Q4 serves correctly via its own dedicated service, not
-  just via the tuning script's ad-hoc probes. Whether/when to switch back
-  to Q5 afterward is the user's call, not automated by anything here.
+- Completed: generalized `bin/14-smoke-test-glm-service.sh`
+  (`SERVICE_UNIT`/`HOST`/`PORT`/`MODEL` now overridable env vars,
+  previously hardcoded to Q5) and added
+  `bin/21-smoke-test-glm-q4-service.sh` as a thin wrapper around it for
+  Q4. Ran `bin/21` once the user's cold-load finished (2026-08-22
+  11:18-11:20 CEST) against the live `llama-glm-5.2-q4.service`: **all 4
+  cases passed** (correct `"Paris"` answer for `enable_thinking:false`,
+  coherent non-truncated Fibonacci implementations for both
+  `reasoning_effort` modes, well-formed `get_weather` tool call) — same
+  bar Q5 passed on 2026-08-20. **Decode throughput came out ~12-13%
+  faster than Q5** on the two larger-sample cases (reasoning_high: 14.40
+  vs 12.91 tok/s; reasoning_max: 14.57 vs 12.88 tok/s) — a single-sample
+  smoke-test comparison, not `bin/15`/`bin/16`'s rigorous benchmark, but
+  directly on-point for the complaint that started this whole
+  side-by-side effort ("Q5 decode feels slow") — see Task 3.4 for the
+  full table and detail.
+- Next: whether/when to switch back to Q5, or keep Q4 running given its
+  faster smoke-test decode numbers, is the user's call — not automated
+  by anything here. If a real throughput comparison is wanted,
+  `bin/15-measure-pcie-vs-throughput.sh`/`bin/16-benchmark-q4-vs-q5.sh`
+  haven't yet been run against the installed side-by-side Q4 service
+  specifically (only ad-hoc probes so far).
 
 #### 2026-08-20 (yet later — Q4-specific block-placement tuning added)
 
