@@ -1,0 +1,63 @@
+GLM-5.2 UD-Q4_K_XL KV-cache probe -- 768K/896K
+model: /data/llama_cpp/models/GLM-5.2-GGUF/UD-Q4_K_XL/GLM-5.2-UD-Q4_K_XL-00001-of-00011.gguf
+quant: UD-Q4_K_XL
+n-cpu-moe: 54, tensor-split: 54,9,8,8
+started (UTC): 2026-08-20T120959Z
+
+ctx        status      gpu_mib    ram_kib      load_secs
+baseline (clean): gpu=8 MiB, ram=11846088 KiB
+
+768000     ok           242600   21951548           1630
+  -- memory/fit-check log lines (diagnostic) --
+    0.01.197.988 I common_params_fit_impl: getting device memory data for initial parameters:
+    0.02.394.528 I common_memory_breakdown_print: | memory breakdown [MiB]                                       | total    free      self    model   context   compute    unaccounted |
+    0.02.394.531 I common_memory_breakdown_print: |   - CUDA0 (RTX PRO 6000 Blackwell Max-Q Workstation Edition) | 97288 = 96727 + ( 72096 =  18309 +   49406 +    4380) +      -71534 |
+    0.02.394.532 I common_memory_breakdown_print: |   - CUDA1 (RTX PRO 6000 Blackwell Max-Q Workstation Edition) | 97288 = 96727 + ( 63326 =  52106 +    7968 +    3252) +      -62765 |
+    0.02.394.532 I common_memory_breakdown_print: |   - CUDA2 (RTX PRO 6000 Blackwell Max-Q Workstation Edition) | 97279 = 96718 + ( 56685 =  46316 +    7125 +    3244) +      -56124 |
+    0.02.394.532 I common_memory_breakdown_print: |   - CUDA3 (RTX PRO 6000 Blackwell Max-Q Workstation Edition) | 97288 = 96727 + ( 45411 =  36925 +    5250 +    3236) +      -44850 |
+    0.02.394.532 I common_memory_breakdown_print: |   - Host                                                     |                  287632 = 286108 +       0 +    1524                |
+    0.02.442.991 I common_params_fit_impl: projected memory use with initial parameters [MiB]:
+    0.02.442.995 I common_params_fit_impl:   - CUDA0 (NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition):  97288 total,  72096 used,  24630 free vs. target of   1024
+    0.02.442.996 I common_params_fit_impl:   - CUDA1 (NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition):  97288 total,  63326 used,  33400 free vs. target of   1024
+    0.02.442.996 I common_params_fit_impl:   - CUDA2 (NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition):  97279 total,  56685 used,  40033 free vs. target of   1024
+    0.02.442.996 I common_params_fit_impl:   - CUDA3 (NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition):  97288 total,  45411 used,  51315 free vs. target of   1024
+    0.02.442.997 I common_params_fit_impl: projected to use 237520 MiB of device memory vs. 386899 MiB of free device memory
+    0.02.442.997 I common_params_fit_impl: targets for free memory can be met on all devices, no changes needed
+    27.06.166.184 I llama_kv_cache:      CUDA0 KV buffer size = 46406.25 MiB
+    27.06.216.573 I llama_kv_cache:      CUDA1 KV buffer size =  7593.75 MiB
+    27.06.233.520 I llama_kv_cache:      CUDA2 KV buffer size =  6750.00 MiB
+    27.06.293.277 I llama_kv_cache:      CUDA3 KV buffer size =  5062.50 MiB
+    27.06.324.743 I llama_kv_cache:      CUDA0 KV buffer size =  3000.00 MiB
+    27.06.326.880 I llama_kv_cache:      CUDA1 KV buffer size =   375.00 MiB
+    27.06.327.322 I llama_kv_cache:      CUDA2 KV buffer size =   375.00 MiB
+    27.06.327.736 I llama_kv_cache:      CUDA3 KV buffer size =   187.50 MiB
+896000     ok           255976   21876360           1637
+  -- memory/fit-check log lines (diagnostic) --
+    0.01.177.373 I common_params_fit_impl: getting device memory data for initial parameters:
+    0.01.809.482 I common_memory_breakdown_print: | memory breakdown [MiB]                                       | total    free      self    model   context   compute    unaccounted |
+    0.01.809.486 I common_memory_breakdown_print: |   - CUDA0 (RTX PRO 6000 Blackwell Max-Q Workstation Edition) | 97288 = 96727 + ( 80580 =  18309 +   57640 +    4630) +      -80019 |
+    0.01.809.486 I common_memory_breakdown_print: |   - CUDA1 (RTX PRO 6000 Blackwell Max-Q Workstation Edition) | 97288 = 96727 + ( 65155 =  52106 +    9296 +    3752) +      -64593 |
+    0.01.809.487 I common_memory_breakdown_print: |   - CUDA2 (RTX PRO 6000 Blackwell Max-Q Workstation Edition) | 97279 = 96718 + ( 58373 =  46316 +    8312 +    3744) +      -57811 |
+    0.01.809.487 I common_memory_breakdown_print: |   - CUDA3 (RTX PRO 6000 Blackwell Max-Q Workstation Edition) | 97288 = 96727 + ( 46786 =  36925 +    6125 +    3736) +      -46225 |
+    0.01.809.487 I common_memory_breakdown_print: |   - Host                                                     |                  287882 = 286108 +       0 +    1774                |
+    0.01.853.284 I common_params_fit_impl: projected memory use with initial parameters [MiB]:
+    0.01.853.287 I common_params_fit_impl:   - CUDA0 (NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition):  97288 total,  80580 used,  16146 free vs. target of   1024
+    0.01.853.288 I common_params_fit_impl:   - CUDA1 (NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition):  97288 total,  65155 used,  31572 free vs. target of   1024
+    0.01.853.288 I common_params_fit_impl:   - CUDA2 (NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition):  97279 total,  58373 used,  38345 free vs. target of   1024
+    0.01.853.288 I common_params_fit_impl:   - CUDA3 (NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition):  97288 total,  46786 used,  49940 free vs. target of   1024
+    0.01.853.289 I common_params_fit_impl: projected to use 250895 MiB of device memory vs. 386899 MiB of free device memory
+    0.01.853.289 I common_params_fit_impl: targets for free memory can be met on all devices, no changes needed
+    27.08.175.765 I llama_kv_cache:      CUDA0 KV buffer size = 54140.62 MiB
+    27.08.229.680 I llama_kv_cache:      CUDA1 KV buffer size =  8859.38 MiB
+    27.08.247.647 I llama_kv_cache:      CUDA2 KV buffer size =  7875.00 MiB
+    27.08.307.501 I llama_kv_cache:      CUDA3 KV buffer size =  5906.25 MiB
+    27.08.341.961 I llama_kv_cache:      CUDA0 KV buffer size =  3500.00 MiB
+    27.08.344.426 I llama_kv_cache:      CUDA1 KV buffer size =   437.50 MiB
+    27.08.344.910 I llama_kv_cache:      CUDA2 KV buffer size =   437.50 MiB
+    27.08.345.361 I llama_kv_cache:      CUDA3 KV buffer size =   218.75 MiB
+
+== Per-GPU breakdown (see each *-q4-kv-ctx*.log's common_params_fit_impl lines for authoritative used/free per GPU) ==
+Compare against the adopted safety-margin policy (>=15% free VRAM per
+GPU, or >=10 GiB absolute, whichever is greater) and against Q5's own
+768K reference (CUDA0 22,710/23.3%, CUDA1 22,816/23.5%, CUDA2 30,617/31.5%,
+CUDA3 43,251/44.5% free -- bin/logs/2026-08-20T055618Z-kv-ctx768000.log).

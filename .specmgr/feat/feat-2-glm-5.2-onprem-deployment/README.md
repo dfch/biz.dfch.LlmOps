@@ -103,7 +103,14 @@ minimums (their reference config runs the 2-bit quant on a single 24 GB GPU
   test then a real OpenCode agentic session; all 3 reasoning modes
   (`reasoning_effort` max/high and `enable_thinking:false`) confirmed to
   toggle correctly. If the engine is llama.cpp, tool-calling is explicitly
-  re-verified (REQ-011 risk)
+  re-verified (REQ-011 risk) — **curl smoke-test half PASSED 2026-08-20**
+  (Task 2.4, `bin/14-smoke-test-glm-service.sh`): all 3 reasoning modes
+  produced coherent, non-degenerate, non-truncated (`finish_reason: stop`)
+  output, and the tool-calling case emitted a well-formed
+  `tool_calls[].function` block (`get_weather`, `arguments: {"location":"Paris"}`) — REQ-011's llama.cpp risk did NOT materialize on this
+  smoke test. **Still open: the real OpenCode agentic session** (deferred
+  to Task 2.6/2.7 once OpenCode is wired up) — this checkbox stays
+  unchecked until that half also passes
 - [x] ACC-005: Verifies REQ-005/REQ-006 — the chosen quant is recorded
   (target `UD-Q5_K_XL`, else `UD-Q4_K_XL`), with a one-line rationale for
   why it is the highest-quality option that still meets REQ-003's context
@@ -343,11 +350,54 @@ Decisions Made for the safety-margin policy).
 
 - [x] Task 2.3.3: Enable lingering (`loginctl enable-linger`) for `user` so `llama-glm-5.2.service` can keep running with no user logged in, WITHOUT autostarting at boot — the actual requirement turned out to be "survive logout", not "autostart now", and those need lingering-on + unit-NOT-enabled together, not lingering alone (see Decisions Made "lingering + no autostart" for the full incident where this was caught and corrected live on the box) — depends on: none — status: done — 2026-08-20: `bin/13-enable-user-lingering.sh` created (idempotent, no sudo needed — verified `loginctl enable-linger` succeeds for `user` without a password prompt on this box) and run: `Linger=yes` confirmed via `loginctl show-user user -p Linger`. **Incident found and fixed in the same check:** `bin/09-install-llama-glm-service.sh` had already been run once (separately) and had `enable`d the unit — with lingering now on, that combination would have auto-started it at the next boot. Caught immediately (`systemctl --user status llama-glm-5.2` showed `enabled`), fixed via `systemctl --user disable llama-glm-5.2` (confirmed `disabled`/`inactive`), and `bin/09` itself rewritten to never call `enable` (it now also defensively re-disables the unit if it finds it enabled from a prior run, so re-running the installer can't silently reintroduce this).
 
-- [ ] Task 2.4: `systemctl --user start` the service (no sudo); curl smoke test against `/v1/chat/completions`, verify tool-calls and all 3 reasoning modes (reasoning_effort max/high, enable_thinking:false). If engine is llama.cpp, explicitly verify OpenAI-compatible tool-calling works for OpenCode (REQ-011 risk) — depends on: Task 2.3, Task 2.3.2, Task 2.3.3 — status: in-progress — 2026-08-20 11:58:20 CEST: `systemctl --user start llama-glm-5.2.service` issued by user. **Cold load in progress, healthy, do not assume a hang.** Last checked ~11:05 (6m54s elapsed): `Active: active (running)`, `/health` correctly `503` (loading), disk read progress via `/proc/<pid>/io`: ~75.9 GiB / 524 GiB read (**~14.5%**), no errors in `journalctl --user-unit llama-glm-5.2.service` (only benign `W model has unused tensor blk.78...ignoring` lines, expected from `--n-cpu-moe`/tensor-split leaving some tensors GPU-unused by design). At the ~325 MB/s `--load-mode none` rate measured in Task 2.2.1's benchmark, full load is expected to take a similar ~28 min order of magnitude — **check back via `systemctl --user status llama-glm-5.2.service` / `curl http://localhost:8092/health` once, do not poll tick-by-tick.** Once `/health` returns `200`: run the curl smoke test against `/v1/chat/completions`, verify tool-calls and all 3 reasoning modes (`reasoning_effort: max/high`, `enable_thinking: false`), then mark this task done.
+- [x] Task 2.4: `systemctl --user start` the service (no sudo); curl smoke test against `/v1/chat/completions`, verify tool-calls and all 3 reasoning modes (reasoning_effort max/high, enable_thinking:false). If engine is llama.cpp, explicitly verify OpenAI-compatible tool-calling works for OpenCode (REQ-011 risk) — depends on: Task 2.3, Task 2.3.2, Task 2.3.3 — status: done — 2026-08-20 11:58:20 CEST: `systemctl --user start llama-glm-5.2.service` issued by user. Cold load completed successfully at `12:31:12` (~33 min, matching Task 2.2.1's estimate); confirmed via `systemctl --user status` (`active (running)`), `journalctl` (`model loaded`, `listening on http://0.0.0.0:8092`), `curl http://localhost:8092/health` (`200 {"status":"ok"}`), and `/v1/models` (`glm-5.2:UD-Q5_K_XL`, `n_ctx: 768000`). **`bin/14-smoke-test-glm-service.sh` run 2026-08-20 12:50-12:52 CEST against the live service — ALL 4 CASES PASSED, `OVERALL: no degenerate/suspicious/failed results found`:**
+
+  - `enable_thinking:false`: `finish_reason: stop`, content `"Paris"` (factually correct), 2 completion tokens, ~12.0 tok/s
+  - `reasoning_effort:high`: `finish_reason: stop` (NOT truncated), a correct recursive `fibonacci()` plus a note on its exponential complexity and a memoized alternative, 477 completion tokens, ~12.9 tok/s, non-empty `reasoning_content`
+  - `reasoning_effort:max`: `finish_reason: stop` (NOT truncated — earlier ACC-002 attempt at 600 tokens WAS truncated; 4000-token budget here let it finish), a correct recursive `fibonacci()` plus memoized variant, 694 completion tokens, ~12.9 tok/s, non-empty `reasoning_content`
+  - Tool-calling (REQ-011 risk): `finish_reason: tool_calls`, well-formed `message.tool_calls[0].function` = `{"name":"get_weather","arguments":"{\"location\":\"Paris\"}"}`, valid JSON args with the expected key — llama.cpp's tool-calling did NOT show the historically-weaker failure mode (no plain-text imitation in `content`, which was empty as expected for a pure tool-call turn)
+
+  No degenerate/frozen-token signature in any case. Results:
+  `bin/logs/2026-08-20T105048Z-smoke-test-glm-service/{nothink,reasoning_high,reasoning_max,toolcall}.json`. **REQ-004 (all 3 reasoning modes) and the curl half of REQ-011/ACC-004 (tool-calling) both confirmed via curl.** ACC-004's remaining half (a real OpenCode agentic session) is deferred to Task 2.6/2.7 once OpenCode is wired up — see ACC-004.
 
 - [ ] Task 2.5: Validate the finalized production context size (**768K**, decided in Task 2.3 — see Track A result; comfortably exceeds REQ-003's 350-370K minimum bar by 2x+. 896K remains a flagged revisit candidate pending the tensor-split rebalancing, see Decisions Made, but is not the current target) works without OOM — depends on: Task 2.4 — status: not-started
 
-- [ ] Task 2.5.1: Measure actual generation throughput (tokens/min in and tokens/min out, or tok/s) for `UD-Q5_K_XL` in the production config (`--n-cpu-moe 54 --tensor-split 54,9,8,8`), at the finalized production context size — Task 2.1/2.2 were model-load/VRAM-allocation probes only, not decode-speed benchmarks; the only speed figure on record (~39 tok/s, Task 1.2) is for the much lighter `UD-IQ1_S` spike quant and is not representative, since `UD-Q5_K_XL` streams the majority of MoE expert weight from CPU RAM per decode step (`--n-cpu-moe 54`), which is structurally slower. Runs against the already-installed service, which already has Task 2.2.1's winning `--load-mode` baked in — no second cold-load-mode comparison needed here — depends on: Task 2.5 — status: not-started
+- [ ] Task 2.5.1: Measure actual generation throughput (tokens/min in and tokens/min out, or tok/s) for `UD-Q5_K_XL` in the production config (`--n-cpu-moe 54 --tensor-split 54,9,8,8`), at the finalized production context size — Task 2.1/2.2 were model-load/VRAM-allocation probes only, not decode-speed benchmarks; the only speed figure on record (~39 tok/s, Task 1.2) is for the much lighter `UD-IQ1_S` spike quant and is not representative, since `UD-Q5_K_XL` streams the majority of MoE expert weight from CPU RAM per decode step (`--n-cpu-moe 54`), which is structurally slower. Runs against the already-installed service, which already has Task 2.2.1's winning `--load-mode` baked in — no second cold-load-mode comparison needed here — depends on: Task 2.5 — status: not-started — **2026-08-20: prep work done ahead of time**, prompted by a user report that decode felt slow in real use. A live spot-check during this session (`nvidia-smi dmon -s ut`) found GPU0 (the PCIe 5.0 x16 bus, see Task 2.3/3.3's topology finding) sustaining **~46-60 GB/s PCIe RX at 100% SM utilization** during real generation traffic, while GPUs 1-3 sat idle — a strong signal decode may be PCIe-transfer-bound in this `--n-cpu-moe` hybrid config (the CPU-offloaded MoE-expert weight rows being re-streamed to GPU every decode step), not purely compute-bound. Three scripts created (executable, **not yet run**): `bin/15-measure-pcie-vs-throughput.sh` (generic — correlates per-GPU PCIe RX/TX + SM% with measured `tok/s` against any already-running endpoint; doubles as this task's actual measurement tool), `bin/17-tune-q4-placement.sh` (see below — finds a Q4-specific `--n-cpu-moe`/`--tensor-split` placement rather than blindly reusing Q5's, run BEFORE `bin/16`), and `bin/16-benchmark-q4-vs-q5.sh` (orchestrates a full A/B: benchmarks the live Q5 production service via `bin/15` first — satisfying this task — then stops it, cold-loads `UD-Q4_K_XL` ad-hoc on port 8093 with a placement now parameterized via `NCMOE`/`TENSOR_SPLIT` env vars — defaulting to Q5's `54,9,8,8` but meant to be overridden with `bin/17`'s winning candidate — benchmarks it via `bin/15`, and restarts production Q5 via a `trap`-guarded cleanup that always runs regardless of how the script exits). Also see the theoretical Q4-vs-Q5 speedup estimate under Current Status/session notes (~15-30%, derived from the ~17% smaller Q4 file size and the PCIe-bound hypothesis) — a rough estimate only, to be replaced by `bin/16`'s actual measurement.
+
+- **2026-08-20 (later): Q4-specific placement tuning added, prompted by a
+  user question — "shouldn't Q4 get its own block-placement tuning,
+  like Q5 did?".** Correct catch: blindly reusing Q5's `54,9,8,8` for Q4
+  is SAFE (every Q4 tensor is \<= its Q5 counterpart) but leaves headroom
+  unused. Measured directly from GGUF tensor metadata (not estimated):
+  Q4's average MoE-expert-block size is **5.468 GiB vs Q5's 6.635 GiB
+  (~82.4% of Q5's size)**, both over the same 76 MoE blocks
+  (`block_count=79`, `leading_dense_block_count=3`, confirmed via
+  `gguf-dump`). Reusing Q5's split unchanged would free ~28 GiB combined
+  headroom across GPU1-3 (not needed for safety at 768K — Q5 already
+  clears its margin comfortably there — so it's available to push MORE
+  blocks off CPU-offload onto GPU-resident, which would compound with
+  Q4's bit-width win under the PCIe-bound hypothesis). Confirmed via
+  `llama-server --help`: `--n-cpu-moe N` keeps the MoE weights of the
+  FIRST N layers on CPU (not last N). Also discovered a key efficiency
+  fact: llama.cpp's own startup fit-check
+  (`common_params_fit_impl`/`common_fit_params`, confirmed in existing
+  logs: "fitting params to free memory took 0.60 seconds") completes in
+  **under a second**, right after reading GGUF metadata — WAY before the
+  30-45 min tensor-copy phase. This means candidate placements can be
+  tested in seconds each (start, capture the early diagnostic, kill
+  before the expensive load), not one full cold-load per candidate.
+  `bin/17-tune-q4-placement.sh` created to exploit this: stops
+  production, tries 3 candidates (`54,9,8,8` baseline reuse plus two
+  progressively more aggressive rebalances, `50,11,9,9` and `46,13,10,10`)
+  each killed right after its fit-check, prints a comparison table
+  against Q5's known 768K reference, and restarts production via the
+  same `trap`-guarded cleanup pattern as `bin/16`. **Not yet run.**
+  `bin/16` updated to take `NCMOE`/`TENSOR_SPLIT` as overridable env vars
+  (still defaulting to Q5's values) so the winning candidate from
+  `bin/17` can feed directly into a fair "best Q4 config vs best Q5
+  config" throughput comparison. Recommended order:
+  `bin/17-tune-q4-placement.sh` → pick a winner → re-run `bin/16` with
+  `NCMOE=... TENSOR_SPLIT=... bash bin/16-benchmark-q4-vs-q5.sh`.
 
 - [ ] Task 2.6: Connect OpenWebUI and OpenCode to the GLM-5.2 endpoint as a separate model entry — depends on: Task 2.5 — status: not-started — OpenCode side drafted ahead of time (2026-08-20): `opencode-provider-snippet-glm-5.2.jsonc` (feature folder root) holds a `provider.llama-cpp-sys0` entry using `@ai-sdk/openai-compatible`, `baseURL: http://<sys0-LAN-IP>:8092/v1`, model key `glm-5.2:UD-Q5_K_XL` with `limit.context: 768000` (matching Task 2.3's decided production context size) — mirrors the box's existing `ollama-sys0` provider entry in shape. Deliberately NOT written into any actual `opencode.jsonc` on this box (that file belongs to a different system) — it's a standalone paste-able fragment for the user to merge into their own config's `provider` object once Task 2.4 confirms the endpoint is actually up. Motivated the `--alias glm-5.2:UD-Q5_K_XL` addition to `bin/08-llama-glm-5.2.service` (see its header comment) so the model id OpenCode/OpenWebUI would show isn't the raw GGUF file path. See Task 3.2 (Phase 3) for the still-open question of driving `--chat-template-kwargs` reasoning-mode toggles from OpenCode itself.
 
@@ -356,8 +406,61 @@ Decisions Made for the safety-margin policy).
 #### Phase 3: Optimisations (nice-to-have, non-blocking on Phase 2)
 
 - [ ] Task 3.1: Evaluate/resize the `/swapfile` swap device. Discovered while actually running Task 2.3.1's `bin/10-tune-vm-swappiness.sh` on the box (2026-08-20): the swap device is only **2 GiB total, already ~1.8 GiB (~90%) used** — much smaller than assumed when the swap-policy decision was made. This meaningfully changes that decision's premise: at 2 GiB against a 512 GiB RAM pool, swap cannot absorb anything close to the multi-hundred-GB-scale anonymous-memory incidents already seen in Task 2.1 (Incident #1 alone consumed ~1.4 GiB of this same 2 GiB device in well under a minute — ~70% of its entire capacity from one transient event). At this size swap functions as an early trip-wire signal, not a real capacity cushion — `vm.swappiness=1` (Task 2.3.1) still correctly reduces *proactive* swapping, but does not fix the fact that any genuine pressure event would exhaust this device almost immediately and fall through to the OOM-killer anyway, safety-net or not. Decide whether to enlarge the swapfile (and to what size) to make it a meaningful buffer, or explicitly accept it as trip-wire-only and document that — depends on: Task 2.3.1 — status: not-started
+
 - [ ] Task 3.2: Work out how to drive GLM-5.2's `--chat-template-kwargs` reasoning-mode toggles (`reasoning_effort: max`/`high`, or `enable_thinking: false` — REQ-004) from an OpenCode client session, not just from raw curl smoke tests. Surfaced while drafting the OpenCode `opencode.jsonc` provider snippet for this endpoint (`@ai-sdk/openai-compatible`, pointed at `http://<sys0-host>:8092/v1`): OpenCode's documented config schema for a custom OpenAI-compatible provider (`provider.<id>.models.<id>.{name,limit.context,limit.output}`) has no obvious per-model or per-request hook for injecting arbitrary extra body fields like `chat_template_kwargs` into the request OpenCode sends. Options to evaluate: (a) an OpenCode plugin that injects the field (similar in spirit to `opencode-helicone-session`'s header injection, but for a body field instead of a header); (b) exposing each reasoning mode as a SEPARATE model entry in `opencode.jsonc` pointed at the SAME `baseURL`/model, if the AI SDK's `providerOptions`/`options` surface turns out to support a static extra-body passthrough per model entry (needs verification against the actual `@ai-sdk/openai-compatible` package, not just the opencode.jsonc doc examples seen so far); (c) worst case, accept that OpenCode sessions run GLM-5.2 in its default mode only (`reasoning_effort: max` per unsloth's defaults) and reserve explicit low/no-thinking-mode testing for direct curl/API smoke tests outside OpenCode (Task 2.4/ACC-004 already covers that path). Not a blocker for Task 2.4/ACC-004 (which verifies the modes via curl, per REQ-004's own wording), but does affect how usable the reasoning-mode flexibility actually is day-to-day once OpenCode is wired up (Task 2.6) — depends on: Task 2.6 — status: not-started
+
 - [ ] Task 3.3: Revisit the `--tensor-split`/`--n-cpu-moe` split to see whether 896K context can be reclaimed, informed by the box's PCIe topology (`nvidia-smi --query-gpu=index,pcie.link.gen.max`: GPU0/GPU2 are PCIe 5.0 x16, GPU1/GPU3 are PCIe 4.0 x16). **Moved here from being an embedded Task 2.3 gating item (2026-08-20)** — it never actually blocked shipping at 768K (which already clears the safety-margin policy on every GPU and exceeds REQ-003's 350-370K target by 2x+); it only matters for the 896K stretch goal, which is explicitly "flagged as a revisit candidate, not discarded" rather than required. Context for the revisit: at ctx=896,000 under the current validated split (`--n-cpu-moe 54 --tensor-split 54,9,8,8`), CUDA0 is the binding constraint (14,079 MiB / 14.5% free, ~514 MiB short of the 15% leg) despite holding the *smallest* static model weight of the four GPUs (19,485 MiB) — it appears the layers assigned to CUDA0 by the tensor-split ratio (54/79 ≈ 68%) are the same ones `--n-cpu-moe 54` offloads experts from, so CUDA0 ends up "hollowed out" of static weight but loaded with a proportional (71%) share of the KV-cache instead, which is what makes it tight as context grows. **A real risk, not just an optimization detail:** CUDA0 also happens to sit on the fast PCIe 5.0 bus, which is currently a good pairing (CPU-offloaded experts stream across PCIe every decode step, and that traffic is landing on the faster bus) — shrinking CUDA0's tensor-split ratio to relieve KV-cache pressure could inadvertently shift that expert-streaming traffic onto a Gen4 GPU instead, regressing decode throughput to gain KV-cache margin. **Do not attempt this rebalancing before Task 2.5.1 (decode tok/s baseline) has run** — without a throughput baseline first, a rebalance's downside (slower decode) would be invisible until after the fact. If pursued: re-validate both KV-cache margin (`bin/07-measure-kv-cache-768-896.sh`-style, at ctx=896000) AND decode throughput (Task 2.5.1-style) for any candidate split, not just the former — depends on: Task 2.5.1 — status: not-started
+
+- [x] Task 3.4: Install `UD-Q4_K_XL` as a side-by-side, independently
+  swappable systemd service (user request, 2026-08-20/2026-08-22) —
+  depends on: none — status: done. **Investigated and found a hard
+  capacity ceiling first**: `UD-Q4_K_XL` (~467 GB) + `UD-Q5_K_XL` (~562
+  GB) combined (~1029 GB) exceed this box's 896 GB total pool (384 GB
+  VRAM + 512 GB RAM) by ~133 GB, confirmed against live numbers (only
+  ~116 GiB combined GPU free / ~131 GiB RAM "available" while Q5 alone
+  ran) — true concurrent residency of both quants is impossible
+  regardless of placement, a raw capacity limit, not a tuning problem.
+  **Decided (user): install both as separate, independently
+  start/stoppable systemd `--user` services, swapped (never run
+  together).** `bin/19-llama-glm-5.2-q4.service` (port 8093, distinct
+  `--alias glm-5.2:UD-Q4_K_XL`, otherwise identical
+  `--n-cpu-moe 54 --tensor-split 54,9,8,8 --ctx-size 768000 --load-mode none` placement to Q5 — deliberately reused unchanged rather than
+  re-optimized, since every Q4 tensor is ≤ its Q5 counterpart so a split
+  validated for Q5 is guaranteed safe for Q4) and
+  `bin/20-install-llama-glm-q4-service.sh` (mirrors `bin/09`: copy +
+  daemon-reload, NOT enable, NOT start) created and run — confirmed
+  installed (`loaded; disabled; inactive`) side-by-side with Q5, which
+  stayed running throughout the install untouched.
+  **`bin/18-tune-q4-kv-cache-768-896.sh`** (Q4 equivalent of `bin/07`:
+  same real-load methodology, same 768K/896K sizes, same reused
+  placement) validated the config on a clean GPU set — briefly stopped
+  Q5 for this one measurement (explicitly approved), tested both sizes,
+  restarted Q5 afterward via a `trap`-guarded cleanup. **Both sizes
+  measured `status=ok`, clearing the ≥15%/≥10 GiB safety-margin policy
+  on every GPU at BOTH context sizes** (authoritative
+  `common_params_fit_impl` figures):
+
+  | ctx | CUDA0 free | CUDA1 free | CUDA2 free | CUDA3 free |
+  |---|---|---|---|---|
+  | 768,000 | 24,630 MiB (25.3%) | 33,400 MiB (34.3%) | 40,033 MiB (41.2%) | 51,315 MiB (52.8%) |
+  | 896,000 | 16,146 MiB (16.6%) | 31,572 MiB (32.5%) | 38,345 MiB (39.4%) | 49,940 MiB (51.3%) |
+
+  **Notable secondary finding**: unlike Q5 (which narrowly missed 896K's
+  15% leg at 14.47% on CUDA0), **Q4 clears 896K comfortably** (CUDA0
+  16.6% > 15%) at this same split — Q4's smaller per-block footprint
+  (measured ~5.468 GiB/MoE block vs Q5's ~6.635 GiB, ~82.4%, from actual
+  GGUF tensor metadata) gives it enough extra headroom to reach the 896K
+  stretch goal that Q5 couldn't safely reach without Task 3.3's
+  rebalancing. Not yet acted on (the installed `bin/19` unit still
+  ships at 768000, matching Q5, for a fair baseline) — worth revisiting
+  if 896K context specifically is wanted for the Q4 slot. Full logs:
+  `bin/logs/2026-08-20T120959Z-q4-kv-cache-768-896.{txt,json}` and
+  per-context `*-q4-kv-ctx768000.log`/`*-q4-kv-ctx896000.log`.
+  **Confirmed working end-to-end**: after this feature's own session
+  ended and the box was power-cycled (per its normal daily routine), the
+  user exercised the actual swap workflow live — cleanly stopped Q5,
+  started `llama-glm-5.2-q4.service` — confirming the side-by-side
+  design works as intended outside of any assistant-driven script.
 
 **Note:** If a task's scope changes mid-flight, edit its description in place;
 rely on git history (`git log -p` on this file) to recover what was
@@ -537,21 +640,145 @@ modest, directionally-expected result. Track B's remaining open item is
 now only the `--tensor-split`/`--n-cpu-moe` rebalancing discussion (see
 above) — once that lands, `bin/09-install-llama-glm-service.sh` can run.
 
+**Task 2.4 is now DONE — service started, cold-loaded, and smoke-tested
+successfully.** `llama-glm-5.2.service` was started `11:58:20 CEST`,
+finished cold-loading at `12:31:12` (~33 min), and
+`bin/14-smoke-test-glm-service.sh` (run `12:50-12:52 CEST` against the
+live service) passed all 4 cases: all 3 reasoning modes
+(`enable_thinking:false`, `reasoning_effort:high`/`max`) produced
+coherent, non-truncated, non-degenerate output, and the tool-calling case
+returned a well-formed `tool_calls[].function` block — REQ-011's
+llama.cpp tool-calling risk did not materialize. REQ-004 and the curl half
+of REQ-011/ACC-004 are confirmed; ACC-004's remaining half (a real
+OpenCode agentic session) awaits Task 2.6. Phase 2 now moves to Task 2.5
+(768K end-to-end OOM validation) and Task 2.5.1 (decode throughput
+benchmark).
+
+**User-reported: decode feels slow in real use; investigated, not yet
+resolved.** Prompted a live PCIe spot-check (`nvidia-smi dmon -s ut`)
+during real generation traffic against production: **GPU0 sustained
+~46-60 GB/s PCIe RX at 100% SM utilization** while GPUs 1-3 sat idle —
+GPU0 is the GPU on the PCIe 5.0 x16 bus (Task 2.3/3.3's topology finding),
+and that RX rate is close to the bus's practical ceiling. This is a
+strong (not yet fully isolated/proven) signal that decode in this
+`--n-cpu-moe 54` hybrid config is at least partly **PCIe-transfer-bound**
+— every decode step re-streams the routed MoE-expert weight rows for the
+54 CPU-offloaded layers from CPU RAM to GPU0. **Theoretical estimate for
+`UD-Q4_K_XL` vs `UD-Q5_K_XL`:** Q4 is ~467 GB vs Q5's ~562 GB (~17%
+smaller, ~5.0 vs ~6.05 bits/weight average); if decode is genuinely
+PCIe-bound, expect roughly **15-30% higher tok/s at Q4** (Q5's
+smoke-test figures were ~12.0-12.9 tok/s → very roughly ~14-17 tok/s
+estimated for Q4) — plausibly toward the higher end since Dynamic/XL
+quant schemes typically cut MoE-expert bit-depth more aggressively than
+attention/embedding layers, and the CPU-offloaded/streamed data is
+specifically MoE-expert weight. **This is an estimate, not a
+measurement** — `UD-Q4_K_XL` finished downloading (100.1%, confirmed via
+`bin/04-dl-status.sh`) partway through this session, so a real A/B is now
+possible. `bin/15-measure-pcie-vs-throughput.sh` (generic PCIe+throughput
+correlator) and `bin/16-benchmark-q4-vs-q5.sh` (full stop-Q5/load-Q4
+ad-hoc/benchmark/restart-Q5 orchestration, doubling as Task 2.5.1's
+throughput measurement for Q5 along the way) were created this session —
+**both prepared but deliberately NOT executed yet** (per instruction;
+`bin/16` is disruptive — stops production for roughly one Q4 cold-load +
+one Q5 cold-load, likely 1-1.5+ hours). See Task 2.5.1 for the full
+detail and Next Steps for how to run it.
+
+**IMPORTANT capacity finding — Q4 and Q5 CANNOT be loaded/running at the
+same time on this box.** Investigated in response to a user request to
+install Q4 "side-by-side" with Q5: `UD-Q4_K_XL` (~467 GB) + `UD-Q5_K_XL`
+(~562 GB) combined (~1029 GB) **exceed this box's total 896 GB pool
+(384 GB VRAM + 512 GB RAM) by ~133 GB**, even before either model's
+KV-cache/compute buffers — confirmed against live numbers at the time
+(only ~116 GiB combined GPU free and ~131 GiB RAM "available" while Q5
+alone ran, nowhere near Q4's own ~467 GB weight requirement). This is a
+raw capacity ceiling, not a placement/tuning problem — no
+`--tensor-split`/`--n-cpu-moe` choice changes how many total bytes a
+quant's weights need, only where they live. **Per explicit user decision:
+install both as separate systemd services for quick swapping (stop one,
+start the other) — never run both loaded at once.**
+`bin/19-llama-glm-5.2-q4.service` (port 8093, same `--n-cpu-moe 54 --tensor-split 54,9,8,8 --ctx-size 768000` placement as Q5, since it's
+guaranteed safe — every Q4 tensor is ≤ its Q5 counterpart) and
+`bin/20-install-llama-glm-q4-service.sh` (mirrors `bin/09`: copy +
+daemon-reload, NOT enable, NOT start) were created and **the Q4 service
+is now installed** — confirmed side-by-side with Q5, which stayed running
+throughout the install untouched.
+
+**`bin/18-tune-q4-kv-cache-768-896.sh` completed successfully (Task
+3.4) — both 768K and 896K measured `status=ok`, clearing the
+≥15%/≥10 GiB safety-margin policy on every GPU at BOTH sizes:**
+
+| ctx | CUDA0 free | CUDA1 free | CUDA2 free | CUDA3 free |
+|---|---|---|---|---|
+| 768,000 | 24,630 MiB (25.3%) | 33,400 MiB (34.3%) | 40,033 MiB (41.2%) | 51,315 MiB (52.8%) |
+| 896,000 | 16,146 MiB (16.6%) | 31,572 MiB (32.5%) | 38,345 MiB (39.4%) | 49,940 MiB (51.3%) |
+
+Notably, **Q4 clears 896K where Q5 narrowly missed it** (Q5's CUDA0 was
+14.47% at 896K; Q4's is 16.6%) — see Task 3.4 for the full detail.
+
+**Live-confirmed end-to-end after this session ended and the box was
+power-cycled**: the user exercised the actual swap workflow themselves —
+cleanly stopped `llama-glm-5.2.service` (Q5, clean `systemctl stop`, not
+a crash — confirmed via `journalctl`) and started
+`llama-glm-5.2-q4.service` (Q4), which was mid-cold-load (healthy,
+`active (running)`, RSS climbing normally) when this session resumed.
+This is exactly the intended "swap, never both at once" usage pattern
+working as designed, exercised independently of any assistant action.
+
 ### Next Steps
 
-0. **IMMEDIATE — pick this up first in a fresh session.** Task 2.4 is
-   in-progress: `llama-glm-5.2.service` was started (`systemctl --user start`) at 2026-08-20 11:58:20 CEST and is cold-loading the ~524 GiB
-   model (`--load-mode none`, expected ~28 min total per Task 2.2.1's
-   benchmark). Last checked ~11:05 CEST (~7 min in): `active (running)`,
-   `/health` still `503` (expected), ~14.5% through the disk read, no
-   errors. **Check once** (`systemctl --user status llama-glm-5.2.service`,
-   `curl http://localhost:8092/health`) — do NOT poll repeatedly, this is
-   a long-unattended-job pattern (see AGENTS.md). Once `/health` is `200`:
-   run the curl smoke test against `/v1/chat/completions`, verify
-   tool-calls (REQ-011 risk explicitly called out on Task 2.4) and all 3
-   reasoning modes (`reasoning_effort: max`/`high`, `enable_thinking: false`), then mark Task 2.4 done. If it crashed instead, check
-   `journalctl --user-unit llama-glm-5.2.service` for the failure and
-   compare against the validated config in `bin/08-llama-glm-5.2.service`.
+**NEW — Q4 vs Q5 investigation, prompted by a user report of slow
+decode (highest priority once ready to take the endpoint offline
+briefly). Two-step sequence, run in this order:**
+
+1. **`bin/17-tune-q4-placement.sh`** — find Q4's own `--n-cpu-moe`/
+   `--tensor-split` placement rather than reusing Q5's unchanged. Fast
+   (seconds per candidate, not a full cold load — exploits llama.cpp's
+   own sub-second startup fit-check). Stops production briefly, tries 3
+   candidates (`54,9,8,8` baseline reuse, `50,11,9,9`, `46,13,10,10`),
+   restarts production afterward via a `trap`-guarded cleanup. Review its
+   comparison table (per-GPU used/free MiB vs. the printed Q5 768K
+   reference) and pick whichever candidate clears the adopted
+   ≥15%/≥10 GiB safety margin with the most blocks shifted off
+   CPU-offload (lower `--n-cpu-moe`, more PCIe traffic eliminated).
+2. **`bin/16-benchmark-q4-vs-q5.sh`**, re-run with the winning candidate:
+   `NCMOE=<winner> TENSOR_SPLIT=<winner> bash bin/16-benchmark-q4-vs-q5.sh`
+   (defaults to Q5's `54,9,8,8` if step 1 is skipped — still a valid,
+   safe comparison, just not necessarily Q4's best case). This stops
+   production, cold-loads `UD-Q4_K_XL` ad-hoc on port 8093 with the
+   chosen placement, benchmarks both quants via
+   `bin/15-measure-pcie-vs-throughput.sh` (Q5 pass first, which also
+   satisfies Task 2.5.1), and restarts production Q5 afterward. Expect
+   ~1-1.5+ hours offline (two cold loads) for this step, vs. step 1's
+   few minutes.
+
+Check `ss -tnp | grep 8092` first to confirm no one else is using the
+endpoint before either step — both scripts also warn and pause 10s if
+they find a connection. Result: a measured tok/s delta to compare against
+this session's ~15-30% theoretical estimate (see Current Status) — likely
+higher if step 1 finds a placement with fewer CPU-offloaded blocks than
+Q5's. Do not poll either script tick-by-tick once started (same
+long-unattended-job guidance as the cold-load waits elsewhere in this
+file).
+
+0. **Task 2.4 is now DONE — smoke test PASSED, no further action here.**
+   `bin/14-smoke-test-glm-service.sh` ran 2026-08-20 12:50-12:52 CEST
+   against the live `llama-glm-5.2.service`: all 3 reasoning modes
+   (`enable_thinking:false`, `reasoning_effort:high/max`) produced
+   coherent, non-truncated, non-degenerate output, and the tool-calling
+   case emitted a well-formed `tool_calls[].function` block (REQ-011 risk
+   did not materialize). See Task 2.4 for the full per-case result
+   summary and `bin/logs/2026-08-20T105048Z-smoke-test-glm-service/` for
+   the raw JSON. **IMMEDIATE — pick this up first in a fresh session: Task
+   2.5** (validate the finalized 768K production context works
+   end-to-end without OOM — Task 2.1/2.2 were load-only probes, not a
+   filled-context generation run) and **Task 2.5.1** (measure actual
+   decode throughput for `UD-Q5_K_XL` in the production config — the
+   smoke test's ~12-13 tok/s figures are informative but NOT a substitute
+   for Task 2.5.1's dedicated benchmark, since the smoke-test prompts were
+   short and not run at the production 768K context depth). Then Task 2.6
+   (OpenWebUI/OpenCode wiring — this also unblocks ACC-004's remaining
+   "real OpenCode agentic session" half) and Task 2.7 (quality comparison
+   vs. `feat-1`).
 
 1. **Track A (Task 2.3's 768K/896K probe) is now DONE** — checked
    2026-08-20 ~10:30 CEST: `bin/logs/2026-08-20T055618Z-kv-cache-768-896.txt`
@@ -594,18 +821,19 @@ above) — once that lands, `bin/09-install-llama-glm-service.sh` can run.
    2.3.2 (groups) and Task 2.3.3 (lingering) were already done before
    this**, so nothing further is needed before Task 2.4.
 
-5. **Next up: Task 2.4** (`systemctl --user start llama-glm-5.2.service`,
-   no sudo; curl smoke test against `/v1/chat/completions`, verify
-   tool-calls and all 3 reasoning modes). Cold load historically takes
-   20-45+ min for this quant/size (`bin/08`'s own header) — do not assume
-   a hang; follow via `journalctl --user-unit llama-glm-5.2.service -f`
-   or poll `/health`, not tick-by-tick log-watching (same
-   long-unattended-job guidance as Track A/Task 2.2.1 above). Then
-   continue through Task 2.7 (OpenWebUI/OpenCode wiring, real context
-   validation at 768K, quality comparison vs. `feat-1`), including Task
-   2.5.1 (measure actual tok/min-in/tok/min-out throughput for
-   `UD-Q5_K_XL` — currently unmeasured, Task 2.1/2.2 were memory-only
-   probes, and Task 3.3's rebalancing revisit is gated on this landing).
+5. **Task 2.4 is DONE** (`systemctl --user start llama-glm-5.2.service` +
+   `bin/14-smoke-test-glm-service.sh` both completed 2026-08-20, all 4
+   cases passed — see Task 2.4 for the full result). **Next up: Task
+   2.5** (validate the finalized 768K production context works end-to-end
+   without OOM — a real filled-context generation run, not just the
+   load-only probes Task 2.1/2.2 did) **then Task 2.5.1** (measure actual
+   tok/min-in/tok/min-out throughput for `UD-Q5_K_XL` in the production
+   config — currently unmeasured at production depth; the smoke test's
+   ~12-13 tok/s figures were short-prompt/short-context and are not a
+   substitute; Task 3.3's rebalancing revisit is gated on this landing).
+   Then Task 2.6 (OpenWebUI/OpenCode wiring — also completes ACC-004's
+   remaining "real OpenCode agentic session" half) and Task 2.7 (quality
+   comparison vs. `feat-1`).
 
 6. **Task 2.3.1 is fully done** — `bin/10-tune-vm-swappiness.sh` actually
    run on the box, `vm.swappiness` confirmed `1`. Follow-up spun off as
@@ -660,6 +888,275 @@ above) — once that lands, `bin/09-install-llama-glm-service.sh` can run.
   now fully clear.
 
 ### Recent Updates
+
+#### 2026-08-22 (session resumed after a 2-day gap/power-cycle — Task 3.4 side-by-side Q4 install completed and validated)
+
+- Context: user requested (2026-08-20) a Q5-style tuning script for Q4
+  limited to 768K/896K, an install script for a side-by-side Q4 service,
+  and explicitly "do not take anything offline". Investigating the
+  side-by-side request surfaced a hard capacity finding first (see
+  Current Status/Task 3.4): `UD-Q4_K_XL` (~467 GB) + `UD-Q5_K_XL`
+  (~562 GB) exceed the box's 896 GB pool by ~133 GB, so true concurrent
+  residency is impossible regardless of placement. User decided: install
+  both as separate, independently swappable systemd services instead,
+  with the tuning script allowed to briefly stop Q5 for its own
+  measurement window (an explicit, scoped exception to "no offline").
+- Completed: `bin/19-llama-glm-5.2-q4.service` (side-by-side unit, port
+  8093, reuses Q5's exact `--n-cpu-moe 54 --tensor-split 54,9,8,8 --ctx-size 768000 --load-mode none` placement — deliberately not
+  re-optimized, since it's guaranteed safe) and
+  `bin/20-install-llama-glm-q4-service.sh` (mirrors `bin/09`) created and
+  run: **Q4 service installed** (`loaded; disabled; inactive`),
+  confirmed side-by-side with Q5 (which stayed active/untouched
+  throughout the install itself — a safe, non-disruptive step).
+- Completed: `bin/18-tune-q4-kv-cache-768-896.sh` (Q4 equivalent of
+  `bin/07` — same real-load methodology, same 2 context sizes, same
+  reused placement) created and run in the background. Briefly stopped
+  Q5 (explicitly approved for this script), ran both probes, restarted
+  Q5 via a `trap`-guarded cleanup. **Both sizes measured `status=ok`**,
+  clearing the ≥15%/≥10 GiB safety-margin policy on every GPU at both
+  sizes (see Task 3.4/Current Status for the full per-GPU table) — and
+  notably, **Q4 clears 896K where Q5 narrowly missed it** (CUDA0 16.6%
+  vs Q5's 14.47%), a side benefit of Q4's smaller per-block footprint
+  (~82.4% of Q5's size, measured from GGUF metadata in an earlier
+  session entry).
+- Found (session gap): this session was interrupted mid-monitoring of
+  `bin/18` (which had, in fact, already completed successfully in the
+  background before the interruption). On resuming, ~2 real days had
+  passed (`date` jumped from 2026-08-20 to 2026-08-22) — consistent with
+  this box's normal daily power-cycle routine (see AGENTS.md). Verified
+  the tuning script's own log showed a clean completion (`Cleanup (exit code 0)`, Q5 restored) before the gap, so no results were lost.
+- Found (live validation, not assistant-driven): on resuming, the box
+  showed `llama-glm-5.2-q4.service` actively cold-loading (`active (running)`, healthy) and `llama-glm-5.2.service` freshly, cleanly
+  stopped (`journalctl` confirms `systemctl stop`, not a crash — Q5 was
+  even briefly started at 10:19:54 CEST and deliberately stopped 8s
+  later at 10:20:02, then Q4 started at 10:20:16). This is the user
+  exercising the actual intended swap workflow (`stop Q5, start Q4`)
+  live and independently after the reboot — good real-world confirmation
+  the side-by-side design works as intended, not just in script logic.
+- Completed: updated Task 3.4 (new), Current Status, and this entry with
+  the full validated results; verified no GPU/RAM conflict occurred at
+  any point (checked `nvidia-smi`, `ps aux`, `journalctl` timelines).
+- Next: let the in-progress Q4 cold-load (started by the user) finish;
+  once `/health` on port 8093 returns 200, a curl smoke test
+  (`bin/14`-style, pointed at 8093 with `--alias glm-5.2:UD-Q4_K_XL`)
+  would confirm Q4 serves correctly via its own dedicated service, not
+  just via the tuning script's ad-hoc probes. Whether/when to switch back
+  to Q5 afterward is the user's call, not automated by anything here.
+
+#### 2026-08-20 (yet later — Q4-specific block-placement tuning added)
+
+- Found (user question, good catch): reusing Q5's validated
+  `--n-cpu-moe 54 --tensor-split 54,9,8,8` for the Q4-vs-Q5 benchmark
+  (previous session entry) tests "Q5's config forced onto Q4," not "Q4
+  tuned for itself" — since Q4's per-block weight is smaller, the same
+  VRAM budget could plausibly support MORE GPU-resident (fewer
+  CPU-offloaded) blocks, which would compound with Q4's bit-width
+  reduction for a potentially bigger speedup than the ~15-30% estimate.
+- Completed: measured Q4's actual MoE-expert-block size directly from
+  GGUF tensor metadata (via `gguf-dump`/the `gguf` Python package,
+  scanning all shards of both quants) rather than estimating from overall
+  file size: **Q4 averages 5.468 GiB/block vs Q5's 6.635 GiB/block
+  (~82.4% of Q5's size)**, across the same 76 MoE blocks
+  (`block_count=79`, `leading_dense_block_count=3`, `expert_count=256`,
+  `expert_used_count=8`, `expert_shared_count=1` — identical architecture
+  metadata for both quants, confirming only the per-tensor bit-depth
+  differs, not the model structure). Close to but not identical to the
+  ~17% overall file-size ratio, confirming MoE-expert tensors shrink
+  roughly in step with the whole model between these two quant levels
+  (no dramatic surprise, but good to have confirmed rather than assumed).
+- Completed: confirmed `--n-cpu-moe N` semantics precisely via
+  `llama-server --help`: keeps the MoE weights of the FIRST N layers on
+  CPU (not the last N) — resolves an ambiguity that mattered for
+  reasoning about how a changed value would interact with
+  `--tensor-split`.
+- Found (significant efficiency discovery): llama.cpp's own startup
+  fit-check (`common_params_fit_impl`/`common_fit_params` log lines,
+  e.g. "fitting params to free memory took 0.60 seconds" in an existing
+  cold-load log) completes in under a second, immediately after reading
+  GGUF metadata — long before the 30-45 min tensor-copy phase begins.
+  This means candidate `--n-cpu-moe`/`--tensor-split` placements can be
+  evaluated in SECONDS each (start `llama-server`, capture the early
+  diagnostic, kill before the expensive load) rather than requiring a
+  full cold load per candidate — turning what looked like a multi-hour
+  tuning exercise into a few-minutes one.
+- Completed: verified the parsing logic for this diagnostic against a
+  known-good existing log (`bin/logs/2026-08-20T055618Z-kv-ctx768000.log`)
+  before trusting it — the `common_memory_breakdown_print` line's fields
+  were initially mislabeled during a first pass (its "second number" is
+  the PRE-load baseline free memory, not the post-load free memory as
+  first assumed) and corrected to use the more direct, authoritative
+  `common_params_fit_impl` line ("`X total, Y used, Z free`") as the
+  primary source instead, with the breakdown line kept only for
+  supplementary model/context/compute detail. Re-verified against the
+  real log: reproduces the already-known-correct Task 2.3 per-GPU numbers
+  exactly (e.g. CUDA0 22,710 MiB/23.3% free at ctx=768K, matching prior
+  session's recorded 22,569 MiB/23.2% within expected rounding).
+- Completed: created `bin/17-tune-q4-placement.sh` (executable,
+  syntax-checked, parsing logic verified against real data as above) —
+  stops production, tries 3 candidates against `UD-Q4_K_XL`
+  (`54,9,8,8` baseline-reuse, `50,11,9,9` modest rebalance,
+  `46,13,10,10` more aggressive rebalance — the latter two are informed
+  estimates from the ~28 GiB combined headroom Q4 would free if reusing
+  Q5's split unchanged, NOT derived from a full simulation of llama.cpp's
+  internal layer-assignment algorithm, which isn't fully known/predictable
+  from outside — consistent with this project's "measure, don't
+  hand-calculate" lesson from Task 2.1's own incidents), each candidate
+  killed immediately after its fit-check result, prints a comparison
+  table against Q5's hardcoded 768K reference, and restarts production
+  via the same `trap`-guarded cleanup pattern as `bin/16`. **Not yet
+  run.**
+- Completed: updated `bin/16-benchmark-q4-vs-q5.sh` to take
+  `NCMOE`/`TENSOR_SPLIT` as overridable env vars (still defaulting to
+  Q5's `54,9,8,8` for backward compatibility) instead of hardcoding them,
+  so `bin/17`'s winning candidate can feed directly into a fair
+  "best Q4 config vs best Q5 config" throughput comparison; added a
+  header cross-reference to run `bin/17` first, and a pre-flight-check
+  note if the defaults are left unchanged.
+- Next: run `bin/17-tune-q4-placement.sh` (expected: minutes, not hours),
+  pick a winning candidate, then re-run `bin/16-benchmark-q4-vs-q5.sh`
+  with `NCMOE=... TENSOR_SPLIT=...` set to that winner for the real
+  throughput A/B (expected: ~1-1.5+ hours, two cold loads). Both still
+  require explicit confirmation before running, given they take
+  production offline.
+
+#### 2026-08-20 (still later — user reports slow decode; PCIe investigation; Q4-vs-Q5 benchmark tooling prepared)
+
+- Found: user reported decode feels slow in real use. Investigated live
+  (this session has shell access to `sys0`): an active connection to the
+  production endpoint from `192.168.1.166` was mid-generation.
+  `nvidia-smi dmon -s ut` showed **GPU0 sustaining ~46-60 GB/s PCIe RX at
+  100% SM utilization**, sampled repeatedly over several seconds (not a
+  single-sample fluke), while GPUs 1-3 sat at 0% utilization/near-zero
+  PCIe traffic. GPU0 is the GPU already identified (Task 2.3/3.3's
+  `nvidia-smi --query-gpu=pcie.link.gen.max` finding) as sitting on this
+  box's PCIe 5.0 x16 bus (practical ceiling roughly 55-60 GB/s) — the
+  observed rate is close to saturating it.
+- Found: this refines earlier assumptions about how `--n-cpu-moe`
+  actually behaves here. The evidence (sustained, large, GPU0-concentrated
+  PCIe RX, correlated with 100% SM use) is more consistent with the
+  CPU-offloaded MoE-expert weight rows being **streamed from CPU RAM to
+  GPU every decode step** (closer to a KTransformers-style hybrid) than
+  with "those 54 layers' FFN math is computed entirely on the CPU" (which
+  would predict much less PCIe traffic — mostly just small activation
+  vectors crossing the CPU/GPU boundary). Not fully proven/isolated
+  (would need `nsys`-level per-copy tracing or a controlled single-request
+  test to rule out confounds), but a strong working hypothesis.
+- Completed: derived a theoretical Q4-vs-Q5 speedup estimate from this
+  hypothesis: `UD-Q4_K_XL` (467.3 GB actual, ~5.0 bits/weight average) vs
+  `UD-Q5_K_XL` (562.5 GB actual, ~6.05 bits/weight average) is ~17%
+  smaller overall; if decode is genuinely PCIe-bound, expect **roughly
+  15-30% higher tok/s at Q4** (plausibly toward the higher end, since
+  Dynamic/XL quant schemes typically cut MoE-expert bit-depth more
+  aggressively than attention/embedding layers, and the CPU-offloaded/
+  streamed data is specifically MoE-expert weight). Explicitly presented
+  to the user as an estimate, not a measurement, with its caveats.
+- Found: `UD-Q4_K_XL` (the fallback quant, downloading in the background
+  since 2026-08-19) finished during this session — confirmed 100.1%/467.3
+  GB via `bin/04-dl-status.sh`, all 11 shards present — so a real A/B
+  measurement is now possible.
+- Decided (per instruction): don't run the live A/B test yet (it's
+  disruptive — stops production for ~1-1.5+ hours). Instead prepared two
+  reusable scripts, both executable and syntax/logic-checked against
+  synthetic data, but **deliberately NOT executed**:
+  - `bin/15-measure-pcie-vs-throughput.sh`: generic — against any
+    already-running llama-server endpoint (HOST/PORT/MODEL overridable),
+    sends one deterministic long-generation request while sampling
+    `nvidia-smi dmon -s ut -o T` in the background, then correlates the
+    response's own `timings.predicted_per_second` with per-GPU avg/max
+    PCIe RX/TX and SM% during the request's exact wall-clock window.
+    Reusable for future throughput checks beyond just this Q4/Q5
+    question.
+  - `bin/16-benchmark-q4-vs-q5.sh`: orchestrates the full A/B —
+    benchmarks the live Q5 production service via `bin/15` first (this
+    pass doubles as Task 2.5.1's throughput measurement), stops
+    `llama-glm-5.2.service`, cold-loads `UD-Q4_K_XL` ad-hoc on
+    `127.0.0.1:8093` (deliberately not `0.0.0.0` — never network-reachable
+    as an accidental second endpoint) with identical
+    `--n-cpu-moe 54 --tensor-split 54,9,8,8 --load-mode none` placement,
+    benchmarks it via `bin/15`, tears it down, and restarts production Q5
+    via a `trap`-guarded `cleanup()` that runs on normal exit, on any
+    `set -e` failure, and on Ctrl-C — so a mid-script error should not
+    leave the box with neither model loaded. Prints a final tok/s
+    comparison table with % delta.
+- Next: when the endpoint can be taken offline for ~1-1.5h, run
+  `bash bin/16-benchmark-q4-vs-q5.sh` and compare its measured delta
+  against the ~15-30% theoretical estimate above; update Task 2.5.1 (and
+  this session's estimate) with the real number. Feeds into Task 3.3's
+  gated rebalancing discussion too, since it's the same PCIe-bound
+  hypothesis at stake there.
+
+#### 2026-08-20 (even later, Task 2.4 smoke test run — PASSED, Task 2.4 done)
+
+- Completed: user ran `bin/14-smoke-test-glm-service.sh` against the live
+  `llama-glm-5.2.service` (`12:50-12:52 CEST`). All 4 cases passed with
+  `finish_reason: stop` (or `tool_calls` for the tool case), no truncation,
+  no degenerate/frozen-token signature:
+  - `enable_thinking:false`: `"Paris"` (factually correct), 2 completion
+    tokens, ~12.0 tok/s
+  - `reasoning_effort:high`: correct recursive `fibonacci()` + complexity
+    note + memoized alternative, 477 completion tokens, ~12.9 tok/s,
+    non-empty `reasoning_content`, NOT truncated
+  - `reasoning_effort:max`: correct recursive `fibonacci()` + memoized
+    variant, 694 completion tokens, ~12.9 tok/s, non-empty
+    `reasoning_content`, NOT truncated (contrast with the earlier ACC-002
+    spike's 600-token attempt, which truncated at this same default mode —
+    this run's 4000-token budget was enough for a full answer)
+  - Tool-calling (REQ-011 risk): well-formed
+    `message.tool_calls[0].function` = `{"name":"get_weather","arguments":"{\"location\":\"Paris\"}"}`
+    with valid, correctly-keyed JSON arguments; `content` empty as expected
+    for a pure tool-call turn (no plain-text imitation, the historical
+    llama.cpp weak-tool-calling failure mode)
+- Completed: reviewed all 4 result JSONs
+  (`bin/logs/2026-08-20T105048Z-smoke-test-glm-service/`) and re-ran the
+  script's own analysis pass manually — confirmed `OVERALL: no degenerate/suspicious/failed results found`.
+- Completed: marked Task 2.4 `done` with the full per-case result summary;
+  updated ACC-004 to record the curl-smoke-test half as PASSED, keeping
+  the checkbox itself unchecked since ACC-004's wording explicitly also
+  requires a real OpenCode agentic session (deferred to Task 2.6/2.7).
+  Updated Current Status, Next Steps (items 0 and 5), and this entry
+  accordingly.
+- Note: the ~12-13 tok/s figures from this smoke test are informative but
+  explicitly NOT a substitute for Task 2.5.1's dedicated throughput
+  benchmark — these were short prompts at low actual context depth, not a
+  production-realistic 768K-context decode measurement.
+- Next: Task 2.5 (768K end-to-end OOM validation — a real filled-context
+  generation run, not a load-only probe) → Task 2.5.1 (decode throughput
+  benchmark) → Task 2.6 (OpenWebUI/OpenCode wiring, also completes
+  ACC-004's remaining OpenCode-session half) → Task 2.7 (quality
+  comparison vs. `feat-1`).
+
+#### 2026-08-20 (later, Task 2.4 cold-load confirmed done, smoke-test script prepared)
+
+- Found: confirmed live on `sys0` (this session has shell access to the
+  box) that Task 2.4's `llama-glm-5.2.service` cold load — started
+  `11:58:20 CEST` — completed successfully: `systemctl --user status`
+  shows `active (running)`, `journalctl` shows `model loaded` /
+  `listening on http://0.0.0.0:8092` at `12:31:12` (~33 min, in line with
+  Task 2.2.1's ~28 min order-of-magnitude estimate), `curl http://localhost:8092/health` returns `200 {"status":"ok"}`, and
+  `/v1/models` reports `glm-5.2:UD-Q5_K_XL` with `n_ctx: 768000` /
+  `n_ctx_train: 1048576` as expected. No errors observed.
+- Completed: wrote `bin/14-smoke-test-glm-service.sh` (Task 2.4's
+  remaining verification step) — unlike bin/03/05's Phase 1 spikes, this
+  targets the already-running systemd service directly (checks
+  `systemctl --user is-active` + `/health` first, does not start/stop its
+  own ad-hoc `llama-server`). Runs 3 reasoning-mode cases against
+  `/v1/chat/completions` (`enable_thinking:false`, `reasoning_effort:high`,
+  `reasoning_effort:max`) plus 1 tool-calling case (a `get_weather`-style
+  function schema, checking REQ-011's llama.cpp-tool-calling risk
+  specifically), each temperature=0. Includes an automated Python analysis
+  pass reusing bin/05's degenerate-frozen-token-signature check, plus new
+  checks for truncation (`finish_reason=length` with no content) and
+  well-formed `tool_calls[].function.{name,arguments}` (vs. a plain-text
+  imitation of a tool call in `content`).
+- Decided (per instruction): script written but **deliberately NOT
+  executed** this session — left for the next session or the user to run
+  (`bash bin/14-smoke-test-glm-service.sh`) and review the `OVERALL`
+  verdict before marking Task 2.4/ACC-004 done.
+- Next: run `bin/14-smoke-test-glm-service.sh`, review results, mark Task
+  2.4/ACC-004 done (or fix and re-run if any case is flagged), then
+  proceed to Task 2.5 (768K context OOM validation) → Task 2.5.1
+  (throughput benchmark) → Task 2.6 (OpenWebUI/OpenCode wiring) → Task 2.7
+  (quality comparison vs. `feat-1`).
 
 #### 2026-08-20 (Task 2.3.1 real run, Task 2.2.1 creation + RAID-contention incident)
 

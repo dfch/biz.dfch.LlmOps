@@ -1,0 +1,101 @@
+# Side-by-side UD-Q4_K_XL systemd unit -- installs alongside (NOT instead
+# of) 08-llama-glm-5.2.service (UD-Q5_K_XL production). Same conventions:
+# systemd --USER unit under ~/.config/systemd/user/, Type=simple,
+# --load-mode none, --host 0.0.0.0, KillMode=control-group,
+# Restart=on-failure/RestartSec=10, LimitNOFILE=65536/LimitMEMLOCK=infinity.
+# See 08-llama-glm-5.2.service's own header for the full rationale behind
+# these choices -- not repeated here, only what differs is called out below.
+#
+# ============================================================================
+# IMPORTANT -- THIS SERVICE CANNOT RUN AT THE SAME TIME AS
+# llama-glm-5.2.service (Q5). Investigated during this session: UD-Q4_K_XL
+# (~467 GB) + UD-Q5_K_XL (~562 GB) combined (~1029 GB) EXCEED this box's
+# total 896 GB pool (384 GB VRAM + 512 GB RAM) by ~133 GB, even before
+# either model's KV-cache/compute buffers -- confirmed against live
+# numbers (only ~116 GiB combined GPU free and ~131 GiB RAM "available"
+# while Q5 alone runs, nowhere near Q4's own ~467 GB weight requirement).
+# This is a raw capacity ceiling, not a placement/tuning problem -- no
+# --tensor-split/--n-cpu-moe choice changes how many total bytes a quant's
+# weights need, only WHERE they live (GPU vs CPU).
+#
+# Per explicit user decision (2026-08-20): install BOTH as separate
+# systemd --user services for quick swapping (`systemctl --user stop
+# llama-glm-5.2 && systemctl --user start llama-glm-5.2-q4`, or vice
+# versa), but NEVER start both at once. Nothing in systemd itself enforces
+# this mutual exclusion (no explicit Conflicts=/BindsTo= is set, to keep
+# both units simple and independent) -- it is an operational rule, not a
+# technical guarantee. If you ever want systemd to enforce it automatically,
+# add `Conflicts=llama-glm-5.2.service` to this unit's [Unit] section (and
+# the mirror image to 08-llama-glm-5.2.service) -- deliberately NOT done by
+# default so an accidental `systemctl --user start` of the wrong one fails
+# loudly with an OOM/CUDA error you'll notice, rather than silently and
+# invisibly stopping the other service out from under whoever is using it.
+# ============================================================================
+#
+# Placement (--n-cpu-moe 54 --tensor-split 54,9,8,8, --ctx-size 768000):
+# reused UNCHANGED from Q5's validated production config, NOT
+# re-optimized for Q4's smaller footprint. This is deliberate for this
+# first install -- every UD-Q4_K_XL tensor is <= its UD-Q5_K_XL
+# counterpart (measured: Q4 averages 5.468 GiB/MoE block vs Q5's 6.635
+# GiB, ~82.4% of Q5's size, from actual GGUF tensor metadata), so a split
+# that fits Q5 on a clean 4-GPU set is guaranteed to fit Q4 too --
+# confirmed empirically via bin/18-tune-q4-kv-cache-768-896.sh before
+# this unit was installed (see that script's log output / the feature
+# README for the actual measured per-GPU numbers). A more aggressive,
+# Q4-specific rebalance (fewer CPU-offloaded blocks, freeing the ~28 GiB
+# of headroom Q4 leaves unused at this same split) is a separate,
+# optional follow-up -- see bin/17-tune-q4-placement.sh for that
+# exploratory work, not yet folded into this unit.
+#
+# Deliberate differences from 08-llama-glm-5.2.service:
+#   - Port 8093, not 8092 -- avoids colliding with Q5 production (8092),
+#     the ad-hoc measurement port (8091), and the earlier ad-hoc
+#     benchmark/tuning ports used during investigation (8090/8094).
+#   - --alias glm-5.2:UD-Q4_K_XL -- distinct model id in /v1/models and
+#     every response's "model" field (see Q5 unit's header for why this
+#     matters -- llama-server otherwise reports its own GGUF path).
+#   - Unit name llama-glm-5.2-q4.service (this file), NOT a suffix/variant
+#     of the Q5 unit -- fully independent, own enable/disable/start/stop
+#     lifecycle.
+#
+# Model: unsloth/GLM-5.2-GGUF, UD-Q4_K_XL, pinned revision
+# abc55e72527792c6e77069c99b4cb7de16fa9f23 -- SAME commit as Q5 (Task 0.5),
+# this is one repo holding multiple quants, not a separate revision per
+# quant.
+#
+# Install: see bin/20-install-llama-glm-q4-service.sh (mirrors
+# bin/09-install-llama-glm-service.sh: copy + daemon-reload, deliberately
+# NOT enable, NOT start).
+
+[Unit]
+Description=llama.cpp GLM-5.2 (UD-Q4_K_XL) OpenAI-compatible API -- side-by-side with Q5, NEVER run both at once (see header)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/data/llama.cpp-dsa
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=CUDA_VISIBLE_DEVICES=0,1,2,3
+ExecStart=/data/llama.cpp-dsa/build/bin/llama-server \
+    --model /data/llama_cpp/models/GLM-5.2-GGUF/UD-Q4_K_XL/GLM-5.2-UD-Q4_K_XL-00001-of-00011.gguf \
+    --alias glm-5.2:UD-Q4_K_XL \
+    --host 0.0.0.0 \
+    --port 8093 \
+    --ctx-size 768000 \
+    --n-gpu-layers 999 \
+    --n-cpu-moe 54 \
+    --tensor-split 54,9,8,8 \
+    --load-mode none \
+    --parallel 1 \
+    --jinja
+KillMode=control-group
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=3600
+TimeoutStopSec=60
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=default.target
