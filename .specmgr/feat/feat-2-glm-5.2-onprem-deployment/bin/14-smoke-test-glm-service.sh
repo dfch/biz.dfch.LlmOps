@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
-# Task 2.4 smoke test -- against the ALREADY-RUNNING systemd --user service
-# (llama-glm-5.2.service, installed via bin/09-install-llama-glm-service.sh),
-# NOT an ad-hoc llama-server process like bin/03/05's Phase 1 spikes. This
-# script does not start/stop anything -- the service must already be
-# `active (running)` and `/health` must already return 200 before running
-# this (start it yourself first: `systemctl --user start llama-glm-5.2.service`).
+# Task 2.4 smoke test -- against an ALREADY-RUNNING systemd --user service
+# (llama-glm-5.2.service by default, installed via
+# bin/09-install-llama-glm-service.sh; override SERVICE_UNIT/HOST/PORT/MODEL
+# below to point this at the side-by-side llama-glm-5.2-q4.service instead
+# -- see bin/19/bin/20), NOT an ad-hoc llama-server process like bin/03/05's
+# Phase 1 spikes. This script does not start/stop anything -- the service
+# must already be `active (running)` and `/health` must already return 200
+# before running this (start it yourself first: `systemctl --user start
+# <unit>`).
+#
+# Usage against Q5 (default, no overrides needed):
+#   bash 14-smoke-test-glm-service.sh
+# Usage against the side-by-side Q4 service:
+#   SERVICE_UNIT=llama-glm-5.2-q4.service PORT=8093 \
+#     MODEL="glm-5.2:UD-Q4_K_XL" bash 14-smoke-test-glm-service.sh
 #
 # Verifies REQ-004/REQ-011/ACC-004:
 #   1. All 3 reasoning-mode toggles produce coherent, non-degenerate,
@@ -27,9 +36,10 @@
 
 set -euo pipefail
 
-HOST=localhost
-PORT=8092
-MODEL="glm-5.2:UD-Q5_K_XL"
+SERVICE_UNIT="${SERVICE_UNIT:-llama-glm-5.2.service}"
+HOST="${HOST:-localhost}"
+PORT="${PORT:-8092}"
+MODEL="${MODEL:-glm-5.2:UD-Q5_K_XL}"
 STARTUP_TIMEOUT=10
 
 LOGDIR="$(cd "$(dirname "$0")" && pwd)/logs"
@@ -38,10 +48,10 @@ STAMP="$(date -u +%Y-%m-%dT%H%M%SZ)"
 RESULT_DIR="${LOGDIR}/${STAMP}-smoke-test-glm-service"
 mkdir -p "$RESULT_DIR"
 
-echo "== Checking llama-glm-5.2.service is already running =="
-if ! systemctl --user is-active --quiet llama-glm-5.2.service; then
-  echo "ERROR: llama-glm-5.2.service is not active -- start it first:" >&2
-  echo "  systemctl --user start llama-glm-5.2.service" >&2
+echo "== Checking ${SERVICE_UNIT} is already running =="
+if ! systemctl --user is-active --quiet "$SERVICE_UNIT"; then
+  echo "ERROR: ${SERVICE_UNIT} is not active -- start it first:" >&2
+  echo "  systemctl --user start ${SERVICE_UNIT}" >&2
   echo "This script does not start/stop the service itself." >&2
   exit 1
 fi
@@ -55,8 +65,8 @@ while true; do
   fi
   if [ "$elapsed" -ge "$STARTUP_TIMEOUT" ]; then
     echo "ERROR: /health did not return 200 (last HTTP code: ${HTTP_CODE}) within ${STARTUP_TIMEOUT}s -- is the model still cold-loading? Check:" >&2
-    echo "  systemctl --user status llama-glm-5.2.service" >&2
-    echo "  journalctl --user-unit llama-glm-5.2.service -n 50" >&2
+    echo "  systemctl --user status ${SERVICE_UNIT}" >&2
+    echo "  journalctl --user-unit ${SERVICE_UNIT} -n 50" >&2
     exit 1
   fi
   sleep 2

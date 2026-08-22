@@ -461,6 +461,12 @@ Decisions Made for the safety-margin policy).
   user exercised the actual swap workflow live — cleanly stopped Q5,
   started `llama-glm-5.2-q4.service` — confirming the side-by-side
   design works as intended outside of any assistant-driven script.
+  **`bin/14-smoke-test-glm-service.sh` (Task 2.4's smoke test) generalized
+  to reuse against Q4**: `SERVICE_UNIT`/`HOST`/`PORT`/`MODEL` are now
+  overridable env vars (previously hardcoded to Q5's values). `bin/21-smoke-test-glm-q4-service.sh` added as a thin wrapper (no new
+  logic, just sets those env vars and `exec`s `bin/14`) — run
+  `bash bin/21-smoke-test-glm-q4-service.sh` once Q4's `/health` (port
+  8093\) returns 200.
 
 **Note:** If a task's scope changes mid-flight, edit its description in place;
 rely on git history (`git log -p` on this file) to recover what was
