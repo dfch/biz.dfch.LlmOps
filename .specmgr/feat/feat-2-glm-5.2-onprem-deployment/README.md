@@ -927,6 +927,131 @@ file).
 
 ### Recent Updates
 
+#### 2026-08-22 (later — incident: `bin/17`'s stale Q5-only assumption caused a live crash loop; fixed copies created)
+
+- **Incident**: while examining `bin/17-tune-q4-placement.sh`'s
+  just-completed run (see below), found `llama-glm-5.2.service` (Q5)
+  stuck in a `Restart=on-failure` crash loop (`activating (auto-restart)`,
+  repeated `failed to load model` every ~10s). Root cause: `bin/17`'s
+  cleanup trap unconditionally runs `systemctl --user start llama-glm-5.2.service` on exit, regardless of whether Q5 was the
+  service actually running before the script started. Since Q4
+  (`llama-glm-5.2-q4.service`) is the real live service now (not Q5),
+  this made cleanup start Q5 on top of GPU memory Q4 was still holding —
+  guaranteed OOM, retried forever by systemd. **Stopped immediately**
+  (`systemctl --user stop llama-glm-5.2.service`); confirmed only one
+  failed cycle occurred (`journalctl` shows one `Main process exited` at
+  14:29:14 CEST before being stopped at 14:29:18) and Q4 was never
+  affected (`/health` returned 200 throughout, `nvidia-smi`/`ps aux`
+  showed Q4's PID 4316 untouched).
+- **Root cause, fully diagnosed**: both `bin/16-benchmark-q4-vs-q5.sh`
+  and `bin/17-tune-q4-placement.sh` were written before Task 3.4
+  installed `llama-glm-5.2-q4.service` as a real side-by-side systemd
+  unit — they hardcode `llama-glm-5.2.service` (Q5) as "the production
+  service to stop/restart" in both directions. Confirmed by inspecting
+  `bin/17`'s actual just-completed run: `bin/logs/2026-08-22T121941Z-tune-q4-placement/*.log`
+  shows all 3 candidates failing `cudaMalloc failed: out of memory` on
+  CUDA1 (52-75 GiB requested, none available) — `bin/17` saw Q5 already
+  inactive, concluded "nothing to stop," and launched every candidate
+  straight into a GPU state Q4 had already filled. **That run's tuning
+  data is invalid and was not used for any decision.** `bin/16` has the
+  same blind spot, made worse by a literal port collision:
+  `AD_HOC_PORT=8093` is now `llama-glm-5.2-q4.service`'s own
+  permanently-assigned port.
+- **Fix, per explicit user request ("just make copies... run them for Q4
+  WITHOUT adding any parameters or setting any env vars")**: rather than
+  editing `bin/16`/`bin/17` in place, created corrected copies that need
+  zero parameters and auto-detect which service to manage instead of
+  hardcoding Q5:
+  - **`bin/22-measure-pcie-vs-throughput-q4.sh`**: thin wrapper for
+    `bin/15` (mirrors `bin/21`'s pattern for `bin/14`), hardcodes
+    `HOST=localhost PORT=8093 MODEL=glm-5.2:UD-Q4_K_XL`. `bin/15` itself
+    needed no fix (it's generic — never starts/stops anything, just
+    calls whatever `HOST:PORT` is already healthy — and had already been
+    run successfully against Q4 by the user directly).
+  - **`bin/23-tune-q4-placement-v2.sh`**: corrected copy of `bin/17`.
+    Auto-detects whichever of `llama-glm-5.2.service`/
+    `llama-glm-5.2-q4.service` is actually active at start, stops THAT
+    one for the trial candidates, and restarts THAT SAME one in cleanup
+    — never hardcodes either direction. Same 3 candidates, same
+    sub-second fit-check technique, same ad-hoc port (8094, unchanged,
+    no collision).
+  - **`bin/24-benchmark-q4-vs-q5-v2.sh`**: corrected copy of `bin/16`.
+    Same auto-detection: benchmarks whichever service is live first
+    (Phase A, no ad-hoc load needed since it's already running), stops
+    it, ad-hoc cold-loads the OTHER quant (Q5 always `54,9,8,8`; Q4
+    defaults to the same reuse until `bin/23` validates a better split —
+    editable `Q4_NCMOE`/`Q4_TENSOR_SPLIT` variables at the top, not env
+    vars), benchmarks it (Phase B), and restarts the ORIGINAL live
+    service in cleanup. Ad-hoc port moved to **8095** (was 8093,
+    colliding with the real Q4 service) — full port map now: 8092=Q5
+    prod, 8093=Q4 prod, 8094=tuning ad-hoc (`bin/17`/`bin/23`),
+    8095=A/B-benchmark ad-hoc (`bin/16`/`bin/24`).
+  - `bin/16` and `bin/17` themselves left untouched (not deleted/rewritten)
+    as the historical record of the first, buggy attempt — per this
+    project's convention of preferring new numbered scripts over
+    silently rewriting history.
+- **`bin/23` run by the user immediately after being created — surfaced a
+  SECOND, independent bug**, this time in the log-grep-then-kill
+  technique itself (not the service-detection fix, which worked
+  correctly: the run's own pre-flight correctly detected
+  `llama-glm-5.2-q4.service` as active, stopped it, and its cleanup
+  correctly restarted that same service afterward — confirmed via
+  `systemctl`/`ps aux`/`/health` immediately after). **All 3 candidate
+  logs stopped at an identical ~3445 bytes**, always right before where
+  the `common_fit_params: successfully fit params` line should appear
+  (per the known-good reference timing in `bin/logs/*-kv-ctx768000.log`)
+  — never showing success OR an explicit failure. Root cause: glibc
+  fully-buffers a process's stdout when it isn't a TTY (true here, since
+  stdout is redirected to a log file); the script's SIGKILL (used to cut
+  each candidate short after only a few seconds, the whole point of the
+  "sub-second fit-check" technique) skips normal process exit entirely,
+  so any buffered-but-not-yet-flushed stdout content — including the one
+  line the script is grep-ing for — is silently lost. (Fatal/OOM errors
+  were unaffected, since glibc's stderr is unbuffered by default — this
+  is why bin/17's original, invalid run could still show its OOM
+  failures correctly even though, per this same bug, it could never have
+  shown a genuine success either.) **Fixed in `bin/23`** (not yet
+  re-verified live, since testing the success path needs genuinely free
+  GPU memory, unavailable while Q4's post-tuning cold-load was in
+  progress): (1) `stdbuf -oL` prefixed onto the `llama-server` invocation
+  to force line-buffered stdout, and (2) the kill sequence changed from
+  an immediate `SIGKILL` to a graceful `SIGTERM` with a 5s grace period
+  before falling back to `SIGKILL` — belt-and-suspenders, since a normal
+  process exit (unlike `SIGKILL`) triggers the C runtime's own stdio
+  flush regardless of whether `stdbuf` alone was sufficient. `bin/24` was
+  checked and confirmed NOT to need this fix — it polls `/health` over
+  HTTP, not log content, so it was never exposed to this bug.
+- **Found (separate, third bug) while retrying**: the user ran
+  `bin/24-benchmark-q4-vs-q5-v2.sh` right after `bin/23`'s cleanup
+  restarted Q4 — it failed immediately (`localhost:8093/health returned 503`). Cause: Phase A's pre-flight only checked `systemctl is-active`
+  to pick which service to benchmark, but a systemd unit reports `active (running)` for the ENTIRE 20-45+ min cold-load window, long before
+  `/health` ever returns 200 — `is-active` being true does not mean
+  "ready to benchmark." **Fixed in `bin/24`**: Phase A now polls
+  `/health` (same pattern Phase B's ad-hoc load already used, up to
+  `STARTUP_TIMEOUT`=5400s) before calling `bin/15`, instead of assuming
+  active implies healthy. Syntax-checked (`bash -n`), not yet
+  re-exercised live.
+- **SESSION HANDOFF (context window filling up, continuing in a new
+  session)** — state as of session end:
+  - `llama-glm-5.2-q4.service` (Q4): `active (running)` since 14:40:44
+    CEST, **still cold-loading** (RSS plateaued ~479 GiB for several
+    minutes — consistent with the final KV-cache-allocation/graph-build
+    phase seen in prior successful loads, not a hang), `/health` still
+    503 as of ~21 min elapsed. Historical Q4 cold-loads took ~27-33 min
+    total, so likely close.
+  - `llama-glm-5.2.service` (Q5): `inactive (dead)`, as expected.
+  - User's explicit instruction for the next session: **wait for Q4's
+    `/health` to return 200, then re-run
+    `bin/23-tune-q4-placement-v2.sh`** (now fixed — `stdbuf -oL` +
+    graceful `SIGTERM`, see above) **to get the first genuinely valid Q4
+    placement-tuning data.** After that, if a better split is found,
+    update `Q4_NCMOE`/`Q4_TENSOR_SPLIT` in
+    `bin/24-benchmark-q4-vs-q5-v2.sh` (now also fixed for the
+    active-vs-healthy gap above) before running the disruptive full A/B
+    benchmark.
+  - Nothing destructive in flight; safe to resume by just polling
+    `curl http://localhost:8093/health` and proceeding once it's 200.
+
 #### 2026-08-22 (session resumed after a 2-day gap/power-cycle — Task 3.4 side-by-side Q4 install completed and validated)
 
 - Context: user requested (2026-08-20) a Q5-style tuning script for Q4
