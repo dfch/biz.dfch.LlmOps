@@ -1,5 +1,6 @@
 ---
 created: 2026-08-19
+github_issue: 2
 id: feat-2-glm-5.2-onprem-deployment
 status: planning
 updated: 2026-08-20
