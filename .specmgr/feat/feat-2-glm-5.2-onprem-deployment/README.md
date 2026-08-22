@@ -362,7 +362,7 @@ Decisions Made for the safety-margin policy).
 
 - [ ] Task 2.5: Validate the finalized production context size (**768K**, decided in Task 2.3 — see Track A result; comfortably exceeds REQ-003's 350-370K minimum bar by 2x+. 896K remains a flagged revisit candidate pending the tensor-split rebalancing, see Decisions Made, but is not the current target) works without OOM — depends on: Task 2.4 — status: not-started
 
-- [ ] Task 2.5.1: Measure actual generation throughput (tokens/min in and tokens/min out, or tok/s) for `UD-Q5_K_XL` in the production config (`--n-cpu-moe 54 --tensor-split 54,9,8,8`), at the finalized production context size — Task 2.1/2.2 were model-load/VRAM-allocation probes only, not decode-speed benchmarks; the only speed figure on record (~39 tok/s, Task 1.2) is for the much lighter `UD-IQ1_S` spike quant and is not representative, since `UD-Q5_K_XL` streams the majority of MoE expert weight from CPU RAM per decode step (`--n-cpu-moe 54`), which is structurally slower. Runs against the already-installed service, which already has Task 2.2.1's winning `--load-mode` baked in — no second cold-load-mode comparison needed here — depends on: Task 2.5 — status: not-started — **2026-08-20: prep work done ahead of time**, prompted by a user report that decode felt slow in real use. A live spot-check during this session (`nvidia-smi dmon -s ut`) found GPU0 (the PCIe 5.0 x16 bus, see Task 2.3/3.3's topology finding) sustaining **~46-60 GB/s PCIe RX at 100% SM utilization** during real generation traffic, while GPUs 1-3 sat idle — a strong signal decode may be PCIe-transfer-bound in this `--n-cpu-moe` hybrid config (the CPU-offloaded MoE-expert weight rows being re-streamed to GPU every decode step), not purely compute-bound. Three scripts created (executable, **not yet run**): `bin/15-measure-pcie-vs-throughput.sh` (generic — correlates per-GPU PCIe RX/TX + SM% with measured `tok/s` against any already-running endpoint; doubles as this task's actual measurement tool), `bin/17-tune-q4-placement.sh` (see below — finds a Q4-specific `--n-cpu-moe`/`--tensor-split` placement rather than blindly reusing Q5's, run BEFORE `bin/16`), and `bin/16-benchmark-q4-vs-q5.sh` (orchestrates a full A/B: benchmarks the live Q5 production service via `bin/15` first — satisfying this task — then stops it, cold-loads `UD-Q4_K_XL` ad-hoc on port 8093 with a placement now parameterized via `NCMOE`/`TENSOR_SPLIT` env vars — defaulting to Q5's `54,9,8,8` but meant to be overridden with `bin/17`'s winning candidate — benchmarks it via `bin/15`, and restarts production Q5 via a `trap`-guarded cleanup that always runs regardless of how the script exits). Also see the theoretical Q4-vs-Q5 speedup estimate under Current Status/session notes (~15-30%, derived from the ~17% smaller Q4 file size and the PCIe-bound hypothesis) — a rough estimate only, to be replaced by `bin/16`'s actual measurement.
+- [x] Task 2.5.1: Measure actual generation throughput (tokens/min in and tokens/min out, or tok/s) for `UD-Q5_K_XL` in the production config (`--n-cpu-moe 54 --tensor-split 54,9,8,8`), at the finalized production context size — Task 2.1/2.2 were model-load/VRAM-allocation probes only, not decode-speed benchmarks; the only speed figure on record (~39 tok/s, Task 1.2) is for the much lighter `UD-IQ1_S` spike quant and is not representative, since `UD-Q5_K_XL` streams the majority of MoE expert weight from CPU RAM per decode step (`--n-cpu-moe 54`), which is structurally slower. Runs against the already-installed service, which already has Task 2.2.1's winning `--load-mode` baked in — no second cold-load-mode comparison needed here — depends on: Task 2.5 — status: not-started — **2026-08-20: prep work done ahead of time**, prompted by a user report that decode felt slow in real use. A live spot-check during this session (`nvidia-smi dmon -s ut`) found GPU0 (the PCIe 5.0 x16 bus, see Task 2.3/3.3's topology finding) sustaining **~46-60 GB/s PCIe RX at 100% SM utilization** during real generation traffic, while GPUs 1-3 sat idle — a strong signal decode may be PCIe-transfer-bound in this `--n-cpu-moe` hybrid config (the CPU-offloaded MoE-expert weight rows being re-streamed to GPU every decode step), not purely compute-bound. Three scripts created (executable, **not yet run**): `bin/15-measure-pcie-vs-throughput.sh` (generic — correlates per-GPU PCIe RX/TX + SM% with measured `tok/s` against any already-running endpoint; doubles as this task's actual measurement tool), `bin/17-tune-q4-placement.sh` (see below — finds a Q4-specific `--n-cpu-moe`/`--tensor-split` placement rather than blindly reusing Q5's, run BEFORE `bin/16`), and `bin/16-benchmark-q4-vs-q5.sh` (orchestrates a full A/B: benchmarks the live Q5 production service via `bin/15` first — satisfying this task — then stops it, cold-loads `UD-Q4_K_XL` ad-hoc on port 8093 with a placement now parameterized via `NCMOE`/`TENSOR_SPLIT` env vars — defaulting to Q5's `54,9,8,8` but meant to be overridden with `bin/17`'s winning candidate — benchmarks it via `bin/15`, and restarts production Q5 via a `trap`-guarded cleanup that always runs regardless of how the script exits). Also see the theoretical Q4-vs-Q5 speedup estimate under Current Status/session notes (~15-30%, derived from the ~17% smaller Q4 file size and the PCIe-bound hypothesis) — a rough estimate only, to be replaced by `bin/16`'s actual measurement.
 
 - **2026-08-20 (later): Q4-specific placement tuning added, prompted by a
   user question — "shouldn't Q4 get its own block-placement tuning,
@@ -398,6 +398,89 @@ Decisions Made for the safety-margin policy).
   config" throughput comparison. Recommended order:
   `bin/17-tune-q4-placement.sh` → pick a winner → re-run `bin/16` with
   `NCMOE=... TENSOR_SPLIT=... bash bin/16-benchmark-q4-vs-q5.sh`.
+
+- **2026-08-22: `bin/23-tune-q4-placement-v2.sh` finally produced valid
+  placement data, after TWO independent bugs were found and fixed (see
+  Recent Updates for the full incident writeup of both).** Bug #1
+  (stdbuf/SIGKILL buffering) was fixed first but insufficient on its own —
+  3 more clean runs still produced only 60s-timeout/inconclusive results
+  (all 3 candidate logs truncated at an identical 3445 bytes/35 lines,
+  never reaching the fit-check line). Bug #2, found by comparing against
+  `bin/07-measure-kv-cache-768-896.sh` (which DID capture this line for
+  Task 2.1/2.2/3.4): the target line
+  (`common_fit_params: successfully fit params to free device memory`) is
+  INFO-level and is silently suppressed at the default log verbosity 3 —
+  `bin/07`/`bin/18` always passed `-lv 4`, but `bin/17`/`bin/23` never
+  did. Added `-lv 4` to `bin/23`; re-run immediately succeeded, all 3
+  candidates reaching a real fit-check result in ~2s each (not 60s
+  timeouts):
+
+  | candidate | n-cpu-moe / split | worst GPU | worst free % | vs. ≥15%/≥10 GiB policy |
+  |---|---|---|---|---|
+  | baseline-reuse-q5 | 54 / `54,9,8,8` | CUDA0 | 25.3% | passes comfortably — best of the 3 |
+  | candidate-A-modest | 50 / `50,11,9,9` | CUDA1 | 20.7% | passes, worse than baseline |
+  | candidate-B-aggressive | 46 / `46,13,10,10` | CUDA1 | 6.8% (6,663 MiB) | **fails both legs** |
+
+  **Finding: the rebalancing hypothesis was wrong, not just unproven.**
+  Shifting blocks off CPU-offload (lower `--n-cpu-moe`) does free headroom
+  on CUDA0/2/3, but the paired `--tensor-split` rebalance concentrates
+  that shifted static weight onto CUDA1 specifically (already the
+  heaviest-static-weight GPU per Task 2.2's original per-GPU analysis:
+  62,690 MiB baseline → 63,685 MiB (A) → 75,264 MiB (B)), so CUDA1's free
+  margin collapses (33,400 → 20,125 → 6,663 MiB) faster than the other
+  GPUs improve. **Decision: keep `54,9,8,8` for Q4** — not merely "safe
+  by reuse" as originally assumed, but the actual best-margin option of
+  the 3 tested. No further, more-aggressive rebalance candidates are
+  worth trying in this direction. This also means `bin/24-benchmark-q4-vs-q5-v2.sh`
+  needs no `Q4_NCMOE`/`Q4_TENSOR_SPLIT` override — its default (reusing
+  Q5's `54,9,8,8`) already is the winning Q4 config, so Task 2.5.1's
+  throughput A/B can run as-is once Q4 (stopped/restarted by this sweep,
+  cold-loading again as of this finding) finishes reloading. Full logs:
+  `bin/logs/2026-08-22T144828Z-tune-q4-placement-v2/`.
+
+- **2026-08-22 (later): Task 2.5.1 DONE — real throughput A/B run via
+  `bin/24-benchmark-q4-vs-q5-v2.sh`, launched detached in the background
+  once Q4 was healthy again (per this repo's own long-running-job
+  guidance — monitored via a background task, not polled tick-by-tick in
+  the main session).** No `Q4_NCMOE`/`Q4_TENSOR_SPLIT` override needed —
+  the script's default (`54,9,8,8`) was already confirmed as the winning
+  Q4 config by the placement-tuning sweep above. Ran clean end-to-end,
+  ~1h for the two benchmark phases (Phase A: Q4 live, already
+  loaded/healthy; Phase B: Q5 ad-hoc cold-load ~20 min), plus a further
+  ~32 min for the trap-guarded cleanup to restart and cold-load Q4 back
+  to production — confirmed healthy afterward
+  (`systemctl --user status llama-glm-5.2-q4.service` = `active (running)`,
+  `/health` = `{"status":"ok"}`). **Result:**
+
+  | quant | context | tok/s | completion tokens | finish_reason |
+  |---|---|---|---|---|
+  | **Q4** (`UD-Q4_K_XL`, live production) | 768000 | **14.26** | 912 | stop |
+  | **Q5** (`UD-Q5_K_XL`, ad-hoc, same `54,9,8,8` placement) | 768000 | **12.65** | 845 | stop |
+
+  **Q5 is 11.3% slower than Q4** in this single-request A/B — directionally
+  consistent with (though smaller than) the session's own theoretical
+  15-30% estimate derived from the PCIe-bound hypothesis and Q4's smaller
+  per-block footprint (Task 2.5.1's earlier prep notes, and the smoke-test
+  spot-check in Task 3.4 which found +11.5%/+13.1% on two prompts) — this
+  full A/B (longer completions, dedicated single-purpose run via
+  `bin/15-measure-pcie-vs-throughput.sh`, not a smoke-test side-effect)
+  lands right in the same ballpark (~11-13%), reinforcing that figure
+  rather than the higher end of the original 15-30% estimate range. No
+  errors; only expected/benign "unused tensor blk.78.\*" warnings during
+  both cold-loads and one non-fatal PCIe-sampling granularity miss in
+  `bin/15`'s dmon window (noted in-log, not a failure). **REQ-005's
+  "maximize quality, speed secondary" framing is satisfied either way**
+  (Q5 stays the primary/production quant per Task 2.2/ACC-005's
+  near-lossless rationale; Q4's measurable-but-modest speed edge is
+  informational for the swap-when-wanted side-by-side design from Task
+  3.4, not grounds to change the default). Full logs:
+  `bin/logs/2026-08-22T145303Z-q4-vs-q5-benchmark-v2/` (per-phase
+  `bin/15` outputs: `response.json`, `dmon.log`, ad-hoc server log).
+  **Phase 2 is now fully clear to move to Task 2.6** (OpenWebUI/OpenCode
+  wiring); Task 3.3's rebalancing revisit (gated on this throughput
+  baseline landing) can also now be picked up if wanted, though Task
+  2.5.1's own placement-tuning sweep (see above) already found no better
+  split than the current `54,9,8,8` for Q4 specifically.
 
 - [ ] Task 2.6: Connect OpenWebUI and OpenCode to the GLM-5.2 endpoint as a separate model entry — depends on: Task 2.5 — status: not-started — OpenCode side drafted ahead of time (2026-08-20): `opencode-provider-snippet-glm-5.2.jsonc` (feature folder root) holds a `provider.llama-cpp-sys0` entry using `@ai-sdk/openai-compatible`, `baseURL: http://<sys0-LAN-IP>:8092/v1`, model key `glm-5.2:UD-Q5_K_XL` with `limit.context: 768000` (matching Task 2.3's decided production context size) — mirrors the box's existing `ollama-sys0` provider entry in shape. Deliberately NOT written into any actual `opencode.jsonc` on this box (that file belongs to a different system) — it's a standalone paste-able fragment for the user to merge into their own config's `provider` object once Task 2.4 confirms the endpoint is actually up. Motivated the `--alias glm-5.2:UD-Q5_K_XL` addition to `bin/08-llama-glm-5.2.service` (see its header comment) so the model id OpenCode/OpenWebUI would show isn't the raw GGUF file path. See Task 3.2 (Phase 3) for the still-open question of driving `--chat-template-kwargs` reasoning-mode toggles from OpenCode itself.
 
@@ -507,6 +590,27 @@ originally planned, rather than keeping a second copy of the task around.
 ## Progress
 
 ### Current Status
+
+**As of 2026-08-22 (latest): Task 2.5.1 (decode throughput) is DONE; Q4's
+own placement-tuning sweep is DONE (kept `54,9,8,8`).** Two independent
+bugs in `bin/23-tune-q4-placement-v2.sh` were found and fixed this
+session (stdout buffering, then a missing `-lv 4` verbosity flag
+suppressing the INFO-level fit-check line) before it could produce any
+valid data — see Task 2.5.1 and Recent Updates for the full incident.
+Once fixed, all 3 placement candidates resolved in ~2s each: baseline
+`54,9,8,8` (25.3% worst-GPU margin) beat both rebalanced alternatives
+(20.7% and a failing 6.8%) — the "shift more onto GPU" hypothesis that
+motivated the sweep was wrong, not just untested. `bin/24-benchmark-q4-vs-q5-v2.sh`
+then ran clean (background-monitored, not polled tick-by-tick): **Q4
+14.26 tok/s vs Q5 12.65 tok/s (Q5 11.3% slower)** at the same `54,9,8,8`/768K
+config — consistent with, though smaller than, the session's earlier
+15-30% theoretical estimate. Q4 was successfully restored to production
+afterward (`/health` = `{"status":"ok"}`). **Task 2.5 (a genuine
+filled-context/large-prompt 768K generation run) is still NOT done** —
+`bin/24`'s benchmark used only a short one-sentence coding prompt against
+a server configured at `--ctx-size 768000`, which validates the KV-cache
+allocation and short-prompt decode but does not exercise a real
+350-370K+-token prompt; that remains open, next up before Task 2.6.
 
 **As of 2026-08-20**: Phase 1 SM120 correctness spike
 **PASSED** — `llama.cpp` (fresh CUDA build at `/data/llama.cpp-dsa`,
@@ -764,6 +868,16 @@ working as designed, exercised independently of any assistant action.
 
 ### Next Steps
 
+**IMMEDIATE (2026-08-22 update): Task 2.5.1 and Task 2.5.1's own
+placement-tuning sweep are both DONE (see Current Status/Recent
+Updates) — kept `54,9,8,8` for Q4, measured Q4 14.26 vs Q5 12.65 tok/s.
+The only remaining Phase 2 gap before Task 2.6 is Task 2.5 itself: a
+real filled-context (350-370K+ token prompt) generation run at the
+768K production config, which nothing run so far has actually exercised
+(all throughput/tuning runs used short prompts). Do that next, then
+proceed to Task 2.6 (OpenWebUI/OpenCode wiring) and Task 2.7 (quality
+comparison vs. feat-1).**
+
 **NEW — Q4 vs Q5 investigation, prompted by a user report of slow
 decode (highest priority once ready to take the endpoint offline
 briefly). Two-step sequence, run in this order:**
@@ -926,6 +1040,68 @@ file).
   now fully clear.
 
 ### Recent Updates
+
+#### 2026-08-22 (latest — `bin/23`'s second, independent bug found and fixed; valid Q4 placement-tuning data finally obtained)
+
+- **Context**: the `stdbuf -oL` + graceful-`SIGTERM` fix applied to
+  `bin/23-tune-q4-placement-v2.sh` earlier the same day (see entry below)
+  addressed a real buffering bug, but a fresh, clean re-run (after
+  waiting for Q4's `/health` to return 200, per the prior session
+  handoff instruction) still produced only 60s-timeout/inconclusive
+  results: all 3 candidate logs across 3 separate attempts
+  (`2026-08-22T123612Z`, `T131018Z`, `T140950Z`) were truncated at an
+  identical 3445 bytes / 35 lines, always stopping right after the
+  "unused tensor blk.78.\*" warnings and never reaching the
+  `common_fit_params` line the script greps for — even though cleanup
+  worked correctly each time (Q4 was always properly stopped/restarted,
+  no crash loop, confirmed via `systemctl`/`journalctl`/`nvidia-smi`).
+- **Root cause, found by comparison**: `common_fit_params: successfully
+  fit params to free device memory` is an INFO-level log line, and
+  `bin/23` (like `bin/17` before it) never passed `-lv N`, so it ran at
+  the default verbosity 3, which suppresses that line unconditionally —
+  success or not. Confirmed by diffing against
+  `bin/07-measure-kv-cache-768-896.sh`, which DID capture this exact
+  line for Task 2.1/2.2/3.4's real per-GPU breakdowns and explicitly
+  passes `-lv 4`. The only place this message had ever appeared in any
+  of this script's own logs was the WARNING-level "abort" variant, in
+  `bin/17`'s original pre-fix run (`2026-08-22T121941Z`, launched into a
+  GPU already filled by Q4) — warnings print regardless of verbosity,
+  unlike the INFO-level success line, which is why that one instance was
+  visible even without `-lv 4` while every clean, successful run's INFO
+  line stayed invisible. Production's own real loads (same flags, no
+  `-lv`) show zero `common_fit_params` lines anywhere across their
+  ~30-40 min journals either, consistent with the same suppression, not
+  evidence the fit-check doesn't run.
+- **Fix**: added `-lv 4` to `bin/23`'s `llama-server` invocation
+  (matching `bin/07`/`bin/18`'s already-proven recipe); syntax-checked,
+  then re-run for real.
+- **Result — first valid Q4 placement-tuning data, all 3 candidates
+  reaching a real fit-check result in ~2s each (not a 60s timeout):**
+
+  | candidate | n-cpu-moe / tensor-split | worst GPU | worst free % | vs. ≥15%/≥10 GiB policy |
+  |---|---|---|---|---|
+  | baseline-reuse-q5 | 54 / `54,9,8,8` | CUDA0 | 25.3% | passes comfortably — best of the 3 |
+  | candidate-A-modest | 50 / `50,11,9,9` | CUDA1 | 20.7% | passes, but worse than baseline |
+  | candidate-B-aggressive | 46 / `46,13,10,10` | CUDA1 | 6.8% (6,663 MiB) | **fails both legs** |
+
+  The rebalancing hypothesis this whole sweep was built on (shift blocks
+  off CPU-offload since Q4's blocks are smaller than Q5's, freeing
+  headroom to push further) turned out to be **wrong, not just
+  unproven**: lowering `--n-cpu-moe` does free headroom on CUDA0/2/3, but
+  the paired `--tensor-split` rebalance concentrates the shifted static
+  weight onto CUDA1 (already the heaviest-static-weight GPU), so CUDA1's
+  margin collapses (33,400 → 20,125 → 6,663 MiB free) faster than the
+  other GPUs improve. **Decision: keep `54,9,8,8` for Q4** — confirmed as
+  the actual best-margin option of the 3, not merely "safe by reuse."
+  See Task 2.5.1 for the full table and reasoning. Cleanup restarted Q4
+  correctly each time (confirmed via `systemctl`/`nvidia-smi`); Q4 is
+  cold-loading again as of this finding (stopped/restarted by this
+  sweep), expected back healthy in the usual ~27-33 min. Full logs:
+  `bin/logs/2026-08-22T144828Z-tune-q4-placement-v2/`.
+- **Next**: once Q4 is healthy again, run
+  `bin/24-benchmark-q4-vs-q5-v2.sh` (Task 2.5.1's throughput A/B) — no
+  `Q4_NCMOE`/`Q4_TENSOR_SPLIT` override needed, since its default
+  (Q5's `54,9,8,8`) is now confirmed as the winning Q4 config too.
 
 #### 2026-08-22 (later — incident: `bin/17`'s stale Q5-only assumption caused a live crash loop; fixed copies created)
 

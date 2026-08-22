@@ -196,6 +196,22 @@ for entry in "${CANDIDATES[@]}"; do
   # were unaffected by this bug since glibc's stderr is unbuffered by
   # default -- that's why bin/17's original run still SHOWED its OOM
   # failures correctly, even though it could never have shown a success.)
+  #
+  # SECOND BUG found 2026-08-22 (later, after the stdbuf fix above still
+  # produced 3 more identical ~3445-byte/35-line truncations across 3
+  # separate clean runs, none reaching the fit-check line): missing
+  # `-lv 4`. `common_fit_params: successfully fit params to free device
+  # memory` is an INFO-level line, suppressed at the default verbosity 3
+  # this script (and bin/17 before it) always ran at -- so the target
+  # string could never appear, success or not, regardless of the stdbuf
+  # fix. Confirmed by comparing against bin/07-measure-kv-cache-768-896.sh
+  # (which DID capture this line for Task 2.1/2.2/3.4) and found it
+  # explicitly passes `-lv 4`; the only occurrence of a
+  # `common_fit_params` line anywhere in this script's own logs was the
+  # WARNING-level "abort" variant in bin/17's original pre-fix run
+  # (warnings print regardless of verbosity, unlike the INFO-level
+  # success line). Fixed by adding `-lv 4` below, matching bin/07/bin/18's
+  # proven recipe.
   stdbuf -oL "$LLAMA_BIN" \
     --model "$Q4_MODEL_FIRST_SHARD" \
     --alias "glm-5.2:UD-Q4_K_XL-tune" \
@@ -207,6 +223,7 @@ for entry in "${CANDIDATES[@]}"; do
     --load-mode none \
     --parallel 1 \
     --jinja \
+    -lv 4 \
     > "$CAND_LOG" 2>&1 &
   CURRENT_PID=$!
 
