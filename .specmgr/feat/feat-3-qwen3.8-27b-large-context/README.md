@@ -256,7 +256,11 @@ What is explicitly out of scope:
   production context, how much of the GB10's unified pool is free (Task
   2.3/REQ-010)? (b) does the endpoint even clear the 768K floor given
   weights + KV cache all live in that one 128GB pool? Both are measured,
-  not assumed.
+  not assumed. Note the box already runs an Ollama stack (including a
+  llama-server with a live 256K context holding ~4 GB of the pool as of
+  2026-08-22) and OpenWebUI — their memory state must be included in
+  Phase 2 measurements, and the running Ollama model should be stopped
+  before the capacity tests to get a clean baseline.
 
 - **NO environment inheritance from `feat-1`/`feat-2`.** The GB10 is a
   new, arm64 box: driver, CUDA, vLLM (the correct arm64/GB10-compatible
@@ -294,33 +298,56 @@ What is explicitly out of scope:
 
 #### Phase 0: Environment prep (new box — real setup, not confirmation)
 
-- [ ] Task 0.1: Confirm disk headroom on the GB10 (Dell factory images
-  typically ship ~768GB NVMe; verify actual size + free space) is
-  sufficient for Qwen3.8-27B weights (~54GB BF16) plus tooling/swap —
-  depends on: none — status: not-started
-- [ ] Task 0.2: Verify the GB10's NVIDIA driver + CUDA are installed and
-  working (DGX-class OS images may differ from the 7960T's pinned
-  driver), AND confirm the installed/available vLLM version is an arm64
-  GB10-compatible build that supports Qwen3.8-27B's architecture
-  (`qwen3_5` tag, hybrid Gated DeltaNet + Gated Attention). Both the
-  arm64/GB10 platform support and the new architecture are unvalidated
-  as of this feature's creation date (2026-08-22) — do NOT assume
-  either; check vLLM's release notes and, if needed, install the correct
-  vLLM build (DGX Spark class support was only recent as of 2026) —
-  depends on: none — status: not-started
-- [ ] Task 0.3: Install/verify HF CLI + token + `hf_transfer` on the GB10
-  (NOT inherited from the 7960T; this is a different, arm64 machine) —
-  depends on: none — status: not-started
-- [ ] Task 0.4: Choose and record the pinned HF revision/commit for
-  `Qwen/Qwen3.8-27B` (latest `main` as of 2026-08-22 model-card review:
-  `1d4bf0f`; re-confirm and pin the actual full commit hash from the box
-  at download time) — depends on: Task 0.3 — status: not-started
+- [x] Task 0.1: Confirm disk headroom on the GB10 is sufficient for
+  Qwen3.8-27B weights (~54GB BF16) plus tooling/swap — depends on:
+  none — status: done 2026-08-22 — 1.9 TB NVMe, 152 GB free at check
+  time (92% used, mostly prior model stores under `/data`); 54 GB
+  download fits with ~100 GB to spare, no cleanup required
+- [x] Task 0.2: Verify the GB10's NVIDIA driver + CUDA are installed and
+  working, AND confirm an arm64 vLLM build supports Qwen3.8-27B's
+  architecture (`qwen3_5` tag, hybrid Gated DeltaNet + Gated Attention) —
+  depends on: none — status: done 2026-08-22 — driver 580.173.02 +
+  CUDA 13.0.88 present and working (nvidia-smi sees the GB10); vLLM
+  0.27.1 (aarch64, venv `/home/admin/venvs/vllm`) registers
+  `Qwen3_5ForConditionalGeneration`/`Qwen3_5ForCausalLM` in its
+  ModelRegistry and implements `mrope_interleaved` — both the platform
+  and architecture checks pass
+- [x] Task 0.3: Install/verify HF CLI + token + `hf_transfer` on the GB10 —
+  depends on: none — status: done 2026-08-22 — no system-wide HF CLI,
+  but the `admin` HF token is present and working; downloads run via the
+  `hf` CLI from the vLLM venv (`/home/admin/venvs/vllm/bin/hf`,
+  hf_transfer enabled). NOTE: `/data` is root-owned and not writable by
+  `admin`, so weights go under `/home/admin/models/`
+- [x] Task 0.4: Choose and record the pinned HF revision/commit for
+  `Qwen/Qwen3.8-27B` — depends on: Task 0.3 — status: done 2026-08-22 —
+  pinned to full commit hash `1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0`
+  (matches the `1d4bf0f` short hash recorded at feature-creation; model
+  is not gated, last modified 2026-08-14, architecture tag `qwen3_5`) —
+  download COMPLETE, 55.6 GB (18 safetensors shards + configs) at
+  `/home/admin/models/qwen3.8-27b`
 
 #### Phase 1: Baseline correctness smoke test (native context, before YaRN)
 
 - [ ] Task 1.1: Bring up Qwen3.8-27B on vLLM at native context (262,144 or
-  smaller for a quick check) on the GB10's SM121 GPU, no YaRN override
-  yet — depends on: Task 0.2, Task 0.4 — status: not-started
+  smaller for a quick check) on the GB10, no YaRN override yet —
+  depends on: Task 0.2, Task 0.4 — status: blocked (see Current Status)
+  — **ready-to-run notes for the next session** (2026-08-22):
+  weights at `/home/admin/models/qwen3.8-27b`; venv
+  `/home/admin/venvs/vllm` (vLLM 0.27.1, aarch64, `Qwen3_5` arch +
+  `mrope_interleaved` support confirmed in its registry); free ports —
+  8080 taken (OpenWebUI), use **8000**; first step: unload the Ollama
+  model to reclaim ~65 GB (`curl -s http://127.0.0.1:11434/api/chat
+  -d '{"model":"qwen3.8:27b-bf16","messages":[{"role":"user",
+  "content":"hi"}],"keep_alive":0}'` — must be issued from a session
+  NOT served by that model, else the issuing opencode session dies mid-
+  turn); then
+  `/home/admin/venvs/vllm/bin/vllm serve /home/admin/models/qwen3.8-27b
+  --port 8000 --trust-remote-code --no-enable-prefix-caching` (start
+  with a modest `--max-model-len` like 32768 to keep KV tiny, native
+  262144 optional) — run via `systemd --user` from Task 4.1 onwards,
+  plain `nohup` is acceptable for this Phase 1 probe only. The unload
+  step also works over SSH from another host — the only requirement is
+  that the issuing session is not itself served by that Ollama model.
 - [ ] Task 1.2: Temperature=0 smoke test — verify coherent, non-degenerate
   output (explicitly check against the `feat-1`/`feat-2` degenerate
   signature: a single frozen token repeated at every decode position),
@@ -387,8 +414,24 @@ What is explicitly out of scope:
 
 ### Current Status
 
-**As of 2026-08-22**: Feature created, planning stage. No tasks started
-yet.
+**As of 2026-08-22**: Phase 0 COMPLETE (Tasks 0.1–0.4 done on host
+`dgx`, the GB10 itself). Weights fully downloaded (55.6 GB, 18
+safetensors shards + configs) to `/home/admin/models/qwen3.8-27b`.
+vLLM 0.27.1 (aarch64, venv `/home/admin/venvs/vllm`) installed and
+verified. Phase 1 NOT started yet — blocked by a memory-contention
+problem that requires the existing Ollama stack to be unloaded first
+(see Blocker below); to be picked up in a fresh session.
+
+**BLOCKER for Phase 1 (documented 2026-08-22 session close):** the box
+currently holds ~75 GiB in use; the dominant consumer is Ollama's
+`qwen3.8:27b-bf16` model (65 GB resident, incl. a live 256K-context
+llama-server) that the local OpenCode session itself is served by —
+unloading it stops that session. vLLM loading the same 27B at BF16
+(~55 GB weights + KV cache + runtime) cannot fit alongside it in the
+128 GB pool. Phase 1 therefore needs the Ollama model unloaded by
+issuing the Ollama API `keep_alive: 0` call (Task 1.1 notes below, no
+root needed), from a session NOT served by that model (fresh session on
+the DGX or the other hardware), then starting vLLM from the venv.
 
 ### Recent Updates
 
@@ -408,11 +451,24 @@ yet.
   class is added (arm64/SM121 vLLM build support — REQ-006/Task 0.2).
   REQ-001/REQ-002, ACC-001/002/009, Scope, Dependencies, Design Notes,
   and the Task List were all re-pointed accordingly.
-- Next: Start Phase 0 (disk check, driver/CUDA/vLLM-arm64 support check,
-  HF tooling on the GB10, HF revision pin).
+- Next: Phase 1 — bring up Qwen3.8-27B on vLLM 0.27.1 (venv
+  `/home/admin/venvs/vllm`) at native context. BLOCKED on unloading the
+  resident Ollama model first (see Current Status) — must start from a
+  session not served by Ollama. Ready-to-run commands are in Task 1.1.
 - Notes: Latest `main` commit on `Qwen/Qwen3.8-27B` at feature-creation
   time was `1d4bf0f` (README-only); actual weights are unchanged since
   the initial upload (`72a217a`/`6714f56`).
+- Done later this date: ran `bin/00-check-env.sh` on `dgx` itself —
+  confirmed GB10 (Dell "Pro Max with GB10 FCM1253", aarch64, Ubuntu
+  24.04.4, driver 580.173.02, CUDA 13.0.88, 1.9 TB NVMe, 128 GB unified
+  pool). vLLM 0.27.1 (aarch64, venv `/home/admin/venvs/vllm`) installed
+  and passes both the platform check and the `qwen3_5` ModelRegistry
+  check including `mrope_interleaved`. HF commit pinned to
+  `1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0`; weight download to
+  `/home/admin/models/qwen3.8-27b` COMPLETED (55.6 GB, 18 shards +
+  configs). Phase 0 closed out; Phase 1 blocked on the existing Ollama
+  stack holding ~65 GB of the unified pool (see Current Status /
+  Blocker).
 
 ### Decisions Made
 
