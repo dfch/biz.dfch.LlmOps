@@ -3,7 +3,7 @@ created: 2026-08-22
 github_issue: 3
 id: feat-3-qwen3.8-27b-large-context
 status: planning
-updated: 2026-08-22
+updated: 2026-08-23
 version: 1.0.0
 ---
 
@@ -26,7 +26,7 @@ tokens = native context x3), pushing toward the model's advertised
 
 Unlike `feat-2`'s GLM-5.2 (744B MoE, forced into a lossy quant to fit that
 box), Qwen3.8-27B is small enough at full BF16 precision (~54 GB weights)
-  to fit the GB10's 128 GB unified pool with meaningful headroom left over
+to fit the GB10's 128 GB unified pool with meaningful headroom left over
 for KV cache — so this feature does not start from a
 quality-vs-capacity compromise. That said, the KV cache at 768K–1M tokens
 is non-trivial, so the achievable context must be measured, not assumed.
@@ -106,14 +106,19 @@ text/coding use via OpenCode is targeted and validated here.
 - [ ] ACC-001: Verifies REQ-001/REQ-002 — Qwen3.8-27B running via vLLM on
   the Dell GB10 (DGX Spark clone), reachable via `/v1/chat/completions`,
   deployment confined to the GB10 (Dell 7960T untouched)
-- [ ] ACC-002: Verifies REQ-003 — empirical memory/KV-cache
+- [x] ACC-002: Verifies REQ-003 — empirical memory/KV-cache
   measurement confirms the endpoint handles at least a 768K-token prompt
   without OOM, with the measured safety margin recorded against the
   unified pool; if a higher context (896K, 1M) also clears the adopted
   safety-margin policy (>=15% free, or >=10 GiB absolute, whichever is
   greater — reused from `feat-2`, applied to the GB10's unified pool),
   the highest safely-supported context is chosen as the production value
-  instead of stopping at 768K
+  instead of stopping at 768K — DONE 2026-08-23: **896K chosen as the
+  production context** (BF16 weights + FP8 KV cache). Full step-up
+  results in Task 2.1/2.2/2.3; 768K passed comfortably (19.8% free), 896K
+  passed narrowly (16.1% free, just above the 15% floor), 1M failed
+  (12.9% free, below the 15% floor) — step-up correctly stopped at 896K
+  per policy.
 - [ ] ACC-003: Verifies REQ-004 — tool-call and all three thinking-control
   modes (`enable_thinking: false`, `reasoning_effort: medium`,
   `reasoning_effort: xhigh`) verified via curl smoke test, then via a
@@ -251,6 +256,21 @@ What is explicitly out of scope:
   if 768K+ is the genuinely typical working context for this deployment,
   not just a ceiling to have available.
 
+- **FP8 KV cache (not weight quantization) was required to get real OS
+  headroom at 768K+ on the GB10's unified pool** (found in Task 2.1):
+  `--gpu-memory-utilization` sizes vLLM's TOTAL memory footprint as a
+  fixed fraction of the pool regardless of how much KV-cache token
+  capacity that buys. On a discrete-VRAM box (`feat-1`/`feat-2`) that
+  just trades away request concurrency; on the GB10's single unified
+  pool it silently starves the OS itself (measured: only ~1.7-3.5 GiB
+  system-wide free at 768K/BF16-KV/util=0.92, vs. a ~17.9 GiB policy
+  floor). The fix is `--kv-cache-dtype fp8` (KV cache precision only —
+  model weights stay BF16, REQ-005 untouched) combined with an EXPLICIT
+  `--kv-cache-memory-bytes` sized just above what the target context
+  needs (not the full `gpu_memory_utilization` budget) — this frees the
+  difference as genuine, measured OS headroom. This is now a required
+  flag pair for every Phase 2+/Phase 4 launch on this box, not optional.
+
 - **Coexistence is a different shape of question here than on the 7960T**:
   `feat-1`/`feat-2` run on the Dell 7960T, a different box — so the
   question is no longer "can Qwen3.8-27B share GPUs with them" (trivially
@@ -340,8 +360,7 @@ What is explicitly out of scope:
   root:
   1. **Missing `Python.h`**: Triton's JIT step (used to inspect the
      `Qwen3_5ForConditionalGeneration` architecture) shells out to
-     `gcc`, which failed with `fatal error: Python.h: No such file or
-     directory` — `python3.12-dev` is not installed system-wide and
+     `gcc`, which failed with `fatal error: Python.h: No such file or directory` — `python3.12-dev` is not installed system-wide and
      apt requires sudo (not available non-interactively). Fixed with
      `uv python install 3.12` (downloads a standalone CPython 3.12.13
      build with headers under
@@ -352,26 +371,19 @@ What is explicitly out of scope:
   2. **`ninja` unreachable**: `torch.compile`/inductor shells out to a
      bare `ninja` on `$PATH`; it IS installed inside the venv
      (`/home/admin/venvs/vllm/bin/ninja`, pulled in as a pip dependency)
-     but the venv's `bin/` was not on `PATH` for a plain `nohup vllm
-     serve ...` invocation, causing `FileNotFoundError: [Errno 2] No
-     such file or directory: 'ninja'` deep in engine-core init. Fixed
+     but the venv's `bin/` was not on `PATH` for a plain `nohup vllm serve ...` invocation, causing `FileNotFoundError: [Errno 2] No such file or directory: 'ninja'` deep in engine-core init. Fixed
      with `export PATH=/home/admin/venvs/vllm/bin:$PATH` before
      launching.
-  Final working launch command (both fixes applied):
-  `CPATH=/home/admin/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/include/python3.12
-  PATH=/home/admin/venvs/vllm/bin:$PATH
-  /home/admin/venvs/vllm/bin/vllm serve /home/admin/models/qwen3.8-27b
-  --port 8000 --trust-remote-code --no-enable-prefix-caching
-  --max-model-len 32768 --enable-auto-tool-choice
-  --tool-call-parser qwen3_xml --reasoning-parser qwen3` (tool/
-  reasoning parser choice explained in Task 1.2). Startup took ~9 min
-  total (weight load ~5m47s of 51.75 GiB checkpoint off local NVMe +
-  torch.compile/CUDA-graph capture ~3m); no OOM; `gpu_worker.py`
-  reported 51.7 GiB available for KV cache at this (deliberately small)
-  32768 max-model-len — real capacity measurement is Phase 2's job, not
-  this one. Server shut down cleanly after Task 1.2/1.3 (no leftover
-  process, GPU back to 0 processes / ~114 GiB free) so Phase 2 starts
-  from a clean baseline.
+     Final working launch command (both fixes applied):
+     `CPATH=/home/admin/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/include/python3.12 PATH=/home/admin/venvs/vllm/bin:$PATH /home/admin/venvs/vllm/bin/vllm serve /home/admin/models/qwen3.8-27b --port 8000 --trust-remote-code --no-enable-prefix-caching --max-model-len 32768 --enable-auto-tool-choice --tool-call-parser qwen3_xml --reasoning-parser qwen3` (tool/
+     reasoning parser choice explained in Task 1.2). Startup took ~9 min
+     total (weight load ~5m47s of 51.75 GiB checkpoint off local NVMe +
+     torch.compile/CUDA-graph capture ~3m); no OOM; `gpu_worker.py`
+     reported 51.7 GiB available for KV cache at this (deliberately small)
+     32768 max-model-len — real capacity measurement is Phase 2's job, not
+     this one. Server shut down cleanly after Task 1.2/1.3 (no leftover
+     process, GPU back to 0 processes / ~114 GiB free) so Phase 2 starts
+     from a clean baseline.
 - [x] Task 1.2: Temperature=0 smoke test — verify coherent, non-degenerate
   output (explicitly check against the `feat-1`/`feat-2` degenerate
   signature: a single frozen token repeated at every decode position),
@@ -384,10 +396,8 @@ What is explicitly out of scope:
     ~4.6 tokens/s in this initial run (unquantized BF16, no batching,
     32768 max-model-len) — noted as a throughput observation for later
     phases, not a correctness blocker.
-  - **Tool-calling**: required explicit `--enable-auto-tool-choice
-    --tool-call-parser <name>` (off by default; first attempt without it
-    correctly errored rather than silently ignoring `tool_choice:
-    "auto"`). Parser choice `qwen3_xml` was picked by inspecting the
+  - **Tool-calling**: required explicit `--enable-auto-tool-choice --tool-call-parser <name>` (off by default; first attempt without it
+    correctly errored rather than silently ignoring `tool_choice: "auto"`). Parser choice `qwen3_xml` was picked by inspecting the
     model's own `chat_template.jinja`, which emits tool calls as
     `<tool_call><function=NAME><parameter=...>...</parameter></function></tool_call>`
     — vLLM's registered `qwen3_engine_tool_parser` (aliased as both
@@ -396,13 +406,12 @@ What is explicitly out of scope:
     tool-call test returned a clean, correctly-typed
     `tool_calls[0].function.arguments = {"location": "Paris"}` with
     `finish_reason: "tool_calls"` and `content: null`.
-  - **Thinking controls**: also required an explicit `--reasoning-parser
-    qwen3` (found via `vllm.reasoning.__init__` registry) to split
+  - **Thinking controls**: also required an explicit `--reasoning-parser qwen3` (found via `vllm.reasoning.__init__` registry) to split
     `<think>`-style reasoning out of `content` into the OpenAI-style
     `message.reasoning` field — without it, reasoning text and the
     final answer are concatenated in `content` with `reasoning: null`.
     With the parser enabled, verified per ACC-003's exact 3 modes on a
-    17*24 arithmetic prompt (correct answer=408 in every case):
+    17\*24 arithmetic prompt (correct answer=408 in every case):
     `enable_thinking: false` -> no reasoning field populated, direct
     tool-call/answer; `reasoning_effort: low/medium/xhigh` (all with
     `enable_thinking: true`) -> each produced a populated `reasoning`
@@ -418,27 +427,111 @@ What is explicitly out of scope:
   and the GB10 (SM121) platform are both validated at native context.
   Carry-forward flags for Phase 2/4 deployment configs: always launch
   with `CPATH`/`PATH` set as in Task 1.1, plus
-  `--enable-auto-tool-choice --tool-call-parser qwen3_xml
-  --reasoning-parser qwen3`.
+  `--enable-auto-tool-choice --tool-call-parser qwen3_xml --reasoning-parser qwen3`.
 
 #### Phase 2: Context extension + capacity measurement
 
-- [ ] Task 2.1: Apply the YaRN `rope_parameters` override (see Design
+- [x] Task 2.1: Apply the YaRN `rope_parameters` override (see Design
   Notes table) targeting 768K context; measure unified-pool memory +
   KV-cache usage and free headroom at that context size — depends on:
-  Task 1.3 — status: not-started
-- [ ] Task 2.2: If Task 2.1's margin clears the adopted safety-margin
+  Task 1.3 — status: done 2026-08-23 — two sub-attempts, the first of
+  which surfaced a real problem before the second succeeded:
+
+  1. **First attempt (default `--gpu-memory-utilization 0.92`, BF16 KV
+     cache)**: hit a NEW environment gap — the default
+     `VLLM_ENGINE_READY_TIMEOUT_S=600` was too short for this box (weight
+     load alone took ~5.7 min because "Auto-prefetch is disabled" — the
+     51.75 GiB checkpoint exceeds available page-cacheable RAM on EXT4 —
+     plus KV-cache profiling/compile on a 786,432 max-model-len engine),
+     so the engine core was killed as a false-timeout before finishing.
+     Fixed with `VLLM_ENGINE_READY_TIMEOUT_S=3600`; carry this forward to
+     every Phase 2+ launch (native-context Task 1.1 never needed it
+     because its 32768 max-model-len profiled fast enough to clear the
+     600s default).
+  2. **Re-run with the fix**: server started cleanly and a REAL
+     768,567-token prompt (built by encoding/trimming with the model's
+     own tokenizer, not a synthetic token-count estimate) was POSTed to
+     `/v1/chat/completions` end-to-end — HTTP 200, no OOM, ~36 min wall
+     time (2166s) for the full prefill+decode. So the raw 768K capability
+     bar is cleared. BUT the memory accounting exposed a real problem:
+     KV cache capacity was only 820,013 tokens against the 786,432
+     needed (1.04x margin — barely fits one full-length request), and
+     system-wide `free -h` "available" during serving was only
+     **~1.7-3.5 GiB** out of 119.63 GiB total — nowhere near the adopted
+      safety-margin policy (needs at least 15% of 119.63 GiB, i.e. ~17.9
+      GiB, or at least 10 GiB, whichever is greater). Root cause:
+      `--gpu-memory-utilization 0.92` fixes vLLM's TOTAL footprint budget
+      (weights 55.99 GiB + activation 3.78 GiB + CUDA graph 0.94 GiB + KV
+      cache 50.29 GiB = ~111.0 GiB of the 119.63 GiB pool) regardless of
+      how much KV-cache *capacity* that buys — on a discrete-VRAM box
+      this just means "less concurrency headroom"; on the GB10's unified
+      pool it means "the OS itself is left with almost nothing," a
+      materially different risk.
+  3. **Fix: `--kv-cache-dtype fp8` + explicit `--kv-cache-memory-bytes`**
+     (KV cache precision only — model weights stay BF16, REQ-005
+     unaffected). FP8 KV cache roughly halves bytes/token (~65.8 KB/token
+     BF16 -> ~33.0 KB/token FP8, measured empirically, not just the
+     nominal 2x), so the same 786,432-token requirement can be met with
+     a much smaller, explicitly-sized KV-cache reservation instead of
+     vLLM automatically consuming the full `gpu_memory_utilization`
+     budget. Re-ran with `--kv-cache-dtype fp8 --kv-cache-memory-bytes 32212254720` (30 GiB, sized for ~1.24x margin over 786,432 tokens):
+     KV cache capacity **974,864 tokens** (1.24x margin, up from 1.04x),
+     system `free -h` available **23.73 GiB (19.8% of the 119.63 GiB
+     pool)** — clears the safety-margin policy with real room to spare.
+     Re-ran the SAME real 768,567-token prompt end-to-end: HTTP 200, no
+     OOM, ~45 min wall time (2693s) — slower than the BF16 KV-cache run
+     (likely FP8 dequant overhead on this platform's FlashInfer path,
+     not yet tuned for GB10; flagged as a throughput observation, not a
+     blocker, same bucket as Task 1.2's low-throughput note). **Adopted
+     for production: FP8 KV cache + explicit `--kv-cache-memory-bytes`,
+     NOT the default `--gpu-memory-utilization`-driven auto-sizing, is
+     required on this box to get real OS headroom at 768K+.**
+
+- [x] Task 2.2: If Task 2.1's margin clears the adopted safety-margin
   policy (>=15% free of the unified pool, or >=10 GiB absolute, whichever
   is greater) with room to spare, step upward (896K, then 1M) and
   re-measure at each step until the policy is no longer cleared — choose
   the highest context size that still clears it as the production target
   (may be 768K, may be higher) — depends on: Task 2.1 —
-  status: not-started
-- [ ] Task 2.3: Record the remaining free headroom of the GB10's unified
+  status: done 2026-08-23 — stepped up using the same FP8-KV-cache
+  approach (load-time capacity/headroom measurement at each step, per
+  the plan's Task 4.3 being the place reserved for a full real-prompt
+  end-to-end check at the FINAL chosen production context; 768K already
+  got a real-prompt check in Task 2.1):
+
+  | Context | Factor | `--kv-cache-memory-bytes` | KV cache capacity | Concurrency margin | Free memory | % free | Policy (>=15% or >=10 GiB) |
+  |---|---|---|---|---|---|---|---|
+  | 768K (786,432) | 3.0 | 30 GiB | 974,864 tokens | 1.24x | 23.73 GiB | 19.8% | **PASS** |
+  | 896K (917,504) | 3.5 | 33 GiB | 1,073,277 tokens | 1.17x | 19.28 GiB | 16.1% | **PASS (thin — only ~1.1pp above the 15% floor)** |
+  | 1M (1,048,576) | 4.0 | 37.11 GiB | 1,209,295 tokens | 1.15x | 15.39 GiB | 12.9% | **FAIL** (below the 15% floor, despite being above the 10 GiB absolute floor — the policy takes the greater/stricter of the two) |
+
+  Step-up correctly stopped at 1M per the policy. **896K is the highest
+  context that clears the policy and is the chosen production context**
+  — clearly ahead of the 768K floor from REQ-003, but not the full 1M
+  ceiling. All three sizes loaded and served `/v1/models` successfully
+  (200 OK) with no OOM at load time; only 768K got the full real-prompt
+  end-to-end POST (Task 2.1) — 896K's real-prompt end-to-end validation
+  is carried forward as Task 4.3 against the finalized systemd
+  deployment, per the original plan.
+
+- [x] Task 2.3: Record the remaining free headroom of the GB10's unified
   pool at the chosen production context, i.e. answer REQ-010's "what
   else could share this box, or is the pool effectively consumed"
   question with real measured numbers — depends on: Task 2.2 —
-  status: not-started
+  status: done 2026-08-23 — at the chosen production context (896K,
+  factor 3.5, FP8 KV cache, `--kv-cache-memory-bytes` 33 GiB): **19.28
+  GiB (16.1%) of the GB10's 119.63 GiB unified pool remains free**,
+  measured via `free -h`/`free -b` while the server was actively serving.
+  This clears the adopted safety-margin policy but only just (the 15%
+  floor is ~17.9 GiB; this is ~1.3 GiB above it) — answer to REQ-010:
+  **the GB10 effectively owns the pool at 896K**; ~19 GiB is not enough
+  to co-locate another meaningful model or service (e.g. the prior
+  Ollama stack alone reserved ~65 GiB per the 2026-08-22 note), though it
+  is enough headroom for the OS/desktop/monitoring tools to keep
+  operating without instability. If more coexistence headroom is ever
+  needed, the 768K step (23.73 GiB / 19.8% free) is the more
+  conservative fallback, still comfortably above the 768K floor from
+  REQ-003.
 
 #### Phase 3: Precision decision
 
@@ -454,9 +547,9 @@ What is explicitly out of scope:
 
 - [ ] Task 4.1: Install vLLM + Qwen3.8-27B as a systemd service (`--user`
   - lingering, following `feat-2`'s pattern unless GB10-specific needs
-  dictate a system-wide unit instead) with the chosen production context,
-  YaRN config, and precision on the GB10 — depends on: Task 3.1 —
-  status: not-started
+    dictate a system-wide unit instead) with the chosen production context,
+    YaRN config, and precision on the GB10 — depends on: Task 3.1 —
+    status: not-started
 - [ ] Task 4.2: Start the service; curl smoke test against
   `/v1/chat/completions` at the production context size — verify
   tool-calls and all thinking-control modes — depends on: Task 4.1 —
@@ -491,21 +584,96 @@ fix. vLLM is confirmed as the deployment engine (REQ-006/ACC-005); no
 SGLang fallback needed. The test server was shut down cleanly after
 Phase 1 so the GB10 is back to a clean, fully-free baseline.
 
-**NEXT: Phase 2 (Task 2.1)** — apply the YaRN `rope_parameters`
-override targeting 768K context and measure unified-pool memory/KV-
-cache headroom. Carry forward the Task 1.1 environment fixes (`CPATH`,
-`PATH`) and the Task 1.3 tool/reasoning-parser flags
-(`--enable-auto-tool-choice --tool-call-parser qwen3_xml
---reasoning-parser qwen3`) into the Phase 2/4 launch commands.
+**As of 2026-08-23 (later this date)**: Phase 2 COMPLETE (Tasks 2.1-2.3).
+Two real findings, not just confirmations: (1) the default
+`VLLM_ENGINE_READY_TIMEOUT_S=600` is too short for this box at large
+`--max-model-len` and had to be raised to 3600; (2) the default
+`--gpu-memory-utilization`-driven KV cache sizing leaves the GB10's OS
+with almost no memory at 768K+ (measured ~1.7-3.5 GiB free, vs. a
+~17.9 GiB policy floor) — fixed by switching to `--kv-cache-dtype fp8`
+with an explicit, right-sized `--kv-cache-memory-bytes` instead (KV
+cache precision only, BF16 weights unaffected). With that fix, stepped
+768K -> 896K -> 1M: 768K passed comfortably (19.8% free), 896K passed
+narrowly (16.1% free), 1M failed (12.9% free, below the 15% policy
+floor). **896K (YaRN factor 3.5) is the chosen production context**,
+with 19.28 GiB (16.1%) of the pool remaining free — the GB10
+effectively owns its pool at this context; no meaningful coexistence
+headroom remains (REQ-010/Task 2.3).
 
-**Known non-blocking observation from Phase 1**: generation throughput
-was only ~4.6 tokens/s in the small-context smoke test (unquantized
-BF16, single request, no prefix caching). Worth re-checking during
-Phase 2/4 once context and serving flags are closer to production
-shape; flagged here so it is not forgotten (may inform the Phase 3
-quantization discussion, REQ-005/Task 3.2, if it persists).
+**NEXT: Phase 3 (Task 3.1)** — confirm BF16 as the production model
+*weight* precision (expected, since Phase 2's fix was a KV-cache-only
+precision change, not a weight quantization — REQ-005 is about weights
+and remains satisfied by BF16). Task 3.2 (optional FP8/quant weight
+eval) is likely skippable given Phase 2 already solved the
+headroom problem via KV-cache dtype rather than weight precision, but
+should still be explicitly confirmed/closed rather than silently
+skipped. Carry forward into Phase 4: `CPATH`/`PATH` (Task 1.1),
+`VLLM_ENGINE_READY_TIMEOUT_S=3600` (Task 2.1), tool/reasoning-parser
+flags (Task 1.3), and `--kv-cache-dtype fp8 --kv-cache-memory-bytes
+35433480192` (33 GiB, the 896K-sized value from Task 2.2) as the
+production launch flags. **A working, already-tested 896K launch
+script for this exact config exists on the GB10 at
+`/home/admin/launch-phase2-896k-fp8kv.sh`** (plus the 768K and 1M
+variants alongside it, `launch-phase2-768k-fp8kv.sh` /
+`launch-phase2-1m-fp8kv.sh`, and their run logs
+`vllm-phase2-*-fp8kv.log`) — Phase 4's systemd unit (Task 4.1) should
+be derived from the 896K script rather than rebuilt from scratch. The
+GB10 was left in a clean idle baseline at end of session (0 GPU
+processes, port 8000 free, ~100-114 GiB free depending on page-cache
+state) — no cleanup needed before Phase 3/4 work resumes.
+
+**Known non-blocking observation from Phase 1/2**: generation
+throughput was only ~4.6 tokens/s in the Phase 1 small-context smoke
+test (unquantized BF16, single request, no prefix caching), and the
+768K real-prompt end-to-end requests took ~36 min (BF16 KV cache) /
+~45 min (FP8 KV cache) wall time in Phase 2 — FP8 KV cache appears
+slower here, likely un-tuned FlashInfer FP8 dequant on this new
+GB10/SM121 platform. Worth a closer look during Phase 4 once serving
+flags are closer to final production shape; flagged so it is not
+forgotten (may matter for real interactive/agentic use over OpenCode).
 
 ### Recent Updates
+
+#### 2026-08-23 (continued — Phase 2)
+
+- Completed: Phase 2 (Tasks 2.1-2.3), run directly on the GB10 (this
+  session had a live shell on `dgx` itself, not remote).
+- Found and fixed: default `VLLM_ENGINE_READY_TIMEOUT_S=600` was too
+  short for a 786,432 max-model-len launch on this box (weight load +
+  KV-cache profiling/compile exceeded it, killing the engine core with
+  a false-timeout on the first 768K attempt) — fixed with
+  `VLLM_ENGINE_READY_TIMEOUT_S=3600`, now required for every Phase 2+
+  launch.
+- Found and fixed: `--gpu-memory-utilization 0.92` (the vLLM default,
+  reused from `feat-1`/`feat-2`) leaves the GB10's OS with almost no
+  memory at 768K — measured ~1.7-3.5 GiB free system-wide (KV cache
+  820,013-token capacity vs. 786,432 needed, only 1.04x margin) — vs. a
+  ~17.9 GiB policy floor. Fixed with `--kv-cache-dtype fp8` (KV cache
+  precision only, BF16 weights unaffected -- REQ-005 untouched) plus an
+  explicit, right-sized `--kv-cache-memory-bytes` instead of letting
+  `gpu_memory_utilization` auto-consume the whole budget.
+- Verified end-to-end (not just at load time): built a REAL
+  768,567-token prompt with the model's own tokenizer and POSTed it to
+  `/v1/chat/completions` -- twice (BF16 KV cache: HTTP 200, ~36 min;
+  FP8 KV cache: HTTP 200, ~45 min) -- both succeeded with no OOM.
+- Stepped up 768K -> 896K -> 1M (FP8 KV cache, load-time capacity checks
+  at each step): 768K passed comfortably (19.8% free), 896K passed
+  narrowly (16.1% free, ~1.1pp above the 15% floor), 1M failed (12.9%
+  free). Per the safety-margin policy, stopped at 896K.
+- Decision: **896K (YaRN factor 3.5) is the chosen production context**
+  (REQ-003/ACC-002), not the full 1M ceiling and not just the 768K
+  floor -- with 19.28 GiB (16.1%) of the GB10's unified pool remaining
+  free at that context (REQ-010/Task 2.3). No meaningful coexistence
+  headroom remains at 896K; if more headroom is ever needed later, 768K
+  (23.73 GiB / 19.8% free) is the documented, more conservative
+  fallback.
+- Cleanup: all three test vLLM instances (768K BF16-KV, 768K FP8-KV,
+  896K, 1M) were shut down cleanly after their measurements; GB10
+  confirmed back to a clean baseline (0 GPU processes, ~101-115 GiB
+  free depending on page-cache state) after each and at session end.
+- Next: Phase 3 (Task 3.1) -- confirm BF16 as the production model
+  *weight* precision (expected outcome, unaffected by the FP8 KV-cache
+  decision above, which is a separate axis).
 
 #### 2026-08-23
 
@@ -521,8 +689,7 @@ quantization discussion, REQ-005/Task 3.2, if it persists).
   `bin/`). Full details and the final working launch command are in
   Task 1.1.
 - Completed: Smoke-tested correctness (coherent non-degenerate output),
-  tool-calling (`--enable-auto-tool-choice --tool-call-parser
-  qwen3_xml`, verified against the model's own chat template format),
+  tool-calling (`--enable-auto-tool-choice --tool-call-parser qwen3_xml`, verified against the model's own chat template format),
   and all three thinking-control modes from ACC-003
   (`enable_thinking: false`, `reasoning_effort: low/medium/xhigh` with
   `--reasoning-parser qwen3`) — all passed. Details in Task 1.2.
@@ -638,6 +805,40 @@ quantization discussion, REQ-005/Task 3.2, if it persists).
   headers avoids any C-API ABI mismatch risk. This is now a required
   step in every vLLM launch command for this feature (Phase 2 onward),
   not a one-time fix.
+- **2026-08-23**: `VLLM_ENGINE_READY_TIMEOUT_S` must be raised from
+  vLLM's 600s default to 3600 for any Phase 2+ launch on this box —
+  the 786,432+ max-model-len engine-core startup (weight load without
+  auto-prefetch + KV-cache profiling/compile) exceeds 600s and the
+  APIServer kills the engine core as a false-timeout otherwise. Task
+  1.1's native-context (32768) launch never hit this because it
+  profiled fast enough to clear the 600s default. This is now a
+  required env var for every Phase 2/4 launch command for this feature.
+- **2026-08-23**: `--gpu-memory-utilization` (vLLM's default KV-cache
+  sizing mechanism, reused as-is from `feat-1`/`feat-2`) is UNSAFE on
+  the GB10's unified pool at 768K+ context — it sizes vLLM's total
+  footprint as a fixed fraction of the WHOLE pool regardless of the
+  resulting KV-cache token capacity, which starves the OS itself
+  (measured ~1.7-3.5 GiB system-wide free at util=0.92/768K, against a
+  ~17.9 GiB safety-margin-policy floor). **`--kv-cache-dtype fp8` with
+  an explicit, right-sized `--kv-cache-memory-bytes` is required for
+  production on this box instead** — this only changes KV-cache
+  precision (model weights stay BF16, REQ-005 unaffected) and gives
+  direct, measured control over how much of the pool is actually
+  reserved, leaving the rest as real OS headroom. Empirically verified
+  via two full real-768K-token-prompt end-to-end requests (BF16 KV:
+  36 min; FP8 KV: 45 min; both HTTP 200, no OOM).
+- **2026-08-23**: **896K (YaRN factor 3.5) chosen as the production
+  context** for REQ-003/ACC-002, not the 768K floor and not the 1M
+  ceiling — measured step-up (FP8 KV cache): 768K = 19.8% free (PASS),
+  896K = 16.1% free (PASS, narrowly — only ~1.1pp above the adopted 15%
+  policy floor), 1M = 12.9% free (FAIL). Per the adopted safety-margin
+  policy (>=15% free or >=10 GiB, whichever greater — the 15% floor is
+  the binding one here), the step-up correctly stops at 896K. At 896K,
+  19.28 GiB (16.1%) of the GB10's 119.63 GiB unified pool remains free
+  — answering REQ-010, the GB10 effectively owns its pool at this
+  context; the 768K step (23.73 GiB / 19.8% free) remains documented as
+  a more conservative fallback if headroom needs ever outweigh the
+  extra 896K-768K=131,072 tokens of context in the future.
 - **2026-08-23**: Tool-call parser `qwen3_xml` and reasoning parser
   `qwen3` are the correct vLLM flags for Qwen3.8-27B's `qwen3_5`
   architecture — determined by inspecting the model's own
