@@ -122,10 +122,12 @@ text/coding use via OpenCode is targeted and validated here.
   precision, with a one-line rationale recorded; if a quantized variant
   is adopted instead, the empirical justification (headroom/throughput
   data, quality-impact check) is recorded alongside it
-- [ ] ACC-005: Verifies REQ-006 — vLLM is confirmed as the deployment
+- [x] ACC-005: Verifies REQ-006 — vLLM is confirmed as the deployment
   engine, with the version used recorded; if vLLM fails the Phase 1
   native-context smoke test, the fallback engine actually used (SGLang)
-  is recorded instead, along with why
+  is recorded instead, along with why — DONE 2026-08-23: vLLM 0.27.1
+  (aarch64) passed Phase 1 cleanly (Task 1.1–1.3), no SGLang fallback
+  needed
 - [ ] ACC-006: Verifies REQ-007 — deployment config records the exact HF
   revision/commit hash used
 - [ ] ACC-007: Verifies REQ-008 — endpoint reachable without credentials
@@ -328,35 +330,96 @@ What is explicitly out of scope:
 
 #### Phase 1: Baseline correctness smoke test (native context, before YaRN)
 
-- [ ] Task 1.1: Bring up Qwen3.8-27B on vLLM at native context (262,144 or
+- [x] Task 1.1: Bring up Qwen3.8-27B on vLLM at native context (262,144 or
   smaller for a quick check) on the GB10, no YaRN override yet —
-  depends on: Task 0.2, Task 0.4 — status: blocked (see Current Status)
-  — **ready-to-run notes for the next session** (2026-08-22):
-  weights at `/home/admin/models/qwen3.8-27b`; venv
-  `/home/admin/venvs/vllm` (vLLM 0.27.1, aarch64, `Qwen3_5` arch +
-  `mrope_interleaved` support confirmed in its registry); free ports —
-  8080 taken (OpenWebUI), use **8000**; first step: unload the Ollama
-  model to reclaim ~65 GB (`curl -s http://127.0.0.1:11434/api/chat
-  -d '{"model":"qwen3.8:27b-bf16","messages":[{"role":"user",
-  "content":"hi"}],"keep_alive":0}'` — must be issued from a session
-  NOT served by that model, else the issuing opencode session dies mid-
-  turn); then
-  `/home/admin/venvs/vllm/bin/vllm serve /home/admin/models/qwen3.8-27b
-  --port 8000 --trust-remote-code --no-enable-prefix-caching` (start
-  with a modest `--max-model-len` like 32768 to keep KV tiny, native
-  262144 optional) — run via `systemd --user` from Task 4.1 onwards,
-  plain `nohup` is acceptable for this Phase 1 probe only. The unload
-  step also works over SSH from another host — the only requirement is
-  that the issuing session is not itself served by that Ollama model.
-- [ ] Task 1.2: Temperature=0 smoke test — verify coherent, non-degenerate
+  depends on: Task 0.2, Task 0.4 — status: done 2026-08-23 — brought up
+  at `--max-model-len 32768` on port 8000 (Ollama's prior 65 GB
+  reservation was already clear — `free -h` showed ~114 GiB available,
+  `nvidia-smi` showed 0 processes, before starting). Two NEW Phase-0-
+  class environment gaps surfaced and were fixed, both without sudo/
+  root:
+  1. **Missing `Python.h`**: Triton's JIT step (used to inspect the
+     `Qwen3_5ForConditionalGeneration` architecture) shells out to
+     `gcc`, which failed with `fatal error: Python.h: No such file or
+     directory` — `python3.12-dev` is not installed system-wide and
+     apt requires sudo (not available non-interactively). Fixed with
+     `uv python install 3.12` (downloads a standalone CPython 3.12.13
+     build with headers under
+     `~/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/`,
+     no sudo) plus `export CPATH=.../include/python3.12` so `gcc`
+     finds it. Same 3.12 minor version as the venv's interpreter
+     (3.12.3), so no Python C-API ABI risk.
+  2. **`ninja` unreachable**: `torch.compile`/inductor shells out to a
+     bare `ninja` on `$PATH`; it IS installed inside the venv
+     (`/home/admin/venvs/vllm/bin/ninja`, pulled in as a pip dependency)
+     but the venv's `bin/` was not on `PATH` for a plain `nohup vllm
+     serve ...` invocation, causing `FileNotFoundError: [Errno 2] No
+     such file or directory: 'ninja'` deep in engine-core init. Fixed
+     with `export PATH=/home/admin/venvs/vllm/bin:$PATH` before
+     launching.
+  Final working launch command (both fixes applied):
+  `CPATH=/home/admin/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/include/python3.12
+  PATH=/home/admin/venvs/vllm/bin:$PATH
+  /home/admin/venvs/vllm/bin/vllm serve /home/admin/models/qwen3.8-27b
+  --port 8000 --trust-remote-code --no-enable-prefix-caching
+  --max-model-len 32768 --enable-auto-tool-choice
+  --tool-call-parser qwen3_xml --reasoning-parser qwen3` (tool/
+  reasoning parser choice explained in Task 1.2). Startup took ~9 min
+  total (weight load ~5m47s of 51.75 GiB checkpoint off local NVMe +
+  torch.compile/CUDA-graph capture ~3m); no OOM; `gpu_worker.py`
+  reported 51.7 GiB available for KV cache at this (deliberately small)
+  32768 max-model-len — real capacity measurement is Phase 2's job, not
+  this one. Server shut down cleanly after Task 1.2/1.3 (no leftover
+  process, GPU back to 0 processes / ~114 GiB free) so Phase 2 starts
+  from a clean baseline.
+- [x] Task 1.2: Temperature=0 smoke test — verify coherent, non-degenerate
   output (explicitly check against the `feat-1`/`feat-2` degenerate
   signature: a single frozen token repeated at every decode position),
   and verify tool-calling + `enable_thinking`/`reasoning_effort` work at
-  native context — depends on: Task 1.1 — status: not-started
-- [ ] Task 1.3: Record the outcome. If vLLM produces degenerate output
+  native context — depends on: Task 1.1 — status: done 2026-08-23 —
+  ALL checks pass:
+  - **Non-degenerate output**: a plain coding prompt (fib w/ memoization)
+    produced coherent, varied text (not the `feat-1`/`feat-2` single-
+    frozen-token signature). Generation throughput measured at only
+    ~4.6 tokens/s in this initial run (unquantized BF16, no batching,
+    32768 max-model-len) — noted as a throughput observation for later
+    phases, not a correctness blocker.
+  - **Tool-calling**: required explicit `--enable-auto-tool-choice
+    --tool-call-parser <name>` (off by default; first attempt without it
+    correctly errored rather than silently ignoring `tool_choice:
+    "auto"`). Parser choice `qwen3_xml` was picked by inspecting the
+    model's own `chat_template.jinja`, which emits tool calls as
+    `<tool_call><function=NAME><parameter=...>...</parameter></function></tool_call>`
+    — vLLM's registered `qwen3_engine_tool_parser` (aliased as both
+    `qwen3_coder` and `qwen3_xml`) matches this format; `qwen3_xml` was
+    used as the non-coder-specific name. A `get_weather("Paris")`
+    tool-call test returned a clean, correctly-typed
+    `tool_calls[0].function.arguments = {"location": "Paris"}` with
+    `finish_reason: "tool_calls"` and `content: null`.
+  - **Thinking controls**: also required an explicit `--reasoning-parser
+    qwen3` (found via `vllm.reasoning.__init__` registry) to split
+    `<think>`-style reasoning out of `content` into the OpenAI-style
+    `message.reasoning` field — without it, reasoning text and the
+    final answer are concatenated in `content` with `reasoning: null`.
+    With the parser enabled, verified per ACC-003's exact 3 modes on a
+    17*24 arithmetic prompt (correct answer=408 in every case):
+    `enable_thinking: false` -> no reasoning field populated, direct
+    tool-call/answer; `reasoning_effort: low/medium/xhigh` (all with
+    `enable_thinking: true`) -> each produced a populated `reasoning`
+    field with a correctly-scaled amount of visible reasoning text and
+    a correct final answer in `content`.
+- [x] Task 1.3: Record the outcome. If vLLM produces degenerate output
   (unexpected given the different kernel class, but not impossible),
   fall back to spiking SGLang next, mirroring `feat-2`'s Phase 1
-  approach — depends on: Task 1.2 — status: not-started
+  approach — depends on: Task 1.2 — status: done 2026-08-23 — **vLLM
+  passes cleanly, no SGLang fallback needed.** REQ-006/ACC-005 resolved:
+  vLLM 0.27.1 (aarch64) is confirmed as the deployment engine for this
+  feature. The `qwen3_5` Gated DeltaNet + Gated Attention architecture
+  and the GB10 (SM121) platform are both validated at native context.
+  Carry-forward flags for Phase 2/4 deployment configs: always launch
+  with `CPATH`/`PATH` set as in Task 1.1, plus
+  `--enable-auto-tool-choice --tool-call-parser qwen3_xml
+  --reasoning-parser qwen3`.
 
 #### Phase 2: Context extension + capacity measurement
 
@@ -414,26 +477,69 @@ What is explicitly out of scope:
 
 ### Current Status
 
-**As of 2026-08-22**: Phase 0 COMPLETE (Tasks 0.1–0.4 done on host
-`dgx`, the GB10 itself). Weights fully downloaded (55.6 GB, 18
-safetensors shards + configs) to `/home/admin/models/qwen3.8-27b`.
-vLLM 0.27.1 (aarch64, venv `/home/admin/venvs/vllm`) installed and
-verified. Phase 1 NOT started yet — blocked by a memory-contention
-problem that requires the existing Ollama stack to be unloaded first
-(see Blocker below); to be picked up in a fresh session.
+**As of 2026-08-23**: Phase 0 and Phase 1 COMPLETE. The prior session's
+Ollama-contention blocker was already cleared by the time this session
+started (Ollama no longer resident; GB10 GPU/unified-pool fully free)
+— no unload step was needed. vLLM 0.27.1 was brought up successfully
+at native context (32768 max-model-len, no YaRN), producing coherent
+non-degenerate output, with tool-calling and all three thinking-control
+modes (`enable_thinking: false`, `reasoning_effort: low/medium/xhigh`)
+verified via curl. Two new non-root-fixable environment gaps were found
+and fixed without sudo (missing `Python.h` via `uv python install` +
+`CPATH`; `ninja` unreachable via `PATH`) — see Task 1.1 for the full
+fix. vLLM is confirmed as the deployment engine (REQ-006/ACC-005); no
+SGLang fallback needed. The test server was shut down cleanly after
+Phase 1 so the GB10 is back to a clean, fully-free baseline.
 
-**BLOCKER for Phase 1 (documented 2026-08-22 session close):** the box
-currently holds ~75 GiB in use; the dominant consumer is Ollama's
-`qwen3.8:27b-bf16` model (65 GB resident, incl. a live 256K-context
-llama-server) that the local OpenCode session itself is served by —
-unloading it stops that session. vLLM loading the same 27B at BF16
-(~55 GB weights + KV cache + runtime) cannot fit alongside it in the
-128 GB pool. Phase 1 therefore needs the Ollama model unloaded by
-issuing the Ollama API `keep_alive: 0` call (Task 1.1 notes below, no
-root needed), from a session NOT served by that model (fresh session on
-the DGX or the other hardware), then starting vLLM from the venv.
+**NEXT: Phase 2 (Task 2.1)** — apply the YaRN `rope_parameters`
+override targeting 768K context and measure unified-pool memory/KV-
+cache headroom. Carry forward the Task 1.1 environment fixes (`CPATH`,
+`PATH`) and the Task 1.3 tool/reasoning-parser flags
+(`--enable-auto-tool-choice --tool-call-parser qwen3_xml
+--reasoning-parser qwen3`) into the Phase 2/4 launch commands.
+
+**Known non-blocking observation from Phase 1**: generation throughput
+was only ~4.6 tokens/s in the small-context smoke test (unquantized
+BF16, single request, no prefix caching). Worth re-checking during
+Phase 2/4 once context and serving flags are closer to production
+shape; flagged here so it is not forgotten (may inform the Phase 3
+quantization discussion, REQ-005/Task 3.2, if it persists).
 
 ### Recent Updates
+
+#### 2026-08-23
+
+- Completed: Phase 1 (Tasks 1.1–1.3), fully unblocked — the Ollama
+  memory-contention blocker from 2026-08-22 was already gone at session
+  start (confirmed via `nvidia-smi`/`free -h`: 0 GPU processes, ~114 GiB
+  free); no unload step was needed this time.
+- Completed: Brought up vLLM 0.27.1 serving Qwen3.8-27B at native
+  context (`--max-model-len 32768`, no YaRN). Hit and fixed two new,
+  non-root-fixable environment gaps along the way: missing `Python.h`
+  (fixed via `uv python install 3.12` + `CPATH`, no sudo) and an
+  unreachable `ninja` binary (fixed via `PATH` including the venv's
+  `bin/`). Full details and the final working launch command are in
+  Task 1.1.
+- Completed: Smoke-tested correctness (coherent non-degenerate output),
+  tool-calling (`--enable-auto-tool-choice --tool-call-parser
+  qwen3_xml`, verified against the model's own chat template format),
+  and all three thinking-control modes from ACC-003
+  (`enable_thinking: false`, `reasoning_effort: low/medium/xhigh` with
+  `--reasoning-parser qwen3`) — all passed. Details in Task 1.2.
+- Decision: vLLM confirmed as the deployment engine (REQ-006/ACC-005) —
+  no SGLang fallback spike needed, unlike what Task 1.3 left open as a
+  contingency. Task 1.3.
+- Observation (non-blocking): generation throughput was low (~4.6
+  tokens/s) in this small-context/no-batching/no-prefix-caching smoke
+  test — flagged for a closer look during Phase 2/4, not a blocker for
+  Phase 1's correctness goal.
+- Cleanup: shut the Phase 1 test vLLM instance down cleanly; GB10 GPU/
+  unified pool confirmed back to a clean baseline (0 processes) before
+  ending the session.
+- Next: Phase 2 (Task 2.1) — apply the YaRN `rope_parameters` override
+  targeting 768K context and measure unified-pool memory/KV-cache
+  headroom, carrying forward Task 1.1's `CPATH`/`PATH` fixes and Task
+  1.3's tool/reasoning-parser flags into the launch command.
 
 #### 2026-08-22
 
@@ -468,7 +574,8 @@ the DGX or the other hardware), then starting vLLM from the venv.
   `/home/admin/models/qwen3.8-27b` COMPLETED (55.6 GB, 18 shards +
   configs). Phase 0 closed out; Phase 1 blocked on the existing Ollama
   stack holding ~65 GB of the unified pool (see Current Status /
-  Blocker).
+  Blocker as of that date — resolved 2026-08-23, see that date's
+  entries above).
 
 ### Decisions Made
 
@@ -515,6 +622,32 @@ the DGX or the other hardware), then starting vLLM from the venv.
   non-standard hybrid/partial-rotary rotary setup makes an unofficial
   llama.cpp YaRN override judged too high-risk versus the officially
   validated frameworks.
+- **2026-08-23**: vLLM 0.27.1 confirmed as the deployment engine
+  (REQ-006/ACC-005) after Phase 1's native-context smoke test passed
+  cleanly (coherent output, tool-calling, all three thinking-control
+  modes) — no SGLang fallback spike required.
+- **2026-08-23**: Missing system packages needed by vLLM's runtime
+  JIT/compile path (`python3.12-dev` for `Python.h`, needed by Triton's
+  architecture-inspection step; `ninja`, needed by `torch.compile`) are
+  worked around WITHOUT sudo/root — `uv python install 3.12` provides a
+  standalone-build `Python.h` (exposed via `CPATH`), and `ninja` (already
+  a venv pip dependency) is exposed via `PATH` including the venv's
+  `bin/`. Chosen over asking for `apt-get install python3.12-dev`
+  because sudo is not available non-interactively in this environment;
+  matching the venv's Python 3.12.x minor version for the `uv`-installed
+  headers avoids any C-API ABI mismatch risk. This is now a required
+  step in every vLLM launch command for this feature (Phase 2 onward),
+  not a one-time fix.
+- **2026-08-23**: Tool-call parser `qwen3_xml` and reasoning parser
+  `qwen3` are the correct vLLM flags for Qwen3.8-27B's `qwen3_5`
+  architecture — determined by inspecting the model's own
+  `chat_template.jinja` (XML-style `<tool_call><function=...>` format)
+  and vLLM's `vllm.reasoning`/`vllm.tool_parsers` registries, not
+  assumed from the model name alone (there is no plain `qwen3` tool-call
+  parser; `qwen3_xml`/`qwen3_coder` both map to the same underlying
+  `qwen3_engine_tool_parser`, and `qwen3_xml` matches this non-coder
+  model's chat template). These flags are required for ACC-003 and must
+  be carried into the Phase 4 systemd unit.
 
 ### Related PRs / Commits
 
