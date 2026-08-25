@@ -1,0 +1,124 @@
+== Pre-flight checks ==
+Active service right now: llama-glm-5.2-q4.service (Q4, port 8093)
+Will benchmark it live first, then swap to Q5 ad-hoc
+  (--n-cpu-moe 54 --tensor-split 54,9,8,8),
+  then restore llama-glm-5.2-q4.service at the end.
+
+==============================================================
+Phase A: wait for LIVE llama-glm-5.2-q4.service to be healthy, then benchmark via bin/15
+==============================================================
+Waiting for llama-glm-5.2-q4.service (localhost:8093) to become healthy (up to 5400s -- may still be cold-loading)...
+  ... still waiting, 300s elapsed (this is expected during a cold load, do not assume a hang -- see AGENTS.md long-job guidance)
+  ... still waiting, 600s elapsed (this is expected during a cold load, do not assume a hang -- see AGENTS.md long-job guidance)
+  ... still waiting, 900s elapsed (this is expected during a cold load, do not assume a hang -- see AGENTS.md long-job guidance)
+  ... still waiting, 1200s elapsed (this is expected during a cold load, do not assume a hang -- see AGENTS.md long-job guidance)
+llama-glm-5.2-q4.service healthy after ~1395s wait
+
+==============================================================
+Phase A: benchmark LIVE llama-glm-5.2-q4.service (glm-5.2:UD-Q4_K_XL) via bin/15
+==============================================================
+== Checking localhost:8093/health ==
+Model: glm-5.2:UD-Q4_K_XL
+
+== Checking for other active connections on port 8093 (informational only) ==
+No pre-existing connections found.
+
+== Starting background PCIe/utilization sampling (nvidia-smi dmon -s ut -o T) ==
+   log: /home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-22T151620Z-pcie-vs-throughput/dmon.log
+
+== Sending request (max_tokens=1500, chat_template_kwargs={"reasoning_effort": "max"}) at 15:16:21 UTC ==
+Response received at 15:17:26 UTC (elapsed ~65s)
+
+== Analysis ==
+finish_reason: 'stop'
+completion_tokens: 912
+prompt_tokens: 30
+predicted_per_second (tok/s): 14.257261245845188
+prompt_per_second (tok/s): 31.55626007828056
+content preview: '```python\ndef merge_sort(arr):\n    """\n    Sorts a list using the merge sort algorithm.\n\n    Merge sort is a divide-and-conquer algorithm that recursi'
+
+Per-GPU during the request window (from nvidia-smi dmon):
+GPU  avg sm%  avg rxpci MB/s  max rxpci MB/s  avg txpci MB/s
+(no dmon samples fell inside the request window -- request may have
+ been too short for the 1Hz sampling interval to catch, or the
+ HH:MM:SS window crossed midnight UTC; inspect the raw log instead)
+
+Response: /home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-22T151620Z-pcie-vs-throughput/response.json
+PCIe/utilization log: /home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-22T151620Z-pcie-vs-throughput/dmon.log
+
+==============================================================
+Phase B: stop llama-glm-5.2-q4.service, load Q5 ad-hoc, benchmark
+==============================================================
+Stopping llama-glm-5.2-q4.service...
+Waiting for GPU memory to drain to idle...
+GPU memory now (MiB per GPU):
+index, memory.used [MiB]
+0, 2 MiB
+1, 2 MiB
+2, 2 MiB
+3, 2 MiB
+
+Starting ad-hoc Q5 llama-server on 127.0.0.1:8095...
+  log: /home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-22T145303Z-q4-vs-q5-benchmark-v2/ad-hoc-server.log
+Waiting for ad-hoc Q5 server to become healthy (up to 5400s -- cold load, expect 20-45+ min)...
+  ... still loading, 300s elapsed (this is expected, do not assume a hang -- see AGENTS.md long-job guidance)
+  ... still loading, 600s elapsed (this is expected, do not assume a hang -- see AGENTS.md long-job guidance)
+  ... still loading, 900s elapsed (this is expected, do not assume a hang -- see AGENTS.md long-job guidance)
+  ... still loading, 1200s elapsed (this is expected, do not assume a hang -- see AGENTS.md long-job guidance)
+  ... still loading, 1500s elapsed (this is expected, do not assume a hang -- see AGENTS.md long-job guidance)
+  ... still loading, 1800s elapsed (this is expected, do not assume a hang -- see AGENTS.md long-job guidance)
+Ad-hoc Q5 server healthy after ~2025s
+
+==============================================================
+Phase B: benchmark AD-HOC Q5 (glm-5.2:UD-Q5_K_XL) via bin/15
+==============================================================
+== Checking 127.0.0.1:8095/health ==
+Model: glm-5.2:UD-Q5_K_XL
+
+== Checking for other active connections on port 8095 (informational only) ==
+No pre-existing connections found.
+
+== Starting background PCIe/utilization sampling (nvidia-smi dmon -s ut -o T) ==
+   log: /home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-22T155243Z-pcie-vs-throughput/dmon.log
+
+== Sending request (max_tokens=1500, chat_template_kwargs={"reasoning_effort": "max"}) at 15:52:44 UTC ==
+Response received at 15:53:52 UTC (elapsed ~68s)
+
+== Analysis ==
+finish_reason: 'stop'
+completion_tokens: 845
+prompt_tokens: 30
+predicted_per_second (tok/s): 12.648456954940638
+prompt_per_second (tok/s): 27.894677137708584
+content preview: '```python\ndef merge_sort(arr):\n    """\n    Sorts a list using the merge sort algorithm.\n\n    Merge sort is a divide-and-conquer algorithm that recursi'
+
+Per-GPU during the request window (from nvidia-smi dmon):
+GPU  avg sm%  avg rxpci MB/s  max rxpci MB/s  avg txpci MB/s
+(no dmon samples fell inside the request window -- request may have
+ been too short for the 1Hz sampling interval to catch, or the
+ HH:MM:SS window crossed midnight UTC; inspect the raw log instead)
+
+Response: /home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-22T155243Z-pcie-vs-throughput/response.json
+PCIe/utilization log: /home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-22T155243Z-pcie-vs-throughput/dmon.log
+
+Stopping ad-hoc Q5 llama-server (pid 13328)...
+
+==============================================================
+Q4 (live) vs Q5 (ad-hoc) comparison
+==============================================================
+
+glm-5.2:UD-Q4_K_XL (live, 'before'): 14.26 tok/s over 912 completion tokens (finish_reason='stop')
+glm-5.2:UD-Q5_K_XL (ad-hoc, 'after'): 12.65 tok/s over 845 completion tokens (finish_reason='stop')
+
+glm-5.2:UD-Q5_K_XL vs glm-5.2:UD-Q4_K_XL: -11.3% tok/s (slower)
+(Compare this measured figure against this feature's theoretical
+ estimate -- ~15-30% faster expected from the file-size ratio and
+ the PCIe-bound hypothesis -- see session notes/README for the
+ full derivation and caveats.)
+
+Full logs under: /home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-22T145303Z-q4-vs-q5-benchmark-v2/
+(Original service restart happens next, in cleanup.)
+
+== Cleanup (exit code 0) ==
+Ensuring llama-glm-5.2-q4.service (the service that was active before this script ran) is running...
+Done. Verify with: systemctl --user status llama-glm-5.2-q4.service ; curl http://localhost:8093/health

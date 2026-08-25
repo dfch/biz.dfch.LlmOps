@@ -1,0 +1,35 @@
+0.00.464.180 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.926.277 W srv  llama_server: -----------------
+0.00.926.279 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.926.279 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.926.279 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.926.279 W srv  llama_server: -----------------
+0.00.927.522 I srv    load_model: loading model '/data/llama_cpp/models/GLM-5.2-GGUF/UD-Q4_K_XL/GLM-5.2-UD-Q4_K_XL-00001-of-00011.gguf'
+0.01.632.352 W load: special_eot_id is not in special_eog_ids - the tokenizer config may be incorrect
+0.01.632.356 W load: special_eom_id is not in special_eog_ids - the tokenizer config may be incorrect
+0.01.846.719 W model has unused tensor blk.78.attn_norm.weight (size = 24576 bytes) -- ignoring
+0.01.846.723 W model has unused tensor blk.78.attn_q_a_norm.weight (size = 8192 bytes) -- ignoring
+0.01.846.726 W model has unused tensor blk.78.attn_kv_a_norm.weight (size = 2048 bytes) -- ignoring
+0.01.846.728 W model has unused tensor blk.78.attn_q_a.weight (size = 13369344 bytes) -- ignoring
+0.01.846.730 W model has unused tensor blk.78.attn_q_b.weight (size = 35651584 bytes) -- ignoring
+0.01.846.732 W model has unused tensor blk.78.attn_kv_a_mqa.weight (size = 3760128 bytes) -- ignoring
+0.01.846.735 W model has unused tensor blk.78.attn_k_b.weight (size = 6684672 bytes) -- ignoring
+0.01.846.737 W model has unused tensor blk.78.attn_v_b.weight (size = 8912896 bytes) -- ignoring
+0.01.846.739 W model has unused tensor blk.78.attn_output.weight (size = 106954752 bytes) -- ignoring
+0.01.846.742 W model has unused tensor blk.78.ffn_norm.weight (size = 24576 bytes) -- ignoring
+0.01.846.744 W model has unused tensor blk.78.indexer.k_norm.weight (size = 512 bytes) -- ignoring
+0.01.846.747 W model has unused tensor blk.78.indexer.k_norm.bias (size = 512 bytes) -- ignoring
+0.01.846.749 W model has unused tensor blk.78.indexer.proj.weight (size = 786432 bytes) -- ignoring
+0.01.846.752 W model has unused tensor blk.78.indexer.attn_k.weight (size = 835584 bytes) -- ignoring
+0.01.846.754 W model has unused tensor blk.78.indexer.attn_q_b.weight (size = 8912896 bytes) -- ignoring
+0.01.846.757 W model has unused tensor blk.78.ffn_gate_inp.weight (size = 6291456 bytes) -- ignoring
+0.01.846.866 W model has unused tensor blk.78.ffn_gate_exps.weight (size = 1811939328 bytes) -- ignoring
+0.01.846.868 W model has unused tensor blk.78.ffn_down_exps.weight (size = 2214592512 bytes) -- ignoring
+0.01.846.871 W model has unused tensor blk.78.ffn_up_exps.weight (size = 1811939328 bytes) -- ignoring
+0.01.846.874 W model has unused tensor blk.78.ffn_gate_shexp.weight (size = 13369344 bytes) -- ignoring
+0.01.846.876 W model has unused tensor blk.78.ffn_down_shexp.weight (size = 13369344 bytes) -- ignoring
+0.01.846.878 W model has unused tensor blk.78.ffn_up_shexp.weight (size = 13369344 bytes) -- ignoring
+0.01.846.881 W model has unused tensor blk.78.nextn.eh_proj.weight (size = 80216064 bytes) -- ignoring
+0.01.846.884 W model has unused tensor blk.78.nextn.enorm.weight (size = 24576 bytes) -- ignoring
+0.01.846.887 W model has unused tensor blk.78.nextn.hnorm.weight (size = 24576 bytes) -- ignoring
+0.01.846.895 W model has unused tensor blk.78.nextn.shared_head_norm.weight (size = 24576 bytes) -- ignoring

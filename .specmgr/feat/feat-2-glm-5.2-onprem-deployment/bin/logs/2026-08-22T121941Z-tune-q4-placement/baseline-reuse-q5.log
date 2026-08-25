@@ -1,0 +1,38 @@
+0.00.157.525 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.747.305 W srv  llama_server: -----------------
+0.00.747.310 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.747.310 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.747.310 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.747.310 W srv  llama_server: -----------------
+0.00.748.683 I srv    load_model: loading model '/data/llama_cpp/models/GLM-5.2-GGUF/UD-Q4_K_XL/GLM-5.2-UD-Q4_K_XL-00001-of-00011.gguf'
+0.01.915.707 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 999, abort
+0.02.211.024 W load: special_eot_id is not in special_eog_ids - the tokenizer config may be incorrect
+0.02.211.029 W load: special_eom_id is not in special_eog_ids - the tokenizer config may be incorrect
+0.02.433.045 W model has unused tensor blk.78.attn_norm.weight (size = 24576 bytes) -- ignoring
+0.02.433.051 W model has unused tensor blk.78.attn_q_a_norm.weight (size = 8192 bytes) -- ignoring
+0.02.433.054 W model has unused tensor blk.78.attn_kv_a_norm.weight (size = 2048 bytes) -- ignoring
+0.02.433.056 W model has unused tensor blk.78.attn_q_a.weight (size = 13369344 bytes) -- ignoring
+0.02.433.058 W model has unused tensor blk.78.attn_q_b.weight (size = 35651584 bytes) -- ignoring
+0.02.433.061 W model has unused tensor blk.78.attn_kv_a_mqa.weight (size = 3760128 bytes) -- ignoring
+0.02.433.063 W model has unused tensor blk.78.attn_k_b.weight (size = 6684672 bytes) -- ignoring
+0.02.433.066 W model has unused tensor blk.78.attn_v_b.weight (size = 8912896 bytes) -- ignoring
+0.02.433.068 W model has unused tensor blk.78.attn_output.weight (size = 106954752 bytes) -- ignoring
+0.02.433.071 W model has unused tensor blk.78.ffn_norm.weight (size = 24576 bytes) -- ignoring
+0.02.433.073 W model has unused tensor blk.78.indexer.k_norm.weight (size = 512 bytes) -- ignoring
+0.02.433.076 W model has unused tensor blk.78.indexer.k_norm.bias (size = 512 bytes) -- ignoring
+0.02.433.078 W model has unused tensor blk.78.indexer.proj.weight (size = 786432 bytes) -- ignoring
+0.02.433.081 W model has unused tensor blk.78.indexer.attn_k.weight (size = 835584 bytes) -- ignoring
+0.02.433.083 W model has unused tensor blk.78.indexer.attn_q_b.weight (size = 8912896 bytes) -- ignoring
+0.02.433.086 W model has unused tensor blk.78.ffn_gate_inp.weight (size = 6291456 bytes) -- ignoring
+0.02.433.208 W model has unused tensor blk.78.ffn_gate_exps.weight (size = 1811939328 bytes) -- ignoring
+0.02.433.210 W model has unused tensor blk.78.ffn_down_exps.weight (size = 2214592512 bytes) -- ignoring
+0.02.433.213 W model has unused tensor blk.78.ffn_up_exps.weight (size = 1811939328 bytes) -- ignoring
+0.02.433.215 W model has unused tensor blk.78.ffn_gate_shexp.weight (size = 13369344 bytes) -- ignoring
+0.02.433.217 W model has unused tensor blk.78.ffn_down_shexp.weight (size = 13369344 bytes) -- ignoring
+0.02.433.220 W model has unused tensor blk.78.ffn_up_shexp.weight (size = 13369344 bytes) -- ignoring
+0.02.433.223 W model has unused tensor blk.78.nextn.eh_proj.weight (size = 80216064 bytes) -- ignoring
+0.02.433.227 W model has unused tensor blk.78.nextn.enorm.weight (size = 24576 bytes) -- ignoring
+0.02.433.229 W model has unused tensor blk.78.nextn.hnorm.weight (size = 24576 bytes) -- ignoring
+0.02.433.237 W model has unused tensor blk.78.nextn.shared_head_norm.weight (size = 24576 bytes) -- ignoring
+0.02.436.972 E ggml_backend_cuda_buffer_type_alloc_buffer: allocating 52106.10 MiB on device 1: cudaMalloc failed: out of memory
+0.02.436.978 E alloc_tensor_range: failed to allocate CUDA1 buffer of size 54637206912

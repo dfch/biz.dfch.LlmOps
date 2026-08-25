@@ -1,0 +1,54 @@
+0.00.783.580 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.01.169.908 W srv  llama_server: -----------------
+0.01.169.911 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.01.169.911 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.01.169.911 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.01.169.911 W srv  llama_server: -----------------
+0.01.171.199 I srv    load_model: loading model '/data/llama_cpp/models/GLM-5.2-GGUF/UD-IQ1_S/GLM-5.2-UD-IQ1_S-00001-of-00006.gguf'
+0.01.739.022 W load: special_eot_id is not in special_eog_ids - the tokenizer config may be incorrect
+0.01.739.026 W load: special_eom_id is not in special_eog_ids - the tokenizer config may be incorrect
+0.01.777.607 W model has unused tensor blk.78.attn_norm.weight (size = 24576 bytes) -- ignoring
+0.01.777.612 W model has unused tensor blk.78.attn_q_a_norm.weight (size = 8192 bytes) -- ignoring
+0.01.777.614 W model has unused tensor blk.78.attn_kv_a_norm.weight (size = 2048 bytes) -- ignoring
+0.01.777.617 W model has unused tensor blk.78.attn_q_a.weight (size = 8650752 bytes) -- ignoring
+0.01.777.619 W model has unused tensor blk.78.attn_q_b.weight (size = 35651584 bytes) -- ignoring
+0.01.777.621 W model has unused tensor blk.78.attn_kv_a_mqa.weight (size = 3760128 bytes) -- ignoring
+0.01.777.624 W model has unused tensor blk.78.attn_k_b.weight (size = 6684672 bytes) -- ignoring
+0.01.777.626 W model has unused tensor blk.78.attn_v_b.weight (size = 8912896 bytes) -- ignoring
+0.01.777.629 W model has unused tensor blk.78.attn_output.weight (size = 69206016 bytes) -- ignoring
+0.01.777.631 W model has unused tensor blk.78.ffn_norm.weight (size = 24576 bytes) -- ignoring
+0.01.777.634 W model has unused tensor blk.78.indexer.k_norm.weight (size = 512 bytes) -- ignoring
+0.01.777.637 W model has unused tensor blk.78.indexer.k_norm.bias (size = 512 bytes) -- ignoring
+0.01.777.639 W model has unused tensor blk.78.indexer.proj.weight (size = 786432 bytes) -- ignoring
+0.01.777.642 W model has unused tensor blk.78.indexer.attn_k.weight (size = 835584 bytes) -- ignoring
+0.01.777.645 W model has unused tensor blk.78.indexer.attn_q_b.weight (size = 8912896 bytes) -- ignoring
+0.01.777.647 W model has unused tensor blk.78.ffn_gate_inp.weight (size = 6291456 bytes) -- ignoring
+0.01.777.652 W model has unused tensor blk.78.ffn_gate_exps.weight (size = 1056964608 bytes) -- ignoring
+0.01.777.655 W model has unused tensor blk.78.ffn_down_exps.weight (size = 1384120320 bytes) -- ignoring
+0.01.777.657 W model has unused tensor blk.78.ffn_up_exps.weight (size = 1056964608 bytes) -- ignoring
+0.01.777.659 W model has unused tensor blk.78.ffn_gate_shexp.weight (size = 8650752 bytes) -- ignoring
+0.01.777.662 W model has unused tensor blk.78.ffn_down_shexp.weight (size = 10321920 bytes) -- ignoring
+0.01.777.664 W model has unused tensor blk.78.ffn_up_shexp.weight (size = 8650752 bytes) -- ignoring
+0.01.777.667 W model has unused tensor blk.78.nextn.eh_proj.weight (size = 80216064 bytes) -- ignoring
+0.01.777.670 W model has unused tensor blk.78.nextn.enorm.weight (size = 24576 bytes) -- ignoring
+0.01.777.673 W model has unused tensor blk.78.nextn.hnorm.weight (size = 24576 bytes) -- ignoring
+0.01.777.681 W model has unused tensor blk.78.nextn.shared_head_norm.weight (size = 24576 bytes) -- ignoring
+0.28.206.313 I cmn          init: llama threadpool init, n_threads = 60
+0.28.434.489 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 4096, kv_unified = 'true'
+0.28.451.750 I srv          init: chat template supports preserving reasoning, consider enabling it via --reasoning-preserve
+0.28.451.788 I srv  llama_server: model loaded
+0.28.451.792 I srv  llama_server: listening on http://127.0.0.1:8090
+0.30.137.133 W srv    operator(): got exception: {"error":{"code":500,"message":"[json.exception.parse_error.101] parse error at line 1, column 1: attempting to parse an empty input; check that your input string or stream contains the expected JSON","type":"server_error"}}
+0.30.208.299 W srv    operator(): got exception: {"error":{"code":500,"message":"[json.exception.parse_error.101] parse error at line 1, column 1: attempting to parse an empty input; check that your input string or stream contains the expected JSON","type":"server_error"}}
+0.30.277.988 W srv    operator(): got exception: {"error":{"code":500,"message":"[json.exception.parse_error.101] parse error at line 1, column 1: attempting to parse an empty input; check that your input string or stream contains the expected JSON","type":"server_error"}}
+0.30.345.947 W srv    operator(): got exception: {"error":{"code":500,"message":"[json.exception.parse_error.101] parse error at line 1, column 1: attempting to parse an empty input; check that your input string or stream contains the expected JSON","type":"server_error"}}
+0.30.417.522 W srv    operator(): got exception: {"error":{"code":500,"message":"[json.exception.parse_error.101] parse error at line 1, column 1: attempting to parse an empty input; check that your input string or stream contains the expected JSON","type":"server_error"}}
+0.30.487.760 W srv    operator(): got exception: {"error":{"code":500,"message":"[json.exception.parse_error.101] parse error at line 1, column 1: attempting to parse an empty input; check that your input string or stream contains the expected JSON","type":"server_error"}}
+0.30.533.023 I slot get_availabl: id  3 | task -1 | selected slot by LRU, t_last = -1
+0.30.533.112 I slot launch_slot_: id  3 | task 0 | processing task, is_child = 0
+0.31.465.412 I slot print_timing: id  3 | task 0 | prompt eval time =     196.71 ms /    19 tokens (   10.35 ms per token,    96.59 tokens per second)
+0.31.465.415 I slot print_timing: id  3 | task 0 |        eval time =     734.78 ms /    31 tokens (   24.49 ms per token,    40.83 tokens per second)
+0.31.465.416 I slot print_timing: id  3 | task 0 |       total time =     931.49 ms /    50 tokens
+0.31.465.421 I slot print_timing: id  3 | task 0 |    graphs reused =         30
+0.31.465.459 I slot      release: id  3 | task 0 | stop processing: n_tokens = 49, truncated = 0
+0.31.531.484 I srv    operator(): operator(): cleaning up before exit...

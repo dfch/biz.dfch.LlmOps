@@ -57,6 +57,10 @@ cover/
 
 # Django stuff:
 *.log
+# ...except feature-folder baseline/benchmark logs, which are tracked
+# deliverables (raw evidence backing README-reported numbers), not
+# incidental app logs:
+!.specmgr/feat/**/*.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal

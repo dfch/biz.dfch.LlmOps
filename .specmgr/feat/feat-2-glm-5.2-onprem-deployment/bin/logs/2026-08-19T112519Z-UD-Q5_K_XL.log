@@ -1,0 +1,3 @@
+Fetching 13 files:   0%|          | 0/13 [00:00<?, ?it/s]Fetching 13 files:   8%|▊         | 1/13 [00:05<01:01,  5.11s/it]Fetching 13 files:  15%|█▌        | 2/13 [4:29:29<29:03:37, 9510.64s/it]Fetching 13 files:  77%|███████▋  | 10/13 [5:53:11<1:28:53, 1777.96s/it]Fetching 13 files:  92%|█████████▏| 12/13 [5:53:16<22:36, 1356.89s/it]  Fetching 13 files: 100%|██████████| 13/13 [5:53:16<00:00, 1630.49s/it]
+[32m✓ Downloaded[0m
+  path: /data/llama_cpp/models/GLM-5.2-GGUF

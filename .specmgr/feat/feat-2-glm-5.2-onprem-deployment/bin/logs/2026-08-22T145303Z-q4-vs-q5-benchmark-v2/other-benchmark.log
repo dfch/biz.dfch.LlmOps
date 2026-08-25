@@ -1,0 +1,28 @@
+== Checking 127.0.0.1:8095/health ==
+Model: glm-5.2:UD-Q5_K_XL
+
+== Checking for other active connections on port 8095 (informational only) ==
+No pre-existing connections found.
+
+== Starting background PCIe/utilization sampling (nvidia-smi dmon -s ut -o T) ==
+   log: /home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-22T155243Z-pcie-vs-throughput/dmon.log
+
+== Sending request (max_tokens=1500, chat_template_kwargs={"reasoning_effort": "max"}) at 15:52:44 UTC ==
+Response received at 15:53:52 UTC (elapsed ~68s)
+
+== Analysis ==
+finish_reason: 'stop'
+completion_tokens: 845
+prompt_tokens: 30
+predicted_per_second (tok/s): 12.648456954940638
+prompt_per_second (tok/s): 27.894677137708584
+content preview: '```python\ndef merge_sort(arr):\n    """\n    Sorts a list using the merge sort algorithm.\n\n    Merge sort is a divide-and-conquer algorithm that recursi'
+
+Per-GPU during the request window (from nvidia-smi dmon):
+GPU  avg sm%  avg rxpci MB/s  max rxpci MB/s  avg txpci MB/s
+(no dmon samples fell inside the request window -- request may have
+ been too short for the 1Hz sampling interval to catch, or the
+ HH:MM:SS window crossed midnight UTC; inspect the raw log instead)
+
+Response: /home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-22T155243Z-pcie-vs-throughput/response.json
+PCIe/utilization log: /home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-2-glm-5.2-onprem-deployment/bin/logs/2026-08-22T155243Z-pcie-vs-throughput/dmon.log
