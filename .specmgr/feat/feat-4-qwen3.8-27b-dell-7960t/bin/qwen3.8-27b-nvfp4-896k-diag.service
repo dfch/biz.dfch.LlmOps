@@ -1,0 +1,39 @@
+[Unit]
+Description=vLLM Qwen3.8-27B NVFP4 (Phase 4 diagnostic: YaRN 896K context, TP=2 GPU2+GPU0)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=notify
+WorkingDirectory=/data/qwen3.8-27b
+Environment=PATH=/data/qwen3.8-27b/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/data/qwen3.8-27b/.venv/lib/python3.12/site-packages/nvidia/cu13/bin
+Environment=HF_HOME=/data/nvidia/hf_cache
+Environment=HF_HUB_OFFLINE=1
+Environment=TRANSFORMERS_OFFLINE=1
+Environment=VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
+Environment=CUDA_VISIBLE_DEVICES=GPU-7eea2a46-7ce4-e288-ab02-783dc5c5c9ea,GPU-5200c9f6-a6bc-e388-2bfc-0e6ddce48ad4
+ExecStart=/data/qwen3.8-27b/.venv/bin/vllm serve unsloth/Qwen3.8-27B-NVFP4 \
+    --revision 7d6f8d4d72f56b92b3cdbf22f156b90e1bab0108 \
+    --served-model-name qwen3.8-27b-nvfp4-896k-diag \
+    --tensor-parallel-size 2 \
+    --max-model-len 917504 \
+    --max-num-seqs 2 \
+    --gpu-memory-utilization 0.9 \
+    --hf-overrides '{"text_config": {"rope_parameters": {"mrope_interleaved": true, "mrope_section": [11, 11, 10], "rope_type": "yarn", "rope_theta": 10000000, "partial_rotary_factor": 0.25, "factor": 3.5, "original_max_position_embeddings": 262144}}}' \
+    --tool-call-parser qwen3_xml \
+    --enable-auto-tool-choice \
+    --reasoning-parser qwen3 \
+    --host 0.0.0.0 \
+    --port 8005 \
+    --trust-remote-code
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=control-group
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=3600
+TimeoutStopSec=60
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=default.target

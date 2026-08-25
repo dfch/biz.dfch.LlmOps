@@ -1,0 +1,37 @@
+[Unit]
+Description=vLLM Qwen3.8-27B BF16 (Phase 1 diagnostic: native/short context, no YaRN)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=notify
+WorkingDirectory=/data/qwen3.8-27b
+Environment=PATH=/data/qwen3.8-27b/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/data/qwen3.8-27b/.venv/lib/python3.12/site-packages/nvidia/cu13/bin
+Environment=HF_HOME=/data/nvidia/hf_cache
+Environment=HF_HUB_OFFLINE=1
+Environment=TRANSFORMERS_OFFLINE=1
+Environment=CUDA_VISIBLE_DEVICES=GPU-7eea2a46-7ce4-e288-ab02-783dc5c5c9ea
+ExecStart=/data/qwen3.8-27b/.venv/bin/vllm serve Qwen/Qwen3.8-27B \
+    --revision 1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0 \
+    --served-model-name qwen3.8-27b-bf16-native-diag \
+    --tensor-parallel-size 1 \
+    --max-model-len 8192 \
+    --max-num-seqs 512 \
+    --gpu-memory-utilization 0.9 \
+    --tool-call-parser qwen3_xml \
+    --enable-auto-tool-choice \
+    --reasoning-parser qwen3 \
+    --host 0.0.0.0 \
+    --port 8001 \
+    --trust-remote-code
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=control-group
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=3600
+TimeoutStopSec=60
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=default.target

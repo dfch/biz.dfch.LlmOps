@@ -1,0 +1,33 @@
+// Standalone OpenCode provider snippet for the qwen3.8-27b-bf16-896k
+// service (feat-4), Dell 7960T (hostname sys0).
+//
+// NOT written into any opencode.jsonc on this box -- paste this into the
+// "provider" object of your own opencode.jsonc. Mirrors feat-2/feat-3's
+// "standalone snippet" precedent for this repo.
+//
+// Prerequisites before this endpoint actually answers requests:
+//   1. On the Dell 7960T: `systemctl --user start qwen3.8-27b-bf16-896k.service`
+//      (on-demand only -- never auto-started, per REQ-008; stop it with
+//      `systemctl --user stop qwen3.8-27b-bf16-896k.service` when done)
+//   2. Replace <sys0-LAN-IP> below with the box's actual current LAN IP
+//      (DHCP-assigned, so it can change -- e.g. `192.168.1.103` as of
+//      2026-08-25's session; use `localhost`/`127.0.0.1` instead if
+//      OpenCode runs on the Dell 7960T itself)
+//
+// No API key is required or accepted (REQ-007: unauthenticated, internal
+// network only, accepted risk) -- if the AI SDK's openai-compatible
+// provider errors on a missing key anyway, add "apiKey": "not-needed"
+// under "options" (same workaround feat-2/feat-3 documented).
+{
+    "qwen3.8-27b-dell7960t": {
+        "npm": "@ai-sdk/openai-compatible",
+        "name": "Qwen3.8-27B BF16 896K (Dell 7960T)",
+        "options": { "baseURL": "http://<sys0-LAN-IP>:8001/v1" },
+        "models": {
+            "qwen3.8-27b-bf16-896k": {
+                "name": "qwen3.8-27b-bf16-896k",
+                "limit": { "context": 917504, "output": 65536 }
+            }
+        }
+    }
+}
