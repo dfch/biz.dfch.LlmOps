@@ -1,0 +1,50 @@
+latest: Pulling from lightseekorg/tokenspeed-runner
+a1c37c4213bd: Pulling fs layer
+ca2678b20700: Pulling fs layer
+c70cef8b7dce: Pulling fs layer
+18e327f154d4: Pulling fs layer
+41f56601cf19: Pulling fs layer
+b0c92414acb6: Pulling fs layer
+a0a947cf4622: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+01ce60637eb9: Pulling fs layer
+fbe73d3a1201: Pulling fs layer
+9974aa0ad75c: Pulling fs layer
+e93778145c9b: Pulling fs layer
+cf451b34eb7f: Pulling fs layer
+0edf2ef8a27c: Pulling fs layer
+4f4fb700ef54: Already exists
+18e327f154d4: Download complete
+a0a947cf4622: Download complete
+e93778145c9b: Download complete
+c70cef8b7dce: Download complete
+fbe73d3a1201: Download complete
+b0c92414acb6: Download complete
+41f56601cf19: Download complete
+ca2678b20700: Download complete
+ca2678b20700: Pull complete
+c70cef8b7dce: Pull complete
+18e327f154d4: Pull complete
+41f56601cf19: Pull complete
+b0c92414acb6: Pull complete
+4f4fb700ef54: Pull complete
+a0a947cf4622: Pull complete
+9974aa0ad75c: Download complete
+01ce60637eb9: Download complete
+01ce60637eb9: Pull complete
+fbe73d3a1201: Pull complete
+e93778145c9b: Pull complete
+9974aa0ad75c: Pull complete
+a1c37c4213bd: Download complete
+0edf2ef8a27c: Download complete
+cf451b34eb7f: Download complete
+cf451b34eb7f: Pull complete
+0edf2ef8a27c: Pull complete
+a1c37c4213bd: Pull complete
+Digest: sha256:feafd7a2fdefd4fc9bdce3df8e16f82f477853196c30d3fb8ce2816390b1b88e
+Status: Downloaded newer image for lightseekorg/tokenspeed-runner:latest
+docker.io/lightseekorg/tokenspeed-runner:latest
+561068b20f2ec21856ae756ab7d800eae4f73136d3c42a6bf89d89a97f3c7197
+docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: could not apply required modification to OCI specification: error modifying OCI spec: failed to create the automatic CDI modifier: failed to generate CDI spec for mode "auto": failed to construct device spec generators: failed to get full GPU device editors: error getting device handle for index '1': Unknown Error
+
+Run 'docker run --help' for more information

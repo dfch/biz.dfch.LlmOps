@@ -1,0 +1,582 @@
+latest: Pulling from lightseekorg/tokenspeed-runner
+Digest: sha256:feafd7a2fdefd4fc9bdce3df8e16f82f477853196c30d3fb8ce2816390b1b88e
+Status: Image is up to date for lightseekorg/tokenspeed-runner:latest
+docker.io/lightseekorg/tokenspeed-runner:latest
+tokenspeed-qwen4exp
+== 3. Fix /home/runner/.cache ownership (2026-08-27 finding) ==
+== 4. Installing the Python runtime, kernel, and scheduler packages (editable) ==
+-- runtime --
+Defaulting to user installation because normal site-packages is not writeable
+Obtaining file:///workspace/tokenspeed/python
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: aiohttp in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (3.14.3)
+Requirement already satisfied: compressed-tensors in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.18.0)
+Requirement already satisfied: dill in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.4.1)
+Requirement already satisfied: einops in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.8.2)
+Requirement already satisfied: fastapi in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.141.1)
+Requirement already satisfied: grpcio-health-checking==1.81.1 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (1.81.1)
+Requirement already satisfied: grpcio-reflection==1.81.1 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (1.81.1)
+Requirement already satisfied: hf_transfer in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.1.9)
+Requirement already satisfied: huggingface_hub in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (1.29.0)
+Requirement already satisfied: modelscope in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (1.39.1)
+Requirement already satisfied: msgspec in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.21.1)
+Requirement already satisfied: ninja in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (1.13.0)
+Requirement already satisfied: numpy in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (2.5.2)
+Requirement already satisfied: openai>=2.24.1 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (3.5.0)
+Requirement already satisfied: openai-harmony in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.0.8)
+Requirement already satisfied: orjson in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (3.12.0)
+Requirement already satisfied: packaging in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (26.3)
+Requirement already satisfied: partial-json-parser in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.2.1.1.post7)
+Requirement already satisfied: peft in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.20.0)
+Requirement already satisfied: pillow in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (12.3.0)
+Requirement already satisfied: prometheus-client in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.26.0)
+Requirement already satisfied: psutil in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (7.2.2)
+Requirement already satisfied: pybase64 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (1.5.0)
+Requirement already satisfied: pybind11 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (3.1.0)
+Requirement already satisfied: pydantic in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (2.13.4)
+Requirement already satisfied: py-spy in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.4.2)
+Requirement already satisfied: pytest-asyncio in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (1.4.0)
+Requirement already satisfied: python-multipart in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.0.32)
+Requirement already satisfied: pyzmq in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (27.2.0)
+Requirement already satisfied: requests in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (2.34.2)
+Requirement already satisfied: setproctitle in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (1.3.7)
+Requirement already satisfied: tiktoken in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.14.0)
+Requirement already satisfied: torch in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (2.13.0)
+Requirement already satisfied: torchvision in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.26.0)
+Requirement already satisfied: tokenspeed-kernel>=0.1.3.dev0 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.1.3)
+Requirement already satisfied: tokenspeed-mooncake>=0.3.13.post20260825 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.3.13.post20260825)
+Requirement already satisfied: tokenspeed-scheduler>=0.1.9 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.1.9)
+Requirement already satisfied: tokenspeed-smg==1.10.0.post20260827 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (1.10.0.post20260827)
+Requirement already satisfied: tokenspeed-smg-grpc-proto==0.4.16.post20260827 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.4.16.post20260827)
+Requirement already satisfied: tokenspeed-smg-grpc-servicer==0.9.1.post20260827 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.9.1.post20260827)
+Requirement already satisfied: torch_memory_saver==0.0.9.post1 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.0.9.post1)
+Requirement already satisfied: tqdm in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (4.70.0)
+Requirement already satisfied: transformers==5.12.0 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (5.12.0)
+Requirement already satisfied: uv in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.12.6)
+Requirement already satisfied: uvicorn in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.52.4)
+Requirement already satisfied: uvloop in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.22.1)
+Requirement already satisfied: xgrammar==0.2.3 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (0.2.3)
+Requirement already satisfied: viztracer in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed==0.1.0) (1.1.1)
+Requirement already satisfied: protobuf<7.0.0,>=6.33.5 in /home/runner/.local/lib/python3.12/site-packages (from grpcio-health-checking==1.81.1->tokenspeed==0.1.0) (6.33.6)
+Requirement already satisfied: grpcio>=1.81.1 in /home/runner/.local/lib/python3.12/site-packages (from grpcio-health-checking==1.81.1->tokenspeed==0.1.0) (1.83.0)
+Requirement already satisfied: pyyaml in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-smg==1.10.0.post20260827->tokenspeed==0.1.0) (6.0.3)
+Requirement already satisfied: regex>=2025.10.22 in /home/runner/.local/lib/python3.12/site-packages (from transformers==5.12.0->tokenspeed==0.1.0) (2026.7.19)
+Requirement already satisfied: tokenizers<=0.23.0,>=0.22.0 in /home/runner/.local/lib/python3.12/site-packages (from transformers==5.12.0->tokenspeed==0.1.0) (0.22.2)
+Requirement already satisfied: typer in /home/runner/.local/lib/python3.12/site-packages (from transformers==5.12.0->tokenspeed==0.1.0) (0.27.1)
+Requirement already satisfied: safetensors>=0.4.3 in /home/runner/.local/lib/python3.12/site-packages (from transformers==5.12.0->tokenspeed==0.1.0) (0.8.0)
+Requirement already satisfied: apache-tvm-ffi>=0.1.9 in /home/runner/.local/lib/python3.12/site-packages (from xgrammar==0.2.3->tokenspeed==0.1.0) (0.1.13)
+Requirement already satisfied: triton in /home/runner/.local/lib/python3.12/site-packages (from xgrammar==0.2.3->tokenspeed==0.1.0) (3.7.1)
+Requirement already satisfied: typing-extensions>=4.9.0 in /usr/local/lib/python3.12/dist-packages (from xgrammar==0.2.3->tokenspeed==0.1.0) (4.16.0)
+Requirement already satisfied: click<9.0.0,>=8.4.2 in /home/runner/.local/lib/python3.12/site-packages (from huggingface_hub->tokenspeed==0.1.0) (8.5.0)
+Requirement already satisfied: filelock>=3.10.0 in /usr/local/lib/python3.12/dist-packages (from huggingface_hub->tokenspeed==0.1.0) (3.32.2)
+Requirement already satisfied: fsspec>=2023.5.0 in /usr/local/lib/python3.12/dist-packages (from huggingface_hub->tokenspeed==0.1.0) (2026.7.0)
+Requirement already satisfied: hf-xet<2.0.0,>=1.5.2 in /home/runner/.local/lib/python3.12/site-packages (from huggingface_hub->tokenspeed==0.1.0) (1.6.0)
+Requirement already satisfied: httpx<1,>=0.23.0 in /home/runner/.local/lib/python3.12/site-packages (from huggingface_hub->tokenspeed==0.1.0) (0.28.1)
+Requirement already satisfied: anyio<5,>=4.10.0 in /home/runner/.local/lib/python3.12/site-packages (from openai>=2.24.1->tokenspeed==0.1.0) (4.14.2)
+Requirement already satisfied: httpx2<3,>=2.7.0 in /home/runner/.local/lib/python3.12/site-packages (from openai>=2.24.1->tokenspeed==0.1.0) (2.12.0)
+Requirement already satisfied: jiter<1,>=0.16.0 in /home/runner/.local/lib/python3.12/site-packages (from openai>=2.24.1->tokenspeed==0.1.0) (0.16.0)
+Requirement already satisfied: sniffio in /home/runner/.local/lib/python3.12/site-packages (from openai>=2.24.1->tokenspeed==0.1.0) (1.3.1)
+Requirement already satisfied: annotated-types>=0.6.0 in /home/runner/.local/lib/python3.12/site-packages (from pydantic->tokenspeed==0.1.0) (0.8.0)
+Requirement already satisfied: pydantic-core==2.46.4 in /home/runner/.local/lib/python3.12/site-packages (from pydantic->tokenspeed==0.1.0) (2.46.4)
+Requirement already satisfied: typing-inspection>=0.4.2 in /home/runner/.local/lib/python3.12/site-packages (from pydantic->tokenspeed==0.1.0) (0.4.4)
+Collecting apache-tvm-ffi>=0.1.9 (from xgrammar==0.2.3->tokenspeed==0.1.0)
+  Downloading apache_tvm_ffi-0.1.12-cp312-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (6.2 kB)
+Requirement already satisfied: tokenspeed-proton>=3.8.10.post20260721 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (3.8.10.post20260721)
+Requirement already satisfied: tokenspeed-triton>=3.8.10.post20260721 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (3.8.10.post20260721)
+Requirement already satisfied: wheel in /usr/lib/python3/dist-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (0.42.0)
+Requirement already satisfied: nvidia-cutlass-dsl==4.6.0 in /home/runner/.local/lib/python3.12/site-packages (from nvidia-cutlass-dsl[cu13]==4.6.0->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (4.6.0)
+Requirement already satisfied: nvidia-cutlass-dsl-libs-cu13==4.6.0 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (4.6.0)
+Collecting torch (from tokenspeed==0.1.0)
+  Downloading torch-2.11.0-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (29 kB)
+Collecting flashinfer-python==0.6.15.post1 (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0)
+  Downloading flashinfer_python-0.6.15.post1-py3-none-any.whl.metadata (11 kB)
+Requirement already satisfied: nvidia-ml-py==13.580.82 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (13.580.82)
+Requirement already satisfied: nvtx in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (0.2.16)
+Requirement already satisfied: tokenspeed-deepep==1.2.1.post20251110 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (1.2.1.post20251110)
+Requirement already satisfied: tokenspeed-deepgemm==2.5.0.post20260629 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (2.5.0.post20260629)
+Requirement already satisfied: tokenspeed-flashmla==1.0.0.post20260615 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (1.0.0.post20260615)
+Requirement already satisfied: tokenspeed-mla==0.2.1 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (0.2.1)
+Requirement already satisfied: tokenspeed-fast-hadamard-transform==1.1.0.post20251110 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (1.1.0.post20251110)
+Requirement already satisfied: tokenspeed-fa3==3.0.0.post20260408 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (3.0.0.post20260408)
+Requirement already satisfied: tokenspeed-fa4==4.0.0.post20260710 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (4.0.0.post20260710)
+Requirement already satisfied: quack-kernels>=0.6.1 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (0.6.3)
+Requirement already satisfied: tokenspeed-triton-kernels==1.0.0.post20260510 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (1.0.0.post20260510)
+Requirement already satisfied: tokenspeed-trtllm-kernel==1.2.1.post20260427 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (1.2.1.post20260427)
+Requirement already satisfied: setuptools<82 in /home/runner/.local/lib/python3.12/site-packages (from torch->tokenspeed==0.1.0) (81.0.0)
+Requirement already satisfied: sympy>=1.13.3 in /usr/local/lib/python3.12/dist-packages (from torch->tokenspeed==0.1.0) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in /usr/local/lib/python3.12/dist-packages (from torch->tokenspeed==0.1.0) (3.6.1)
+Requirement already satisfied: jinja2 in /usr/local/lib/python3.12/dist-packages (from torch->tokenspeed==0.1.0) (3.1.6)
+Collecting cuda-toolkit==13.0.2 (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0)
+  Downloading cuda_toolkit-13.0.2-py2.py3-none-any.whl.metadata (9.4 kB)
+Requirement already satisfied: cuda-bindings<14,>=13.0.3 in /usr/local/lib/python3.12/dist-packages (from torch->tokenspeed==0.1.0) (13.3.1)
+Collecting nvidia-cudnn-cu13==9.19.0.56 (from torch->tokenspeed==0.1.0)
+  Downloading nvidia_cudnn_cu13-9.19.0.56-py3-none-manylinux_2_27_x86_64.whl.metadata (1.9 kB)
+Collecting nvidia-cusparselt-cu13==0.8.0 (from torch->tokenspeed==0.1.0)
+  Downloading nvidia_cusparselt_cu13-0.8.0-py3-none-manylinux2014_x86_64.whl.metadata (12 kB)
+Collecting nvidia-nccl-cu13==2.28.9 (from torch->tokenspeed==0.1.0)
+  Downloading nvidia_nccl_cu13-2.28.9-py3-none-manylinux_2_18_x86_64.whl.metadata (2.0 kB)
+Requirement already satisfied: nvidia-nvshmem-cu13==3.4.5 in /usr/local/lib/python3.12/dist-packages (from torch->tokenspeed==0.1.0) (3.4.5)
+Collecting triton (from xgrammar==0.2.3->tokenspeed==0.1.0)
+  Downloading triton-3.6.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-cublas==13.1.0.3.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0)
+  Downloading nvidia_cublas-13.1.0.3-py3-none-manylinux_2_27_x86_64.whl.metadata (1.7 kB)
+Requirement already satisfied: nvidia-cuda-runtime==13.0.96.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0) (13.0.96)
+Requirement already satisfied: nvidia-cufft==12.0.0.61.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0) (12.0.0.61)
+Requirement already satisfied: nvidia-cufile==1.15.1.6.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0) (1.15.1.6)
+Requirement already satisfied: nvidia-cuda-cupti==13.0.85.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0) (13.0.85)
+Requirement already satisfied: nvidia-curand==10.4.0.35.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0) (10.4.0.35)
+Requirement already satisfied: nvidia-cusolver==12.0.4.66.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0) (12.0.4.66)
+Requirement already satisfied: nvidia-cusparse==12.6.3.3.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0) (12.6.3.3)
+Requirement already satisfied: nvidia-nvjitlink==13.0.88.* in /home/runner/.local/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0) (13.0.88)
+Requirement already satisfied: nvidia-cuda-nvrtc==13.0.88.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0) (13.0.88)
+Requirement already satisfied: nvidia-nvtx==13.0.85.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch->tokenspeed==0.1.0) (13.0.85)
+Requirement already satisfied: cuda-python>=12.0 in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.15.post1->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (13.3.1)
+Requirement already satisfied: cuda-tile>=1.4.0 in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.15.post1->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (1.5.0)
+Requirement already satisfied: nccl4py>=0.3.1 in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.15.post1->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (0.4.1)
+Requirement already satisfied: nvidia-cudnn-frontend>=1.13.0 in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.15.post1->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (1.26.0)
+Requirement already satisfied: tabulate in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.15.post1->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (0.10.0)
+Requirement already satisfied: nvidia-cutlass-dsl-libs-base==4.6.0 in /home/runner/.local/lib/python3.12/site-packages (from nvidia-cutlass-dsl==4.6.0->nvidia-cutlass-dsl[cu13]==4.6.0->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (4.6.0)
+Requirement already satisfied: nvidia-cutlass-dsl-libs-cu12==4.6.0 in /home/runner/.local/lib/python3.12/site-packages (from nvidia-cutlass-dsl==4.6.0->nvidia-cutlass-dsl[cu13]==4.6.0->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (4.6.0)
+Requirement already satisfied: nvidia-cuda-nvdisasm<14,>=13.3 in /home/runner/.local/lib/python3.12/site-packages (from nvidia-cutlass-dsl-libs-cu13==4.6.0->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (13.3.73)
+Requirement already satisfied: torch-c-dlpack-ext in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-fa4==4.0.0.post20260710->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (0.1.5)
+Requirement already satisfied: pytest in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-triton-kernels==1.0.0.post20260510->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (9.1.1)
+Requirement already satisfied: nvidia-cutlass-dsl-libs-core==4.6.0 in /home/runner/.local/lib/python3.12/site-packages (from nvidia-cutlass-dsl-libs-base==4.6.0->nvidia-cutlass-dsl==4.6.0->nvidia-cutlass-dsl[cu13]==4.6.0->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (4.6.0)
+Requirement already satisfied: msgpack in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-mooncake>=0.3.13.post20260825->tokenspeed==0.1.0) (1.2.2)
+Requirement already satisfied: aiohappyeyeballs>=2.5.0 in /home/runner/.local/lib/python3.12/site-packages (from aiohttp->tokenspeed==0.1.0) (2.7.1)
+Requirement already satisfied: aiosignal>=1.4.0 in /home/runner/.local/lib/python3.12/site-packages (from aiohttp->tokenspeed==0.1.0) (1.4.0)
+Requirement already satisfied: attrs>=17.3.0 in /home/runner/.local/lib/python3.12/site-packages (from aiohttp->tokenspeed==0.1.0) (26.1.0)
+Requirement already satisfied: frozenlist>=1.1.1 in /home/runner/.local/lib/python3.12/site-packages (from aiohttp->tokenspeed==0.1.0) (1.8.0)
+Requirement already satisfied: multidict<7.0,>=4.5 in /home/runner/.local/lib/python3.12/site-packages (from aiohttp->tokenspeed==0.1.0) (6.7.1)
+Requirement already satisfied: propcache>=0.2.0 in /home/runner/.local/lib/python3.12/site-packages (from aiohttp->tokenspeed==0.1.0) (0.5.2)
+Requirement already satisfied: yarl<2.0,>=1.17.0 in /home/runner/.local/lib/python3.12/site-packages (from aiohttp->tokenspeed==0.1.0) (1.24.5)
+Requirement already satisfied: loguru in /home/runner/.local/lib/python3.12/site-packages (from compressed-tensors->tokenspeed==0.1.0) (0.7.3)
+Requirement already satisfied: starlette>=0.46.0 in /home/runner/.local/lib/python3.12/site-packages (from fastapi->tokenspeed==0.1.0) (1.6.0)
+Requirement already satisfied: annotated-doc>=0.0.2 in /home/runner/.local/lib/python3.12/site-packages (from fastapi->tokenspeed==0.1.0) (0.0.5)
+Requirement already satisfied: modelscope-hub>=0.2.0 in /home/runner/.local/lib/python3.12/site-packages (from modelscope->tokenspeed==0.1.0) (0.2.0)
+Requirement already satisfied: urllib3>=1.26 in /home/runner/.local/lib/python3.12/site-packages (from modelscope->tokenspeed==0.1.0) (2.7.0)
+Requirement already satisfied: charset_normalizer<4,>=2 in /home/runner/.local/lib/python3.12/site-packages (from requests->tokenspeed==0.1.0) (3.5.1)
+Requirement already satisfied: idna<4,>=2.5 in /home/runner/.local/lib/python3.12/site-packages (from requests->tokenspeed==0.1.0) (3.19)
+Requirement already satisfied: certifi>=2023.5.7 in /home/runner/.local/lib/python3.12/site-packages (from requests->tokenspeed==0.1.0) (2026.7.22)
+Requirement already satisfied: accelerate>=0.21.0 in /home/runner/.local/lib/python3.12/site-packages (from peft->tokenspeed==0.1.0) (1.14.0)
+Requirement already satisfied: h11>=0.8 in /home/runner/.local/lib/python3.12/site-packages (from uvicorn->tokenspeed==0.1.0) (0.16.0)
+Requirement already satisfied: objprint>=0.3.0 in /home/runner/.local/lib/python3.12/site-packages (from viztracer->tokenspeed==0.1.0) (0.3.0)
+Requirement already satisfied: cuda-pathfinder>=1.4.2 in /usr/local/lib/python3.12/dist-packages (from cuda-bindings<14,>=13.0.3->torch->tokenspeed==0.1.0) (1.6.0)
+Requirement already satisfied: httpcore==1.* in /home/runner/.local/lib/python3.12/site-packages (from httpx<1,>=0.23.0->huggingface_hub->tokenspeed==0.1.0) (1.0.9)
+Requirement already satisfied: httpcore2==2.12.0 in /home/runner/.local/lib/python3.12/site-packages (from httpx2<3,>=2.7.0->openai>=2.24.1->tokenspeed==0.1.0) (2.12.0)
+Requirement already satisfied: truststore>=0.10 in /home/runner/.local/lib/python3.12/site-packages (from httpx2<3,>=2.7.0->openai>=2.24.1->tokenspeed==0.1.0) (0.10.4)
+Requirement already satisfied: iniconfig>=1.0.1 in /home/runner/.local/lib/python3.12/site-packages (from pytest->tokenspeed-triton-kernels==1.0.0.post20260510->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (2.3.0)
+Requirement already satisfied: pluggy<2,>=1.5 in /home/runner/.local/lib/python3.12/site-packages (from pytest->tokenspeed-triton-kernels==1.0.0.post20260510->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (1.6.0)
+Requirement already satisfied: pygments>=2.7.2 in /home/runner/.local/lib/python3.12/site-packages (from pytest->tokenspeed-triton-kernels==1.0.0.post20260510->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (2.21.0)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /usr/local/lib/python3.12/dist-packages (from sympy>=1.13.3->torch->tokenspeed==0.1.0) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in /usr/local/lib/python3.12/dist-packages (from jinja2->torch->tokenspeed==0.1.0) (3.0.3)
+Requirement already satisfied: shellingham>=1.3.0 in /home/runner/.local/lib/python3.12/site-packages (from typer->transformers==5.12.0->tokenspeed==0.1.0) (1.5.4)
+Requirement already satisfied: rich>=13.8.0 in /home/runner/.local/lib/python3.12/site-packages (from typer->transformers==5.12.0->tokenspeed==0.1.0) (15.0.0)
+Requirement already satisfied: cuda-core~=1.0.0 in /home/runner/.local/lib/python3.12/site-packages (from cuda-python>=12.0->flashinfer-python==0.6.15.post1->tokenspeed-kernel>=0.1.3.dev0->tokenspeed==0.1.0) (1.0.1)
+Requirement already satisfied: markdown-it-py>=2.2.0 in /home/runner/.local/lib/python3.12/site-packages (from rich>=13.8.0->typer->transformers==5.12.0->tokenspeed==0.1.0) (4.2.0)
+Requirement already satisfied: mdurl~=0.1 in /home/runner/.local/lib/python3.12/site-packages (from markdown-it-py>=2.2.0->rich>=13.8.0->typer->transformers==5.12.0->tokenspeed==0.1.0) (0.1.2)
+Downloading torch-2.11.0-cp312-cp312-manylinux_2_28_x86_64.whl (530.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 530.7/530.7 MB 4.7 MB/s eta 0:00:00
+Downloading apache_tvm_ffi-0.1.12-cp312-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (2.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.7/2.7 MB 6.6 MB/s eta 0:00:00
+Downloading cuda_toolkit-13.0.2-py2.py3-none-any.whl (2.4 kB)
+Downloading flashinfer_python-0.6.15.post1-py3-none-any.whl (15.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 15.0/15.0 MB 7.2 MB/s eta 0:00:00
+Downloading nvidia_cudnn_cu13-9.19.0.56-py3-none-manylinux_2_27_x86_64.whl (366.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 366.1/366.1 MB 6.1 MB/s eta 0:00:00
+Downloading nvidia_cusparselt_cu13-0.8.0-py3-none-manylinux2014_x86_64.whl (169.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 169.9/169.9 MB 3.2 MB/s eta 0:00:00
+Downloading nvidia_nccl_cu13-2.28.9-py3-none-manylinux_2_18_x86_64.whl (196.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 196.5/196.5 MB 9.6 MB/s eta 0:00:00
+Downloading triton-3.6.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (188.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 188.3/188.3 MB 2.4 MB/s eta 0:00:00
+Downloading nvidia_cublas-13.1.0.3-py3-none-manylinux_2_27_x86_64.whl (423.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 423.1/423.1 MB 5.3 MB/s eta 0:00:00
+Building wheels for collected packages: tokenspeed
+  Building editable for tokenspeed (pyproject.toml): started
+  Building editable for tokenspeed (pyproject.toml): finished with status 'done'
+  Created wheel for tokenspeed: filename=tokenspeed-0.1.0-0.editable-py3-none-any.whl size=9974 sha256=852853518d067dced212862007f151271874bdc726ec332e458e3ff399ff38a5
+  Stored in directory: /tmp/pip-ephem-wheel-cache-xxoi5x__/wheels/02/bb/7e/813f30ff27119dba30adf263e09e484d1d2189238ed9637064
+Successfully built tokenspeed
+Installing collected packages: nvidia-cusparselt-cu13, cuda-toolkit, triton, nvidia-nccl-cu13, nvidia-cublas, apache-tvm-ffi, nvidia-cudnn-cu13, torch, flashinfer-python, tokenspeed
+  Attempting uninstall: nvidia-cusparselt-cu13
+    Found existing installation: nvidia-cusparselt-cu13 0.8.1
+    Uninstalling nvidia-cusparselt-cu13-0.8.1:
+      Successfully uninstalled nvidia-cusparselt-cu13-0.8.1
+  Attempting uninstall: cuda-toolkit
+    Found existing installation: cuda-toolkit 13.0.3.0
+    Uninstalling cuda-toolkit-13.0.3.0:
+      Successfully uninstalled cuda-toolkit-13.0.3.0
+  Attempting uninstall: triton
+    Found existing installation: triton 3.7.1
+    Uninstalling triton-3.7.1:
+      Successfully uninstalled triton-3.7.1
+  Attempting uninstall: nvidia-nccl-cu13
+    Found existing installation: nvidia-nccl-cu13 2.29.7
+    Uninstalling nvidia-nccl-cu13-2.29.7:
+      Successfully uninstalled nvidia-nccl-cu13-2.29.7
+  Attempting uninstall: nvidia-cublas
+    Found existing installation: nvidia-cublas 13.1.1.3
+    Uninstalling nvidia-cublas-13.1.1.3:
+      Successfully uninstalled nvidia-cublas-13.1.1.3
+  Attempting uninstall: apache-tvm-ffi
+    Found existing installation: apache-tvm-ffi 0.1.13
+    Uninstalling apache-tvm-ffi-0.1.13:
+      Successfully uninstalled apache-tvm-ffi-0.1.13
+  Attempting uninstall: nvidia-cudnn-cu13
+    Found existing installation: nvidia-cudnn-cu13 9.20.0.48
+    Uninstalling nvidia-cudnn-cu13-9.20.0.48:
+      Successfully uninstalled nvidia-cudnn-cu13-9.20.0.48
+  Attempting uninstall: torch
+    Found existing installation: torch 2.13.0
+    Uninstalling torch-2.13.0:
+      Successfully uninstalled torch-2.13.0
+  Attempting uninstall: flashinfer-python
+    Found existing installation: flashinfer-python 0.6.16
+    Uninstalling flashinfer-python-0.6.16:
+      Successfully uninstalled flashinfer-python-0.6.16
+  Attempting uninstall: tokenspeed
+    Found existing installation: tokenspeed 0.1.0
+    Uninstalling tokenspeed-0.1.0:
+      Successfully uninstalled tokenspeed-0.1.0
+Successfully installed apache-tvm-ffi-0.1.12 cuda-toolkit-13.0.2 flashinfer-python-0.6.15.post1 nvidia-cublas-13.1.0.3 nvidia-cudnn-cu13-9.19.0.56 nvidia-cusparselt-cu13-0.8.0 nvidia-nccl-cu13-2.28.9 tokenspeed-0.1.0 torch-2.11.0 triton-3.6.0
+-- kernel (compiles Triton/CUDA kernels -- the slow step) --
+Defaulting to user installation because normal site-packages is not writeable
+Obtaining file:///workspace/tokenspeed/tokenspeed-kernel/python
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: packaging in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (26.3)
+Requirement already satisfied: wheel in /usr/lib/python3/dist-packages (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (0.42.0)
+Requirement already satisfied: psutil in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (7.2.2)
+Requirement already satisfied: numpy in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (2.5.2)
+Collecting torch==2.13.0 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading torch-2.13.0-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (38 kB)
+Collecting apache-tvm-ffi==0.1.13 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading apache_tvm_ffi-0.1.13-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (6.2 kB)
+Requirement already satisfied: tokenspeed-proton>=3.8.10.post20260721 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (3.8.10.post20260721)
+Requirement already satisfied: tokenspeed-triton>=3.8.10.post20260721 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (3.8.10.post20260721)
+Requirement already satisfied: nvidia-cutlass-dsl==4.6.0 in /home/runner/.local/lib/python3.12/site-packages (from nvidia-cutlass-dsl[cu13]==4.6.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (4.6.0)
+Requirement already satisfied: nvidia-cutlass-dsl-libs-cu13==4.6.0 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (4.6.0)
+Collecting flashinfer-python==0.6.16 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading flashinfer_python-0.6.16-py3-none-any.whl.metadata (11 kB)
+Requirement already satisfied: nvidia-cudnn-frontend==1.26.0 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (1.26.0)
+Requirement already satisfied: nvidia-ml-py==13.580.82 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (13.580.82)
+Requirement already satisfied: nvtx in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (0.2.16)
+Collecting tokenspeed-deepep==2.1.0.post20260810 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading tokenspeed_deepep-2.1.0.post20260810-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (118 bytes)
+Collecting tokenspeed-deepgemm==2.5.0.post20260810 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading tokenspeed_deepgemm-2.5.0.post20260810-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (120 bytes)
+Collecting tokenspeed-flashmla==1.0.0.post20260810 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading tokenspeed_flashmla-1.0.0.post20260810-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (120 bytes)
+Collecting tokenspeed-mla==0.2.5 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading tokenspeed_mla-0.2.5-py3-none-manylinux_2_28_x86_64.whl.metadata (10 kB)
+Collecting tokenspeed-fast-hadamard-transform==1.1.0.post20260810 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading tokenspeed_fast_hadamard_transform-1.1.0.post20260810-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (2.3 kB)
+Collecting tokenspeed-fa3==3.0.0.post20260810 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading tokenspeed_fa3-3.0.0.post20260810-cp39-abi3-manylinux_2_28_x86_64.whl.metadata (24 kB)
+Requirement already satisfied: tokenspeed-fa4==4.0.0.post20260710 in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (4.0.0.post20260710)
+Collecting quack-kernels==0.6.1 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading quack_kernels-0.6.1-py3-none-any.whl.metadata (800 bytes)
+Collecting tokenspeed-trtllm-kernel==1.3.0.post20260817 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading tokenspeed_trtllm_kernel-1.3.0.post20260817-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (452 bytes)
+Collecting tokenspeed-flashkda==0.0.1.post20260810 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading tokenspeed_flashkda-0.0.1.post20260810-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (296 bytes)
+Collecting tokenspeed-cutedsl-kda==0.1.0.post20260817 (from tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading tokenspeed_cutedsl_kda-0.1.0.post20260817-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (763 bytes)
+Requirement already satisfied: typing-extensions>=4.5 in /usr/local/lib/python3.12/dist-packages (from apache-tvm-ffi==0.1.13->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (4.16.0)
+Requirement already satisfied: click in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (8.5.0)
+Requirement already satisfied: cuda-python>=12.0 in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (13.3.1)
+Requirement already satisfied: cuda-tile>=1.4.0 in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (1.5.0)
+Requirement already satisfied: einops in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (0.8.2)
+Requirement already satisfied: nccl4py>=0.3.1 in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (0.4.1)
+Requirement already satisfied: ninja in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (1.13.0)
+Requirement already satisfied: requests in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (2.34.2)
+Requirement already satisfied: tabulate in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (0.10.0)
+Requirement already satisfied: tqdm in /home/runner/.local/lib/python3.12/site-packages (from flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (4.70.0)
+Requirement already satisfied: nvidia-cutlass-dsl-libs-base==4.6.0 in /home/runner/.local/lib/python3.12/site-packages (from nvidia-cutlass-dsl==4.6.0->nvidia-cutlass-dsl[cu13]==4.6.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (4.6.0)
+Requirement already satisfied: nvidia-cutlass-dsl-libs-cu12==4.6.0 in /home/runner/.local/lib/python3.12/site-packages (from nvidia-cutlass-dsl==4.6.0->nvidia-cutlass-dsl[cu13]==4.6.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (4.6.0)
+Requirement already satisfied: protobuf<7,>=6.30.2 in /home/runner/.local/lib/python3.12/site-packages (from nvidia-cutlass-dsl-libs-cu13==4.6.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (6.33.6)
+Requirement already satisfied: nvidia-cuda-nvdisasm<14,>=13.3 in /home/runner/.local/lib/python3.12/site-packages (from nvidia-cutlass-dsl-libs-cu13==4.6.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (13.3.73)
+Requirement already satisfied: torch-c-dlpack-ext in /home/runner/.local/lib/python3.12/site-packages (from quack-kernels==0.6.1->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (0.1.5)
+Requirement already satisfied: filelock in /usr/local/lib/python3.12/dist-packages (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (3.32.2)
+Requirement already satisfied: setuptools>=77.0.3 in /home/runner/.local/lib/python3.12/site-packages (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (81.0.0)
+Requirement already satisfied: sympy>=1.13.3 in /usr/local/lib/python3.12/dist-packages (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in /usr/local/lib/python3.12/dist-packages (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (3.6.1)
+Requirement already satisfied: jinja2 in /usr/local/lib/python3.12/dist-packages (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (3.1.6)
+Requirement already satisfied: fsspec>=0.8.5 in /usr/local/lib/python3.12/dist-packages (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (2026.7.0)
+Collecting cuda-toolkit==13.0.3 (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading cuda_toolkit-13.0.3.0-py2.py3-none-any.whl.metadata (17 kB)
+Requirement already satisfied: cuda-bindings<14,>=13.0.3 in /usr/local/lib/python3.12/dist-packages (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (13.3.1)
+Collecting nvidia-cudnn-cu13==9.20.0.48 (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading nvidia_cudnn_cu13-9.20.0.48-py3-none-manylinux_2_27_x86_64.whl.metadata (1.9 kB)
+Collecting nvidia-cusparselt-cu13==0.8.1 (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_x86_64.whl.metadata (12 kB)
+Collecting nvidia-nccl-cu13==2.29.7 (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading nvidia_nccl_cu13-2.29.7-py3-none-manylinux_2_18_x86_64.whl.metadata (2.1 kB)
+Requirement already satisfied: nvidia-nvshmem-cu13==3.4.5 in /usr/local/lib/python3.12/dist-packages (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (3.4.5)
+Collecting triton==3.7.1 (from torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading triton-3.7.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-cublas==13.1.1.3.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148)
+  Downloading nvidia_cublas-13.1.1.3-py3-none-manylinux_2_27_x86_64.whl.metadata (1.8 kB)
+Requirement already satisfied: nvidia-cuda-nvrtc==13.0.88.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (13.0.88)
+Requirement already satisfied: nvidia-cuda-runtime==13.0.96.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (13.0.96)
+Requirement already satisfied: nvidia-cufft==12.0.0.61.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (12.0.0.61)
+Requirement already satisfied: nvidia-nvjitlink<14,>=13.0.88 in /home/runner/.local/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (13.0.88)
+Requirement already satisfied: nvidia-cufile==1.15.1.6.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (1.15.1.6)
+Requirement already satisfied: nvidia-cuda-cupti==13.0.85.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (13.0.85)
+Requirement already satisfied: nvidia-curand==10.4.0.35.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (10.4.0.35)
+Requirement already satisfied: nvidia-cusolver==12.0.4.66.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (12.0.4.66)
+Requirement already satisfied: nvidia-cusparse==12.6.3.3.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (12.6.3.3)
+Requirement already satisfied: nvidia-nvtx==13.0.85.* in /usr/local/lib/python3.12/dist-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (13.0.85)
+Requirement already satisfied: nvidia-cutlass-dsl-libs-core==4.6.0 in /home/runner/.local/lib/python3.12/site-packages (from nvidia-cutlass-dsl-libs-base==4.6.0->nvidia-cutlass-dsl==4.6.0->nvidia-cutlass-dsl[cu13]==4.6.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (4.6.0)
+Requirement already satisfied: cuda-pathfinder>=1.4.2 in /usr/local/lib/python3.12/dist-packages (from cuda-bindings<14,>=13.0.3->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (1.6.0)
+Requirement already satisfied: cuda-core~=1.0.0 in /home/runner/.local/lib/python3.12/site-packages (from cuda-python>=12.0->flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (1.0.1)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /usr/local/lib/python3.12/dist-packages (from sympy>=1.13.3->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in /usr/local/lib/python3.12/dist-packages (from jinja2->torch==2.13.0->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (3.0.3)
+Requirement already satisfied: charset_normalizer<4,>=2 in /home/runner/.local/lib/python3.12/site-packages (from requests->flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (3.5.1)
+Requirement already satisfied: idna<4,>=2.5 in /home/runner/.local/lib/python3.12/site-packages (from requests->flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (3.19)
+Requirement already satisfied: urllib3<3,>=1.26 in /home/runner/.local/lib/python3.12/site-packages (from requests->flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (2.7.0)
+Requirement already satisfied: certifi>=2023.5.7 in /home/runner/.local/lib/python3.12/site-packages (from requests->flashinfer-python==0.6.16->tokenspeed_kernel==0.1.3.dev20260827+git4cb77148) (2026.7.22)
+WARNING: The candidate selected for download or install is a yanked version: 'apache-tvm-ffi' candidate (version 0.1.13 at https://files.pythonhosted.org/packages/c4/44/8b0a68d30a9b79e61003577da1d001f9a0ae0c3a5af1b1d6c21cce0002b1/apache_tvm_ffi-0.1.13-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (from https://pypi.org/simple/apache-tvm-ffi/) (requires-python:>=3.9))
+Reason for being yanked: <none given>
+Downloading apache_tvm_ffi-0.1.13-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (2.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.9/2.9 MB 3.3 MB/s eta 0:00:00
+Downloading flashinfer_python-0.6.16-py3-none-any.whl (15.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 15.9/15.9 MB 1.6 MB/s eta 0:00:00
+Downloading quack_kernels-0.6.1-py3-none-any.whl (358 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 358.4/358.4 kB 1.0 MB/s eta 0:00:00
+Downloading tokenspeed_cutedsl_kda-0.1.0.post20260817-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (173 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 173.9/173.9 kB 1.2 MB/s eta 0:00:00
+Downloading tokenspeed_deepep-2.1.0.post20260810-cp312-cp312-manylinux_2_28_x86_64.whl (14.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 14.3/14.3 MB 948.0 kB/s eta 0:00:00
+Downloading tokenspeed_deepgemm-2.5.0.post20260810-cp312-cp312-manylinux_2_28_x86_64.whl (10.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.7/10.7 MB 1.3 MB/s eta 0:00:00
+Downloading tokenspeed_fa3-3.0.0.post20260810-cp39-abi3-manylinux_2_28_x86_64.whl (62.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.8/62.8 MB 5.5 MB/s eta 0:00:00
+Downloading tokenspeed_fast_hadamard_transform-1.1.0.post20260810-cp312-cp312-manylinux_2_28_x86_64.whl (19.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 19.3/19.3 MB 3.5 MB/s eta 0:00:00
+Downloading tokenspeed_flashkda-0.0.1.post20260810-cp312-cp312-manylinux_2_28_x86_64.whl (5.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.9/5.9 MB 3.5 MB/s eta 0:00:00
+Downloading tokenspeed_flashmla-1.0.0.post20260810-cp312-cp312-manylinux_2_28_x86_64.whl (9.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.3/9.3 MB 3.1 MB/s eta 0:00:00
+Downloading tokenspeed_mla-0.2.5-py3-none-manylinux_2_28_x86_64.whl (755 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 756.0/756.0 kB 3.6 MB/s eta 0:00:00
+Downloading tokenspeed_trtllm_kernel-1.3.0.post20260817-cp312-cp312-manylinux_2_28_x86_64.whl (10.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.7/10.7 MB 4.2 MB/s eta 0:00:00
+Downloading torch-2.13.0-cp312-cp312-manylinux_2_28_x86_64.whl (526.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 526.6/526.6 MB 4.9 MB/s eta 0:00:00
+Downloading cuda_toolkit-13.0.3.0-py2.py3-none-any.whl (2.5 kB)
+Downloading nvidia_cudnn_cu13-9.20.0.48-py3-none-manylinux_2_27_x86_64.whl (366.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 366.2/366.2 MB 4.7 MB/s eta 0:00:00
+Downloading nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_x86_64.whl (170.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 170.1/170.1 MB 2.0 MB/s eta 0:00:00
+Downloading nvidia_nccl_cu13-2.29.7-py3-none-manylinux_2_18_x86_64.whl (206.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 206.0/206.0 MB 11.3 MB/s eta 0:00:00
+Downloading triton-3.7.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (197.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 197.7/197.7 MB 3.4 MB/s eta 0:00:00
+Downloading nvidia_cublas-13.1.1.3-py3-none-manylinux_2_27_x86_64.whl (423.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 423.1/423.1 MB 8.4 MB/s eta 0:00:00
+Building wheels for collected packages: tokenspeed_kernel
+  Building editable for tokenspeed_kernel (pyproject.toml): started
+  Building editable for tokenspeed_kernel (pyproject.toml): still running...
+  Building editable for tokenspeed_kernel (pyproject.toml): still running...
+  Building editable for tokenspeed_kernel (pyproject.toml): still running...
+  Building editable for tokenspeed_kernel (pyproject.toml): finished with status 'done'
+  Created wheel for tokenspeed_kernel: filename=tokenspeed_kernel-0.1.3.dev20260827+git4cb77148-0.editable-py3-none-any.whl size=9691 sha256=07d64711be1195f0f2956d8b2d01d8bae6e3acce27a850f2ce127a6c440a6b05
+  Stored in directory: /tmp/pip-ephem-wheel-cache-6gucabg6/wheels/5d/e9/22/1e42025228111a8d8dc8af85d846f12afeeb13c8b08b15c4e6
+Successfully built tokenspeed_kernel
+Installing collected packages: tokenspeed-flashmla, tokenspeed-deepgemm, tokenspeed-deepep, nvidia-cusparselt-cu13, cuda-toolkit, triton, tokenspeed-flashkda, nvidia-nccl-cu13, nvidia-cublas, apache-tvm-ffi, nvidia-cudnn-cu13, torch, tokenspeed-trtllm-kernel, tokenspeed-fast-hadamard-transform, tokenspeed-fa3, tokenspeed-mla, quack-kernels, flashinfer-python, tokenspeed-cutedsl-kda, tokenspeed_kernel
+  Attempting uninstall: tokenspeed-flashmla
+    Found existing installation: tokenspeed-flashmla 1.0.0.post20260615
+    Uninstalling tokenspeed-flashmla-1.0.0.post20260615:
+      Successfully uninstalled tokenspeed-flashmla-1.0.0.post20260615
+  Attempting uninstall: tokenspeed-deepgemm
+    Found existing installation: tokenspeed-deepgemm 2.5.0.post20260629
+    Uninstalling tokenspeed-deepgemm-2.5.0.post20260629:
+      Successfully uninstalled tokenspeed-deepgemm-2.5.0.post20260629
+  Attempting uninstall: tokenspeed-deepep
+    Found existing installation: tokenspeed-deepep 1.2.1.post20251110
+    Uninstalling tokenspeed-deepep-1.2.1.post20251110:
+      Successfully uninstalled tokenspeed-deepep-1.2.1.post20251110
+  Attempting uninstall: nvidia-cusparselt-cu13
+    Found existing installation: nvidia-cusparselt-cu13 0.8.1
+    Uninstalling nvidia-cusparselt-cu13-0.8.1:
+      Successfully uninstalled nvidia-cusparselt-cu13-0.8.1
+  Attempting uninstall: cuda-toolkit
+    Found existing installation: cuda-toolkit 13.0.3.0
+    Uninstalling cuda-toolkit-13.0.3.0:
+      Successfully uninstalled cuda-toolkit-13.0.3.0
+  Attempting uninstall: triton
+    Found existing installation: triton 3.7.1
+    Uninstalling triton-3.7.1:
+      Successfully uninstalled triton-3.7.1
+  Attempting uninstall: nvidia-nccl-cu13
+    Found existing installation: nvidia-nccl-cu13 2.29.7
+    Uninstalling nvidia-nccl-cu13-2.29.7:
+      Successfully uninstalled nvidia-nccl-cu13-2.29.7
+  Attempting uninstall: nvidia-cublas
+    Found existing installation: nvidia-cublas 13.1.1.3
+    Uninstalling nvidia-cublas-13.1.1.3:
+      Successfully uninstalled nvidia-cublas-13.1.1.3
+  Attempting uninstall: apache-tvm-ffi
+    Found existing installation: apache-tvm-ffi 0.1.13
+    Uninstalling apache-tvm-ffi-0.1.13:
+      Successfully uninstalled apache-tvm-ffi-0.1.13
+  Attempting uninstall: nvidia-cudnn-cu13
+    Found existing installation: nvidia-cudnn-cu13 9.20.0.48
+    Uninstalling nvidia-cudnn-cu13-9.20.0.48:
+      Successfully uninstalled nvidia-cudnn-cu13-9.20.0.48
+  Attempting uninstall: torch
+    Found existing installation: torch 2.13.0
+    Uninstalling torch-2.13.0:
+      Successfully uninstalled torch-2.13.0
+  Attempting uninstall: tokenspeed-trtllm-kernel
+    Found existing installation: tokenspeed-trtllm-kernel 1.2.1.post20260427
+    Uninstalling tokenspeed-trtllm-kernel-1.2.1.post20260427:
+      Successfully uninstalled tokenspeed-trtllm-kernel-1.2.1.post20260427
+  Attempting uninstall: tokenspeed-fast-hadamard-transform
+    Found existing installation: tokenspeed-fast-hadamard-transform 1.1.0.post20251110
+    Uninstalling tokenspeed-fast-hadamard-transform-1.1.0.post20251110:
+      Successfully uninstalled tokenspeed-fast-hadamard-transform-1.1.0.post20251110
+  Attempting uninstall: tokenspeed-fa3
+    Found existing installation: tokenspeed-fa3 3.0.0.post20260408
+    Uninstalling tokenspeed-fa3-3.0.0.post20260408:
+      Successfully uninstalled tokenspeed-fa3-3.0.0.post20260408
+  Attempting uninstall: tokenspeed-mla
+    Found existing installation: tokenspeed-mla 0.2.1
+    Uninstalling tokenspeed-mla-0.2.1:
+      Successfully uninstalled tokenspeed-mla-0.2.1
+  Attempting uninstall: quack-kernels
+    Found existing installation: quack-kernels 0.6.3
+    Uninstalling quack-kernels-0.6.3:
+      Successfully uninstalled quack-kernels-0.6.3
+  Attempting uninstall: flashinfer-python
+    Found existing installation: flashinfer-python 0.6.16
+    Uninstalling flashinfer-python-0.6.16:
+      Successfully uninstalled flashinfer-python-0.6.16
+  Attempting uninstall: tokenspeed_kernel
+    Found existing installation: tokenspeed_kernel 0.1.3
+    Uninstalling tokenspeed_kernel-0.1.3:
+      Successfully uninstalled tokenspeed_kernel-0.1.3
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+torchvision 0.26.0 requires torch==2.11.0, but you have torch 2.13.0 which is incompatible.
+Successfully installed apache-tvm-ffi-0.1.13 cuda-toolkit-13.0.3.0 flashinfer-python-0.6.16 nvidia-cublas-13.1.1.3 nvidia-cudnn-cu13-9.20.0.48 nvidia-cusparselt-cu13-0.8.1 nvidia-nccl-cu13-2.29.7 quack-kernels-0.6.1 tokenspeed-cutedsl-kda-0.1.0.post20260817 tokenspeed-deepep-2.1.0.post20260810 tokenspeed-deepgemm-2.5.0.post20260810 tokenspeed-fa3-3.0.0.post20260810 tokenspeed-fast-hadamard-transform-1.1.0.post20260810 tokenspeed-flashkda-0.0.1.post20260810 tokenspeed-flashmla-1.0.0.post20260810 tokenspeed-mla-0.2.5 tokenspeed-trtllm-kernel-1.3.0.post20260817 tokenspeed_kernel-0.1.3.dev20260827+git4cb77148 torch-2.13.0 triton-3.7.1
+-- scheduler --
+Defaulting to user installation because normal site-packages is not writeable
+Obtaining file:///workspace/tokenspeed/tokenspeed-scheduler
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Getting requirements to build editable: started
+  Getting requirements to build editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: numpy in /home/runner/.local/lib/python3.12/site-packages (from tokenspeed-scheduler==0.1.9) (2.5.2)
+Building wheels for collected packages: tokenspeed-scheduler
+  Building editable for tokenspeed-scheduler (pyproject.toml): started
+  Building editable for tokenspeed-scheduler (pyproject.toml): finished with status 'done'
+  Created wheel for tokenspeed-scheduler: filename=tokenspeed_scheduler-0.1.9-cp312-cp312-linux_x86_64.whl size=442873 sha256=75703a5dbefe9234d3af7a16cc8de051a14c0c18f193ea934170b38ef7ad13af
+  Stored in directory: /tmp/pip-ephem-wheel-cache-tkt24bho/wheels/4a/9a/e0/e93272b7328c4512a4b8de7d305e8c870e1e83765660cfdd3e
+Successfully built tokenspeed-scheduler
+Installing collected packages: tokenspeed-scheduler
+  Attempting uninstall: tokenspeed-scheduler
+    Found existing installation: tokenspeed-scheduler 0.1.9
+    Uninstalling tokenspeed-scheduler-0.1.9:
+      Successfully uninstalled tokenspeed-scheduler-0.1.9
+Successfully installed tokenspeed-scheduler-0.1.9
+/home/runner/.local/lib/python3.12/site-packages/torch/cuda/__init__.py:188: UserWarning: CUDA initialization: CUDA unknown error - this may be due to an incorrectly set up environment, e.g. changing env variable CUDA_VISIBLE_DEVICES after program start. Setting the available devices to be zero. (Triggered internally at /__w/pytorch/pytorch/c10/cuda/CUDAFunctions.cpp:119.)
+  return torch._C._cuda_getDeviceCount() > 0
+Python: 3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]
+CUDA available: False
+PyTorch: 2.13.0+cu130
+tokenspeed: 0.1.0
+aiohttp: 3.14.3
+apache-tvm-ffi: 0.1.13
+compressed-tensors: 0.18.0
+dill: 0.4.1
+einops: 0.8.2
+fastapi: 0.141.1
+flashinfer-cubin: Package Not Found
+flashinfer-python: 0.6.16
+hf_transfer: 0.1.9
+huggingface_hub: 1.29.0
+instanttensor: Package Not Found
+modelscope: 1.39.1
+msgspec: 0.21.1
+ninja: 1.13.0
+numpy: 2.5.2
+nvidia-cutlass-dsl: 4.6.0
+nvidia-cutlass-dsl-libs-cu13: 4.6.0
+nvidia-ml-py: 13.580.82
+nvtx: 0.2.16
+openai: 3.5.0
+openai-harmony: 0.0.8
+orjson: 3.12.0
+packaging: 26.3
+partial-json-parser: 0.2.1.1.post7
+peft: 0.20.0
+pillow: 12.3.0
+prometheus-client: 0.26.0
+psutil: 7.2.2
+pybase64: 1.5.0
+pybind11: 3.1.0
+pydantic: 2.13.4
+py-spy: 0.4.2
+PyYAML: 6.0.3
+pytest-asyncio: 1.4.0
+python-multipart: 0.0.32
+pyzmq: 27.2.0
+quack-kernels: 0.6.1
+requests: 2.34.2
+setproctitle: 1.3.7
+tiktoken: 0.14.0
+tokenspeed-deepep: 2.1.0.post20260810
+tokenspeed-deepgemm: 2.5.0.post20260810
+tokenspeed-fa3: 3.0.0.post20260810
+tokenspeed-fa4: 4.0.0.post20260710
+tokenspeed-fast-hadamard-transform: 1.1.0.post20260810
+tokenspeed-flashmla: 1.0.0.post20260810
+tokenspeed-iris: Package Not Found
+tokenspeed-kernel: 0.1.3.dev20260827+git4cb77148
+tokenspeed-kernel-amd: Package Not Found
+tokenspeed-mla: 0.2.5
+tokenspeed-mooncake: 0.3.13.post20260825
+tokenspeed-proton: 3.8.10.post20260721
+tokenspeed-scheduler: 0.1.9
+tokenspeed-smg: 1.10.0.post20260827
+tokenspeed-smg-grpc-proto: 0.4.16.post20260827
+tokenspeed-smg-grpc-servicer: 0.9.1.post20260827
+tokenspeed-triton: 3.8.10.post20260721
+tokenspeed-trtllm-kernel: 1.3.0.post20260817
+torch: 2.13.0
+torch_memory_saver: 0.0.9.post1
+torchvision: 0.26.0
+tqdm: 4.70.0
+transformers: 5.12.0
+uv: 0.12.6
+uvicorn: 0.52.4
+uvloop: 0.22.1
+viztracer: 1.1.1
+xgrammar: 0.2.3
+NVIDIA Topology: 
+	[4mGPU0	GPU2	GPU3	CPU Affinity	NUMA Affinity	GPU NUMA ID[0m
+GPU0	 X 	NODE	NODE	0-119	0		N/A
+GPU2	NODE	 X 	NODE	0-119	0		N/A
+GPU3	NODE	NODE	 X 	0-119	0		N/A
+
+Legend:
+
+  X    = Self
+  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)
+  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node
+  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)
+  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)
+  PIX  = Connection traversing at most a single PCIe bridge
+  NV#  = Connection traversing a bonded set of # NVLinks
+
+ulimit soft: 1024
