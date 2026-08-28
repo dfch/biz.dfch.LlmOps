@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Simple start/stop/status wrapper around the llama-glm-5.2-q4
+# systemd --user service (UD-Q4_K_XL, 768K context).
+# WARNING: Do NOT run both glm-5.2 and glm-5.2-q4 at the same time.
+# Combined memory footprint (~1029 GB) exceeds system capacity (~896 GB).
+# See .specmgr/feat/feat-2-glm-5.2-onprem-deployment/README.md for detail.
+set -euo pipefail
+
+UNIT="llama-glm-5.2-q4.service"
+
+usage() {
+  echo "Usage: $(basename "$0") {start|stop|restart|status|logs}"
+  exit 1
+}
+
+[ $# -eq 1 ] || usage
+
+case "$1" in
+  start)   systemctl --user start "$UNIT" ;;
+  stop)    systemctl --user stop "$UNIT" ;;
+  restart) systemctl --user restart "$UNIT" ;;
+  status)  systemctl --user status "$UNIT" --no-pager ;;
+  logs)    journalctl --user -u "$UNIT" -f ;;
+  *)       usage ;;
+esac
