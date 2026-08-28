@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Simple start/stop/status wrapper around the qwen3.8-27b-bf16-896k
+# systemd --user service (TP=2, GPU0+GPU2, BF16, 896K/YaRN context).
+# See .specmgr/feat/feat-4-qwen3.8-27b-dell-7960t/README.md for detail.
+set -euo pipefail
+
+UNIT="qwen3.8-27b-bf16-896k.service"
+
+usage() {
+  echo "Usage: $(basename "$0") {start|stop|restart|status|logs}"
+  exit 1
+}
+
+[ $# -eq 1 ] || usage
+
+case "$1" in
+  start)   systemctl --user start "$UNIT" ;;
+  stop)    systemctl --user stop "$UNIT" ;;
+  restart) systemctl --user restart "$UNIT" ;;
+  status)  systemctl --user status "$UNIT" --no-pager ;;
+  logs)    journalctl --user -u "$UNIT" -f ;;
+  *)       usage ;;
+esac
