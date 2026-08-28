@@ -57,9 +57,22 @@ if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER"; then
   docker start "$CONTAINER" >>"$LOG" 2>&1
 else
   echo "== 2. Creating container ${CONTAINER} =="
+  # FLASHINFER_DISABLE_VERSION_CHECK=1 baked in at container-create time
+  # (2026-08-27 follow-up finding): the earlier fix only passed this env
+  # var to the one-off `docker exec` that ran the pip installs (step 4
+  # below), so it never applied to later `docker exec`/`tokenspeed serve`
+  # invocations against the *running* container -- a fresh `docker exec`
+  # without it still hit the exact
+  # "flashinfer-jit-cache version (0.6.17+cu130) does not match
+  # flashinfer version (0.6.16)" RuntimeError at import time, which in
+  # turn masked as what looked like a recurrence of the box-wide
+  # CUDA-context fault. Setting it via `-e` on `docker run` makes it part
+  # of the container's persistent environment for every future
+  # `docker exec`, not just this script's own install step.
   docker run -itd \
     --shm-size 32g \
     --gpus '"device=0,2,3"' \
+    -e FLASHINFER_DISABLE_VERSION_CHECK=1 \
     -v "${SRC}:/workspace/tokenspeed" \
     -v "${HF_CACHE}:/home/runner/.cache/huggingface:ro" \
     --ipc=host \

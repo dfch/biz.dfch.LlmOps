@@ -1,0 +1,639 @@
+████████  ██████  ██   ██ ███████ ███    ██  ███████ ██████  ███████ ███████ ██████  
+   ██    ██    ██ ██  ██  ██      ████   ██  ██      ██   ██ ██      ██      ██   ██ 
+   ██    ██    ██ █████   █████   ██ ██  ██  ███████ ██████  █████   █████   ██   ██ 
+   ██    ██    ██ ██  ██  ██      ██  ██ ██       ██ ██      ██      ██      ██   ██ 
+   ██     ██████  ██   ██ ███████ ██   ████  ███████ ██      ███████ ███████ ██████  
+                        Tokens at the speed of light · v0.1.0
+Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:22:37,251 None] - INFO - Inferred world_size (4) from attn_tp_size (4) x attn_cp_size (1) x attn_dp_size (None) x pp_size (1) (server_args.py:586)[0m
+[ts] [38;20m[2026-08-27 20:22:37,251 None] - INFO - Parallelism configuration:
+[ts] Mapping(rank=?, world_size=4)
+[ts]   Cluster : 1 node(s) x 4 proc(s)
+[ts]   Pipeline: pp=1
+[ts]   Attention: tp=4  cp=1  dp=1
+[ts]     Vision: tp=4  item_dp=1
+[ts]   Dense   : tp=4  dp=1
+[ts]   MoE     : tp=4  ep=1  dp=1 (server_args.py:693)[0m
+[ts] [38;20m[2026-08-27 20:22:37,333 None] - INFO - Auto-enabled allreduce fusion (server_args.py:760)[0m
+[ts] [38;20m[2026-08-27 20:22:37,333 None] - INFO - EPLB is enabled or init_expert_location is provided. ep_dispatch_algorithm is configured. (server_args.py:935)[0m
+[ts] 2026-08-27 20:22:37,334 [smg_grpc_servicer.tokenspeed.server] INFO Launching TokenSpeed scheduler + AsyncLLM...
+[ts] [38;20m[2026-08-27 20:22:37,339 ] - INFO - server_args=ServerArgs(model='Qwen/Qwen3.8-Flash-Next-FP8', tokenizer='Qwen/Qwen3.8-Flash-Next-FP8', tokenizer_mode='auto', skip_tokenizer_init=False, load_format='auto', trust_remote_code=True, dtype='auto', kv_cache_dtype='auto', kv_cache_quant_method='none', quantization='fp8', quantization_param_path=None, max_model_len=None, device='cuda', served_model_name='Qwen/Qwen3.8-Flash-Next-FP8', revision=None, language_model_only=False, zmq_msgpack=False, data_parallel_address='127.0.0.1', data_parallel_rpc_port=30500, zmq_engine_index=0, host='127.0.0.1', port=35697, gpu_memory_utilization=0.95, max_num_seqs=160, max_total_tokens=None, chunked_prefill_size=8192, max_prefill_tokens=8192, enable_mixed_batch=False, prefix_granularity=64, mamba_ssm_dtype='float32', stream_interval=1, stream_output=False, enable_inline_detokenizer=True, seed=379919935, distributed_timeout_seconds=None, download_dir=None, ext_yaml=None, base_gpu_id=0, gpu_id_step=1, log_level='info', log_level_http=None, enable_log_requests=False, log_requests_level=0, enable_log_request_stats=False, enable_metrics=False, decode_log_interval=40, metrics_reporters=['prometheus'], app_key=None, api_key=None, enable_cache_report=False, kv_events_config=None, rl_control_port=36243, weight_version='default', data_parallel_size=None, pipeline_parallel_size=1, pp_layer_partition=None, load_balance_method='shortest_queue', load_watch_interval=0.02, ep_size=1, init_expert_location='trivial', ep_num_redundant_experts=0, ep_dispatch_algorithm='static', eplb_algorithm='auto', expert_distribution_recorder_mode=None, expert_distribution_recorder_buffer_size=None, enable_expert_distribution_metrics=False, enable_eplb=False, moe_backend='flashinfer_cutlass', draft_moe_backend=None, all2all_backend='none', deepep_mode='auto', disable_flashinfer_cutlass_moe_fp4_allgather=False, enable_kvstore=False, kvstore_ratio=2.0, kvstore_size=0, kvstore_io_backend='kernel', kvstore_mem_layout='layer_first', kvstore_storage_backend=None, kvstore_storage_backend_extra_config=None, dist_init_addr=None, nnodes=1, node_rank=0, hf_overrides='{}', preferred_sampling_params=None, attention_backend=None, kda_backend='auto', drafter_attention_backend=None, sampling_backend='flashinfer', dp_sampling=False, dp_sampling_min_bs=None, attention_use_fp4_indexer_cache=None, use_trtllm_ragged_deepseek_prefill=None, deepseek_v4_mega_moe_max_num_tokens=0, deepseek_v4_indexer_prefill_max_logits_mb=512, deepseek_v4_prefill_chunk_size=4, grammar_backend='none', reasoning_parser=None, grammar_compile_timeout_secs=30.0, grammar_compile_max_retries=2, disable_any_whitespace=False, disable_capturable_grammar=False, draft_model_path_use_base=False, speculative_config=None, speculative_algorithm=None, speculative_draft_model_path=None, speculative_draft_model_quantization=None, speculative_num_steps=3, speculative_eagle_topk=1, speculative_num_draft_tokens=4, enable_replay_ssm=False, eagle3_layers_to_capture=None, enable_output_logprobs=False, disable_pdl=False, enable_prefix_caching=True, disable_kvstore=True, enforce_eager=False, disable_cuda_graph_padding=False, disable_autotune=False, enable_cudagraph_gc=False, disable_nccl_nvls=False, disable_symm_mem=False, disable_overlap_schedule=False, disable_tf32=False, force_deterministic_rsag=False, disable_sampling_tp_sync=False, low_latency_max_num_tokens_per_gpu=256, max_cudagraph_capture_size=160, disable_prefill_graph=False, prefill_graph_max_tokens=None, prefill_graph_capture_sizes=None, cudagraph_capture_sizes=None, enable_nan_detection=False, enable_nvtx=False, enable_p2p_check=False, triton_attention_reduce_in_fp32=False, delete_ckpt_after_loading=False, weight_loader_prefetch_checkpoints=True, weight_loader_prefetch_num_threads=4, enable_memory_saver=False, enable_custom_logit_processor=False, mla_disable_ragged=False, warmups=None, nprocs_per_node=None, world_size=None, attn_tp_size=4, dense_tp_size=None, moe_tp_size=None, mapping=Mapping(rank=?, world_size=4)
+[ts]   Cluster : 1 node(s) x 4 proc(s)
+[ts]   Pipeline: pp=1
+[ts]   Attention: tp=4  cp=1  dp=1
+[ts]     Vision: tp=4  item_dp=1
+[ts]   Dense   : tp=4  dp=1
+[ts]   MoE     : tp=4  ep=1  dp=1, mla_chunk_multiplier=4, mm_attention_backend=None, mm_encoder_tp_mode='weights', disaggregation_mode='null', disaggregation_bootstrap_port=8998, disaggregation_transfer_backend='mooncake', disaggregation_ib_device=None, disaggregation_layerwise_interval=1, pdlb_url=None, skip_server_warmup=False, comm_fusion_max_num_tokens=2048, enable_allreduce_fusion=True, enable_expert_parallel=False) (engine.py:529)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:37] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] /home/runner/.local/lib/python3.12/site-packages/transformers/modeling_rope_utils.py:1036: FutureWarning: `rope_config_validation` is deprecated and has been removed. Its functionality has been moved to RotaryEmbeddingConfigMixin.validate_rope method. PreTrainedConfig inherits this class, so please call self.validate_rope() instead. Also, make sure to use the new rope_parameters syntax. You can call self.standardize_rope_params() in the meantime.
+[ts]   warnings.warn(
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:38] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:22:38,113 ] - INFO - Clamping gpu_memory_utilization 0.95 -> 0.9 to leave headroom for the vision encoder. (model_config.py:509)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:38] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] Could not cache non-existence of file. Will ignore error and continue. Error: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/.no_exist'
+[ts] [2026-08-27 20:22:39] Could not cache non-existence of file. Will ignore error and continue. Error: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/.no_exist'
+[ts] Could not cache non-existence of file. Will ignore error and continue. Error: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/.no_exist'
+[ts] [2026-08-27 20:22:39] Could not cache non-existence of file. Will ignore error and continue. Error: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/.no_exist'
+[ts] USDT:2026-08-27 20:22:43 22049:22049 SyncActivityProfilerHandler.cpp:52] profiler_start
+[ts] USDT:2026-08-27 20:22:43 22049:22049 SyncActivityProfilerHandler.cpp:59] profiler_stop
+[ts] USDT:2026-08-27 20:22:43 22050:22050 SyncActivityProfilerHandler.cpp:52] profiler_start
+[ts] USDT:2026-08-27 20:22:43 22050:22050 SyncActivityProfilerHandler.cpp:59] profiler_stop
+[ts] USDT:2026-08-27 20:22:43 22048:22048 SyncActivityProfilerHandler.cpp:52] profiler_start
+[ts] USDT:2026-08-27 20:22:43 22048:22048 SyncActivityProfilerHandler.cpp:59] profiler_stop
+[ts] USDT:2026-08-27 20:22:43 22047:22047 SyncActivityProfilerHandler.cpp:52] profiler_start
+[ts] USDT:2026-08-27 20:22:43 22047:22047 SyncActivityProfilerHandler.cpp:59] profiler_stop
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:44 ATTN TP RANK 2] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] /home/runner/.local/lib/python3.12/site-packages/transformers/modeling_rope_utils.py:1036: FutureWarning: `rope_config_validation` is deprecated and has been removed. Its functionality has been moved to RotaryEmbeddingConfigMixin.validate_rope method. PreTrainedConfig inherits this class, so please call self.validate_rope() instead. Also, make sure to use the new rope_parameters syntax. You can call self.standardize_rope_params() in the meantime.
+[ts]   warnings.warn(
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:44 ATTN TP RANK 2] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:22:44,460  ATTN TP RANK 2] - INFO - Clamping gpu_memory_utilization 0.95 -> 0.9 to leave headroom for the vision encoder. (model_config.py:509)[0m
+[ts] [38;20m[2026-08-27 20:22:44,665  ATTN TP RANK 2] - INFO - Init torch distributed begin. Avail mem=94.4520 GB (distributed_initializer.py:131)[0m
+[ts] [2026-08-27 20:22:44 ATTN TP RANK 2] Worker process 22049 pinned to 120 NUMA-local CPUs for device 2.
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:44 ATTN TP RANK 0] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] /home/runner/.local/lib/python3.12/site-packages/transformers/modeling_rope_utils.py:1036: FutureWarning: `rope_config_validation` is deprecated and has been removed. Its functionality has been moved to RotaryEmbeddingConfigMixin.validate_rope method. PreTrainedConfig inherits this class, so please call self.validate_rope() instead. Also, make sure to use the new rope_parameters syntax. You can call self.standardize_rope_params() in the meantime.
+[ts]   warnings.warn(
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:45 ATTN TP RANK 0] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:22:45,261  ATTN TP RANK 0] - INFO - Clamping gpu_memory_utilization 0.95 -> 0.9 to leave headroom for the vision encoder. (model_config.py:509)[0m
+[ts] [38;20m[2026-08-27 20:22:45,351  ATTN TP RANK 0] - INFO - Init torch distributed begin. Avail mem=94.4523 GB (distributed_initializer.py:131)[0m
+[ts] [2026-08-27 20:22:45 ATTN TP RANK 0] Worker process 22047 pinned to 120 NUMA-local CPUs for device 0.
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:45 ATTN TP RANK 3] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] /home/runner/.local/lib/python3.12/site-packages/transformers/modeling_rope_utils.py:1036: FutureWarning: `rope_config_validation` is deprecated and has been removed. Its functionality has been moved to RotaryEmbeddingConfigMixin.validate_rope method. PreTrainedConfig inherits this class, so please call self.validate_rope() instead. Also, make sure to use the new rope_parameters syntax. You can call self.standardize_rope_params() in the meantime.
+[ts]   warnings.warn(
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:45 ATTN TP RANK 3] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:22:46,001  ATTN TP RANK 3] - INFO - Clamping gpu_memory_utilization 0.95 -> 0.9 to leave headroom for the vision encoder. (model_config.py:509)[0m
+[ts] [38;20m[2026-08-27 20:22:46,088  ATTN TP RANK 3] - INFO - Init torch distributed begin. Avail mem=94.4601 GB (distributed_initializer.py:131)[0m
+[ts] [2026-08-27 20:22:46 ATTN TP RANK 3] Worker process 22050 pinned to 120 NUMA-local CPUs for device 3.
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:46 ATTN TP RANK 1] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] /home/runner/.local/lib/python3.12/site-packages/transformers/modeling_rope_utils.py:1036: FutureWarning: `rope_config_validation` is deprecated and has been removed. Its functionality has been moved to RotaryEmbeddingConfigMixin.validate_rope method. PreTrainedConfig inherits this class, so please call self.validate_rope() instead. Also, make sure to use the new rope_parameters syntax. You can call self.standardize_rope_params() in the meantime.
+[ts]   warnings.warn(
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:47 ATTN TP RANK 1] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:22:47,036  ATTN TP RANK 1] - INFO - Clamping gpu_memory_utilization 0.95 -> 0.9 to leave headroom for the vision encoder. (model_config.py:509)[0m
+[ts] [38;20m[2026-08-27 20:22:47,127  ATTN TP RANK 1] - INFO - Init torch distributed begin. Avail mem=94.4523 GB (distributed_initializer.py:131)[0m
+[ts] [2026-08-27 20:22:47 ATTN TP RANK 1] Worker process 22048 pinned to 120 NUMA-local CPUs for device 1.
+[ts] [2026-08-27 20:22:47 ATTN TP RANK 3] Re/initializing TRT-LLM fusion IPC workspace: world_size=4 rank=3 max_token_num=409 hidden_dim=2560 use_fp32_lamport=False (prev max_token_num=None hidden_dim=None use_fp32_lamport=None)
+[ts] [2026-08-27 20:22:47 ATTN TP RANK 1] Re/initializing TRT-LLM fusion IPC workspace: world_size=4 rank=1 max_token_num=409 hidden_dim=2560 use_fp32_lamport=False (prev max_token_num=None hidden_dim=None use_fp32_lamport=None)
+[ts] [2026-08-27 20:22:47 ATTN TP RANK 0] Re/initializing TRT-LLM fusion IPC workspace: world_size=4 rank=0 max_token_num=409 hidden_dim=2560 use_fp32_lamport=False (prev max_token_num=None hidden_dim=None use_fp32_lamport=None)
+[ts] [2026-08-27 20:22:47 ATTN TP RANK 2] Re/initializing TRT-LLM fusion IPC workspace: world_size=4 rank=2 max_token_num=409 hidden_dim=2560 use_fp32_lamport=False (prev max_token_num=None hidden_dim=None use_fp32_lamport=None)
+[ts] [38;20m[2026-08-27 20:22:48,878  ATTN TP RANK 0] - INFO - trtllm one-shot all-reduce for group (0, 1, 2, 3): unavailable (NCCL fallback) (distributed_initializer.py:197)[0m
+[ts] [38;20m[2026-08-27 20:22:48,879  ATTN TP RANK 0] - INFO - Init comm buff end. Avail mem=93.6086 GB (distributed_initializer.py:203)[0m
+[ts] [38;20m[2026-08-27 20:22:48,879  ATTN TP RANK 0] - INFO - Current Process distributed state:  global rank: 0  attn_tp_rank: 0  attn_dp_rank: 0 (distributed_initializer.py:208)[0m
+[ts] [38;20m[2026-08-27 20:22:48,886  ATTN TP RANK 3] - INFO - trtllm one-shot all-reduce for group (0, 1, 2, 3): unavailable (NCCL fallback) (distributed_initializer.py:197)[0m
+[ts] [38;20m[2026-08-27 20:22:48,887  ATTN TP RANK 3] - INFO - Init comm buff end. Avail mem=93.6164 GB (distributed_initializer.py:203)[0m
+[ts] [38;20m[2026-08-27 20:22:48,887  ATTN TP RANK 3] - INFO - Current Process distributed state:  global rank: 3  attn_tp_rank: 3  attn_dp_rank: 0 (distributed_initializer.py:208)[0m
+[ts] [38;20m[2026-08-27 20:22:48,893  ATTN TP RANK 1] - INFO - trtllm one-shot all-reduce for group (0, 1, 2, 3): unavailable (NCCL fallback) (distributed_initializer.py:197)[0m
+[ts] [38;20m[2026-08-27 20:22:48,893  ATTN TP RANK 1] - INFO - Init comm buff end. Avail mem=93.6086 GB (distributed_initializer.py:203)[0m
+[ts] [38;20m[2026-08-27 20:22:48,893  ATTN TP RANK 1] - INFO - Current Process distributed state:  global rank: 1  attn_tp_rank: 1  attn_dp_rank: 0 (distributed_initializer.py:208)[0m
+[ts] [38;20m[2026-08-27 20:22:48,921  ATTN TP RANK 2] - INFO - trtllm one-shot all-reduce for group (0, 1, 2, 3): unavailable (NCCL fallback) (distributed_initializer.py:197)[0m
+[ts] [38;20m[2026-08-27 20:22:48,921  ATTN TP RANK 2] - INFO - Init comm buff end. Avail mem=93.6082 GB (distributed_initializer.py:203)[0m
+[ts] [38;20m[2026-08-27 20:22:48,921  ATTN TP RANK 2] - INFO - Current Process distributed state:  global rank: 2  attn_tp_rank: 2  attn_dp_rank: 0 (distributed_initializer.py:208)[0m
+[ts] [38;20m[2026-08-27 20:22:48,923  ATTN TP RANK 3] - INFO - Load weight begin. avail mem=93.62 GB (weight_loader.py:65)[0m
+[ts] [38;20m[2026-08-27 20:22:48,923  ATTN TP RANK 0] - INFO - Load weight begin. avail mem=93.61 GB (weight_loader.py:65)[0m
+[ts] [38;20m[2026-08-27 20:22:48,924  ATTN TP RANK 1] - INFO - Load weight begin. avail mem=93.61 GB (weight_loader.py:65)[0m
+[ts] [38;20m[2026-08-27 20:22:48,924  ATTN TP RANK 2] - INFO - Load weight begin. avail mem=93.61 GB (weight_loader.py:65)[0m
+[ts] [2026-08-27 20:22:49 ATTN TP RANK 0] Detected fp8 checkpoint.
+[ts] [2026-08-27 20:22:49 ATTN TP RANK 3] using attn output gate!
+[ts] [2026-08-27 20:22:49 ATTN TP RANK 0] using attn output gate!
+[ts] [2026-08-27 20:22:49 ATTN TP RANK 1] using attn output gate!
+[ts] [2026-08-27 20:22:49 ATTN TP RANK 2] using attn output gate!
+[ts] [2026-08-27 20:22:49 ATTN TP RANK 0] multimodal encoder attention backend: triton_attn (auto)
+[ts] [2026-08-27 20:22:49 ATTN TP RANK 3] multimodal encoder attention backend: triton_attn (auto)
+[ts] [2026-08-27 20:22:49 ATTN TP RANK 1] multimodal encoder attention backend: triton_attn (auto)
+[ts] [2026-08-27 20:22:49 ATTN TP RANK 2] multimodal encoder attention backend: triton_attn (auto)
+[ts] [38;20m[2026-08-27 20:22:49,717  ATTN TP RANK 3] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] [38;20m[2026-08-27 20:22:49,723  ATTN TP RANK 0] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] [38;20m[2026-08-27 20:22:49,724  ATTN TP RANK 1] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] [38;20m[2026-08-27 20:22:49,735  ATTN TP RANK 2] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:50 ATTN TP RANK 3] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:22:50,423  ATTN TP RANK 3] - INFO - Prefetching 131 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:50 ATTN TP RANK 0] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:22:50,845  ATTN TP RANK 0] - INFO - Prefetching 131 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Loading safetensors checkpoint shards:   0% Completed | 0/131 [00:00<?, ?it/s]
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:50 ATTN TP RANK 1] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] Loading safetensors checkpoint shards:   1% Completed | 1/131 [00:00<00:43,  3.00it/s]
+[ts] [38;20m[2026-08-27 20:22:51,396  ATTN TP RANK 1] - INFO - Prefetching 131 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:22:51 ATTN TP RANK 2] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] Loading safetensors checkpoint shards:   2% Completed | 2/131 [00:00<00:40,  3.21it/s]
+[ts] [38;20m[2026-08-27 20:22:51,869  ATTN TP RANK 2] - INFO - Prefetching 131 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Loading safetensors checkpoint shards:   2% Completed | 3/131 [00:08<08:04,  3.78s/it]
+[ts] Loading safetensors checkpoint shards:   3% Completed | 4/131 [00:08<05:07,  2.42s/it]
+[ts] Loading safetensors checkpoint shards:   4% Completed | 5/131 [00:22<13:21,  6.36s/it]
+[ts] Loading safetensors checkpoint shards:   5% Completed | 6/131 [00:22<08:58,  4.31s/it]
+[ts] Loading safetensors checkpoint shards:   5% Completed | 7/131 [00:36<15:10,  7.34s/it]
+[ts] Loading safetensors checkpoint shards:   6% Completed | 8/131 [00:49<19:07,  9.33s/it]
+[ts] Loading safetensors checkpoint shards:   7% Completed | 9/131 [01:03<21:41, 10.66s/it]
+[ts] Loading safetensors checkpoint shards:   8% Completed | 10/131 [01:16<23:15, 11.54s/it]
+[ts] Loading safetensors checkpoint shards:   8% Completed | 11/131 [01:30<24:18, 12.15s/it]
+[ts] Loading safetensors checkpoint shards:   9% Completed | 12/131 [01:44<25:05, 12.65s/it]
+[ts] Loading safetensors checkpoint shards:  10% Completed | 13/131 [01:51<21:26, 10.90s/it]
+[ts] Loading safetensors checkpoint shards:  26% Completed | 34/131 [01:51<01:45,  1.08s/it]
+[ts] Loading safetensors checkpoint shards:  31% Completed | 41/131 [01:52<01:13,  1.23it/s]
+[ts] Loading safetensors checkpoint shards:  35% Completed | 46/131 [01:54<00:59,  1.43it/s]
+[ts] Loading safetensors checkpoint shards:  38% Completed | 50/131 [01:55<00:49,  1.62it/s]
+[ts] Loading safetensors checkpoint shards:  40% Completed | 53/131 [01:56<00:43,  1.79it/s]
+[ts] Loading safetensors checkpoint shards:  42% Completed | 55/131 [01:56<00:39,  1.92it/s]
+[ts] Loading safetensors checkpoint shards:  44% Completed | 57/131 [01:57<00:37,  1.97it/s]
+[ts] Loading safetensors checkpoint shards:  45% Completed | 59/131 [01:58<00:33,  2.15it/s]
+[ts] Loading safetensors checkpoint shards:  47% Completed | 61/131 [01:58<00:28,  2.48it/s]
+[ts] Loading safetensors checkpoint shards:  47% Completed | 62/131 [01:58<00:27,  2.54it/s]
+[ts] Loading safetensors checkpoint shards:  48% Completed | 63/131 [01:59<00:25,  2.66it/s]
+[ts] Loading safetensors checkpoint shards:  49% Completed | 64/131 [01:59<00:23,  2.81it/s]
+[ts] Loading safetensors checkpoint shards:  50% Completed | 65/131 [01:59<00:22,  2.97it/s]
+[ts] Loading safetensors checkpoint shards:  50% Completed | 66/131 [02:00<00:21,  2.99it/s]
+[ts] Loading safetensors checkpoint shards:  51% Completed | 67/131 [02:00<00:21,  3.00it/s]
+[ts] Loading safetensors checkpoint shards:  52% Completed | 68/131 [02:00<00:20,  3.12it/s]
+[ts] [38;20m[2026-08-27 20:24:51,906  ATTN TP RANK 0] - INFO - Checkpoint prefetch finished after 121.06s. (weight_utils.py:528)[0m
+[ts] Loading safetensors checkpoint shards:  53% Completed | 69/131 [02:01<00:20,  3.06it/s]
+[ts] Loading safetensors checkpoint shards:  53% Completed | 70/131 [02:01<00:19,  3.19it/s]
+[ts] Loading safetensors checkpoint shards:  54% Completed | 71/131 [02:01<00:18,  3.29it/s]
+[ts] [38;20m[2026-08-27 20:24:52,588  ATTN TP RANK 3] - INFO - Checkpoint prefetch finished after 122.17s. (weight_utils.py:528)[0m
+[ts] Loading safetensors checkpoint shards:  55% Completed | 72/131 [02:01<00:18,  3.21it/s]
+[ts] [38;20m[2026-08-27 20:24:53,037  ATTN TP RANK 1] - INFO - Checkpoint prefetch finished after 121.64s. (weight_utils.py:528)[0m
+[ts] Loading safetensors checkpoint shards:  56% Completed | 73/131 [02:02<00:17,  3.39it/s]
+[ts] [38;20m[2026-08-27 20:24:53,121  ATTN TP RANK 2] - INFO - Checkpoint prefetch finished after 121.25s. (weight_utils.py:528)[0m
+[ts] Loading safetensors checkpoint shards:  56% Completed | 74/131 [02:02<00:17,  3.29it/s]
+[ts] Loading safetensors checkpoint shards:  57% Completed | 75/131 [02:02<00:16,  3.39it/s]
+[ts] Loading safetensors checkpoint shards:  58% Completed | 76/131 [02:03<00:15,  3.52it/s]
+[ts] Loading safetensors checkpoint shards:  59% Completed | 77/131 [02:03<00:15,  3.40it/s]
+[ts] Loading safetensors checkpoint shards:  60% Completed | 78/131 [02:03<00:15,  3.32it/s]
+[ts] Loading safetensors checkpoint shards:  60% Completed | 79/131 [02:04<00:15,  3.25it/s]
+[ts] Loading safetensors checkpoint shards:  61% Completed | 80/131 [02:04<00:15,  3.39it/s]
+[ts] Loading safetensors checkpoint shards:  62% Completed | 81/131 [02:04<00:15,  3.28it/s]
+[ts] Loading safetensors checkpoint shards:  63% Completed | 82/131 [02:04<00:14,  3.44it/s]
+[ts] Loading safetensors checkpoint shards:  63% Completed | 83/131 [02:05<00:13,  3.56it/s]
+[ts] Loading safetensors checkpoint shards:  64% Completed | 84/131 [02:05<00:13,  3.40it/s]
+[ts] Loading safetensors checkpoint shards:  65% Completed | 85/131 [02:05<00:13,  3.48it/s]
+[ts] Loading safetensors checkpoint shards:  66% Completed | 86/131 [02:06<00:13,  3.37it/s]
+[ts] Loading safetensors checkpoint shards:  66% Completed | 87/131 [02:06<00:13,  3.30it/s]
+[ts] Loading safetensors checkpoint shards:  67% Completed | 88/131 [02:06<00:12,  3.47it/s]
+[ts] Loading safetensors checkpoint shards:  68% Completed | 89/131 [02:06<00:11,  3.60it/s]
+[ts] Loading safetensors checkpoint shards:  69% Completed | 90/131 [02:07<00:11,  3.69it/s]
+[ts] Loading safetensors checkpoint shards:  69% Completed | 91/131 [02:07<00:11,  3.50it/s]
+[ts] Loading safetensors checkpoint shards:  70% Completed | 92/131 [02:07<00:11,  3.38it/s]
+[ts] Loading safetensors checkpoint shards:  71% Completed | 93/131 [02:08<00:10,  3.47it/s]
+[ts] Loading safetensors checkpoint shards:  72% Completed | 94/131 [02:08<00:11,  3.33it/s]
+[ts] Loading safetensors checkpoint shards:  73% Completed | 95/131 [02:08<00:10,  3.48it/s]
+[ts] Loading safetensors checkpoint shards:  73% Completed | 96/131 [02:08<00:10,  3.35it/s]
+[ts] Loading safetensors checkpoint shards:  74% Completed | 97/131 [02:09<00:09,  3.50it/s]
+[ts] Loading safetensors checkpoint shards:  75% Completed | 98/131 [02:09<00:09,  3.38it/s]
+[ts] Loading safetensors checkpoint shards:  76% Completed | 99/131 [02:09<00:09,  3.50it/s]
+[ts] Loading safetensors checkpoint shards:  76% Completed | 100/131 [02:10<00:09,  3.35it/s]
+[ts] Loading safetensors checkpoint shards:  77% Completed | 101/131 [02:10<00:08,  3.48it/s]
+[ts] Loading safetensors checkpoint shards:  78% Completed | 102/131 [02:10<00:08,  3.35it/s]
+[ts] Loading safetensors checkpoint shards:  79% Completed | 103/131 [02:11<00:08,  3.29it/s]
+[ts] Loading safetensors checkpoint shards:  79% Completed | 104/131 [02:11<00:07,  3.42it/s]
+[ts] Loading safetensors checkpoint shards:  80% Completed | 105/131 [02:11<00:07,  3.53it/s]
+[ts] Loading safetensors checkpoint shards:  81% Completed | 106/131 [02:11<00:07,  3.40it/s]
+[ts] Loading safetensors checkpoint shards:  82% Completed | 107/131 [02:12<00:06,  3.53it/s]
+[ts] Loading safetensors checkpoint shards:  82% Completed | 108/131 [02:12<00:06,  3.39it/s]
+[ts] Loading safetensors checkpoint shards:  83% Completed | 109/131 [02:12<00:06,  3.50it/s]
+[ts] Loading safetensors checkpoint shards:  84% Completed | 110/131 [02:12<00:05,  3.57it/s]
+[ts] Loading safetensors checkpoint shards:  85% Completed | 111/131 [02:13<00:05,  3.43it/s]
+[ts] Loading safetensors checkpoint shards:  85% Completed | 112/131 [02:13<00:05,  3.37it/s]
+[ts] Loading safetensors checkpoint shards:  86% Completed | 113/131 [02:13<00:05,  3.32it/s]
+[ts] Loading safetensors checkpoint shards:  87% Completed | 114/131 [02:14<00:04,  3.43it/s]
+[ts] Loading safetensors checkpoint shards:  88% Completed | 115/131 [02:14<00:04,  3.55it/s]
+[ts] Loading safetensors checkpoint shards:  89% Completed | 116/131 [02:14<00:04,  3.43it/s]
+[ts] Loading safetensors checkpoint shards:  89% Completed | 117/131 [02:15<00:03,  3.61it/s]
+[ts] Loading safetensors checkpoint shards:  90% Completed | 118/131 [02:15<00:03,  3.45it/s]
+[ts] Loading safetensors checkpoint shards:  91% Completed | 119/131 [02:15<00:03,  3.56it/s]
+[ts] Loading safetensors checkpoint shards:  92% Completed | 120/131 [02:15<00:03,  3.42it/s]
+[ts] Loading safetensors checkpoint shards:  92% Completed | 121/131 [02:16<00:02,  3.55it/s]
+[ts] Loading safetensors checkpoint shards:  93% Completed | 122/131 [02:16<00:02,  3.66it/s]
+[ts] Loading safetensors checkpoint shards:  94% Completed | 123/131 [02:16<00:02,  3.49it/s]
+[ts] Loading safetensors checkpoint shards:  95% Completed | 124/131 [02:17<00:02,  2.83it/s]
+[ts] Loading safetensors checkpoint shards:  95% Completed | 125/131 [02:17<00:02,  2.90it/s]
+[ts] Loading safetensors checkpoint shards:  96% Completed | 126/131 [02:17<00:01,  2.96it/s]
+[ts] Loading safetensors checkpoint shards:  97% Completed | 127/131 [02:18<00:01,  3.17it/s]
+[ts] Loading safetensors checkpoint shards:  98% Completed | 128/131 [02:18<00:00,  3.15it/s]
+[ts] Loading safetensors checkpoint shards:  99% Completed | 130/131 [02:18<00:00,  3.94it/s]
+[ts] Loading safetensors checkpoint shards: 100% Completed | 131/131 [02:19<00:00,  3.84it/s]
+[ts] Loading safetensors checkpoint shards: 100% Completed | 131/131 [02:19<00:00,  1.06s/it]
+[ts] 
+[ts] [38;20m[2026-08-27 20:25:10,069  ATTN TP RANK 0] - INFO - Load weight end. type=Qwen4ExpForConditionalGeneration, dtype=torch.bfloat16, avail mem=37.86 GB (weight_loader.py:117)[0m
+[ts] [38;20m[2026-08-27 20:25:10,273  ATTN TP RANK 3] - INFO - Load weight end. type=Qwen4ExpForConditionalGeneration, dtype=torch.bfloat16, avail mem=37.86 GB (weight_loader.py:117)[0m
+[ts] [38;20m[2026-08-27 20:25:11,614  ATTN TP RANK 1] - INFO - Load weight end. type=Qwen4ExpForConditionalGeneration, dtype=torch.bfloat16, avail mem=37.86 GB (weight_loader.py:117)[0m
+[ts] [38;20m[2026-08-27 20:25:11,724  ATTN TP RANK 2] - INFO - Load weight end. type=Qwen4ExpForConditionalGeneration, dtype=torch.bfloat16, avail mem=37.86 GB (weight_loader.py:117)[0m
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 2] Multimodal encoder warmup complete: modality=image feature_shapes=[(2304, 1536)] elapsed=1359.372 ms
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 0] Multimodal encoder warmup complete: modality=image feature_shapes=[(2304, 1536)] elapsed=3014.884 ms
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 3] Multimodal encoder warmup complete: modality=image feature_shapes=[(2304, 1536)] elapsed=2810.749 ms
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 1] Multimodal encoder warmup complete: modality=image feature_shapes=[(2304, 1536)] elapsed=1469.841 ms
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 2] Multimodal encoder warmup complete: modality=video feature_shapes=[(4608, 1536)] elapsed=63.847 ms
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 3] Multimodal encoder warmup complete: modality=video feature_shapes=[(4608, 1536)] elapsed=63.941 ms
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 0] Multimodal encoder warmup complete: modality=video feature_shapes=[(4608, 1536)] elapsed=63.913 ms
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 1] Multimodal encoder warmup complete: modality=video feature_shapes=[(4608, 1536)] elapsed=63.922 ms
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 0] Cache profile: parent_bytes=50918400, P=256, parents=598, token_capacity=117112320, layers=48 (draft 0), groups={'full_attention': 6, 'linear_attention_0': 1, 'linear_attention_1': 1, 'linear_attention_2': 1, 'qwen4_exp_ple': 52, 'qwen4_exp_qsa': 48, 'qwen4_exp_qsa_recent': 765}
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 3] Cache profile: parent_bytes=50918400, P=256, parents=598, token_capacity=117112320, layers=48 (draft 0), groups={'full_attention': 6, 'linear_attention_0': 1, 'linear_attention_1': 1, 'linear_attention_2': 1, 'qwen4_exp_ple': 52, 'qwen4_exp_qsa': 48, 'qwen4_exp_qsa_recent': 765}
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 1] Cache profile: parent_bytes=50918400, P=256, parents=598, token_capacity=117112320, layers=48 (draft 0), groups={'full_attention': 6, 'linear_attention_0': 1, 'linear_attention_1': 1, 'linear_attention_2': 1, 'qwen4_exp_ple': 52, 'qwen4_exp_qsa': 48, 'qwen4_exp_qsa_recent': 765}
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 2] Cache profile: parent_bytes=50918400, P=256, parents=598, token_capacity=117112320, layers=48 (draft 0), groups={'full_attention': 6, 'linear_attention_0': 1, 'linear_attention_1': 1, 'linear_attention_2': 1, 'qwen4_exp_ple': 52, 'qwen4_exp_qsa': 48, 'qwen4_exp_qsa_recent': 765}
+[ts] [38;20m[2026-08-27 20:25:13,163  ATTN TP RANK 3] - INFO - Allocated cache arena: 30500121600 bytes, prefix_granularity=256, num_lcm_blocks=598, device cuda (arena.py:117)[0m
+[ts] [38;20m[2026-08-27 20:25:13,163  ATTN TP RANK 0] - INFO - Allocated cache arena: 30500121600 bytes, prefix_granularity=256, num_lcm_blocks=598, device cuda (arena.py:117)[0m
+[ts] [38;20m[2026-08-27 20:25:13,164  ATTN TP RANK 1] - INFO - Allocated cache arena: 30500121600 bytes, prefix_granularity=256, num_lcm_blocks=598, device cuda (arena.py:117)[0m
+[ts] [38;20m[2026-08-27 20:25:13,164  ATTN TP RANK 2] - INFO - Allocated cache arena: 30500121600 bytes, prefix_granularity=256, num_lcm_blocks=598, device cuda (arena.py:117)[0m
+[ts] [38;20m[2026-08-27 20:25:13,165  ATTN TP RANK 3] - INFO - Initialized cache view over 117112320 slots as torch.bfloat16, layers from 0, rank 3 (base.py:145)[0m
+[ts] [38;20m[2026-08-27 20:25:13,165  ATTN TP RANK 0] - INFO - Initialized cache view over 117112320 slots as torch.bfloat16, layers from 0, rank 0 (base.py:145)[0m
+[ts] [38;20m[2026-08-27 20:25:13,165  ATTN TP RANK 1] - INFO - Initialized cache view over 117112320 slots as torch.bfloat16, layers from 0, rank 1 (base.py:145)[0m
+[ts] [38;20m[2026-08-27 20:25:13,165  ATTN TP RANK 2] - INFO - Initialized cache view over 117112320 slots as torch.bfloat16, layers from 0, rank 2 (base.py:145)[0m
+[ts] [38;20m[2026-08-27 20:25:13,165  ATTN TP RANK 3] - INFO - KV Cache is allocated. K size: 5.26 GB, V size: 5.26 GB. (mha.py:91)[0m
+[ts] [38;20m[2026-08-27 20:25:13,165  ATTN TP RANK 0] - INFO - KV Cache is allocated. K size: 5.26 GB, V size: 5.26 GB. (mha.py:91)[0m
+[ts] [38;20m[2026-08-27 20:25:13,165  ATTN TP RANK 1] - INFO - KV Cache is allocated. K size: 5.26 GB, V size: 5.26 GB. (mha.py:91)[0m
+[ts] [38;20m[2026-08-27 20:25:13,165  ATTN TP RANK 2] - INFO - KV Cache is allocated. K size: 5.26 GB, V size: 5.26 GB. (mha.py:91)[0m
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 3] Created hybrid_linear_attn backend: 12 full attn layers, 36 linear attn layers, LCM state fields
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 0] Created hybrid_linear_attn backend: 12 full attn layers, 36 linear attn layers, LCM state fields
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 1] Created hybrid_linear_attn backend: 12 full attn layers, 36 linear attn layers, LCM state fields
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 2] Created hybrid_linear_attn backend: 12 full attn layers, 36 linear attn layers, LCM state fields
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 1] Batch-DP spec-verify: requested=False, infra_supports=False, enabled=False min_bs=None (drafter=False, backend_supports_dp=True, tp_size=4, tp_group=True)
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 0] Batch-DP spec-verify: requested=False, infra_supports=False, enabled=False min_bs=None (drafter=False, backend_supports_dp=True, tp_size=4, tp_group=True)
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 2] Batch-DP spec-verify: requested=False, infra_supports=False, enabled=False min_bs=None (drafter=False, backend_supports_dp=True, tp_size=4, tp_group=True)
+[ts] [2026-08-27 20:25:13 ATTN TP RANK 3] Batch-DP spec-verify: requested=False, infra_supports=False, enabled=False min_bs=None (drafter=False, backend_supports_dp=True, tp_size=4, tp_group=True)
+[ts] [38;20m[2026-08-27 20:25:13,203  ATTN TP RANK 1] - INFO - Kernel tuning with a dummy prefill of 8192 tokens (model_executor.py:649)[0m
+[ts] [38;20m[2026-08-27 20:25:13,203  ATTN TP RANK 0] - INFO - Kernel tuning with a dummy prefill of 8192 tokens (model_executor.py:649)[0m
+[ts] [38;20m[2026-08-27 20:25:13,203  ATTN TP RANK 2] - INFO - Kernel tuning with a dummy prefill of 8192 tokens (model_executor.py:649)[0m
+[ts] 2026-08-27 20:25:13,204 - INFO - autotuner.py:829 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+[ts] [38;20m[2026-08-27 20:25:13,204  ATTN TP RANK 3] - INFO - Kernel tuning with a dummy prefill of 8192 tokens (model_executor.py:649)[0m
+[ts] 2026-08-27 20:25:13,204 - INFO - autotuner.py:829 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+[ts] 2026-08-27 20:25:13,204 - INFO - autotuner.py:829 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+[ts] 2026-08-27 20:25:13,204 - INFO - autotuner.py:829 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+[ts] 2026-08-27 20:25:15,071 - INFO - autotuner.py:852 - flashinfer.jit: [Autotuner]: Autotuning process ends
+[ts] 2026-08-27 20:25:15,071 - INFO - autotuner.py:852 - flashinfer.jit: [Autotuner]: Autotuning process ends
+[ts] 2026-08-27 20:25:15,071 - INFO - autotuner.py:852 - flashinfer.jit: [Autotuner]: Autotuning process ends
+[ts] 2026-08-27 20:25:15,071 - INFO - autotuner.py:852 - flashinfer.jit: [Autotuner]: Autotuning process ends
+[ts] [31;20m[2026-08-27 20:25:15,074  ATTN TP RANK 0] - ERROR - Scheduler hit an exception: Traceback (most recent call last):
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 1391, in run_event_loop
+[ts]     event_loop = EventLoop(
+[ts]                  ^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 248, in __init__
+[ts]     self.model_executor = create_model_executor(
+[ts]                           ^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/factory.py", line 166, in create_model_executor
+[ts]     return ModelExecutor(
+[ts]            ^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_executor.py", line 560, in __init__
+[ts]     self._autotune()
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_executor.py", line 661, in _autotune
+[ts]     self.model_runner.forward(
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_runner.py", line 226, in forward
+[ts]     return self.model.forward(
+[ts]            ^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5.py", line 1496, in forward
+[ts]     return super().forward(
+[ts]            ^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/base/causal_lm.py", line 196, in forward
+[ts]     hidden_states, aux_hidden_states = self.model(
+[ts]                                        ^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 577, in forward
+[ts]     hidden_states, residual = layer(
+[ts]                               ^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 326, in forward
+[ts]     return self._run_mlp(hidden_states, ctx), None
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 258, in _run_mlp
+[ts]     output = self.mlp(mixed, num_global_tokens, max_tokens_per_gpu, ctx)
+[ts]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5_moe.py", line 355, in forward
+[ts]     return self._forward_tp(
+[ts]            ^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5_moe.py", line 398, in _forward_tp
+[ts]     final_hidden_states = self.experts(
+[ts]                           ^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/moe/expert.py", line 393, in forward
+[ts]     return tokenspeed_kernel.moe_apply(
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/ops/moe/__init__.py", line 813, in moe_apply
+[ts]     return kernel(
+[ts]            ^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/selection.py", line 73, in __call__
+[ts]     return self.impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/ops/moe/flashinfer/cutlass_fp8.py", line 106, in flashinfer_cutlass_fp8_moe_apply
+[ts]     return cutlass_fused_moe(
+[ts]            ^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/flashinfer/api_logging.py", line 2333, in _auto_dump_wrapper
+[ts]     return _inner(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/flashinfer/fused_moe/core.py", line 1099, in cutlass_fused_moe
+[ts]     raise NotImplementedError(
+[ts] NotImplementedError: FP8 block scaling not yet implemented for Blackwell.
+[ts]  (event_loop.py:1423)[0m
+[ts] [31;20m[2026-08-27 20:25:15,074  ATTN TP RANK 2] - ERROR - Scheduler hit an exception: Traceback (most recent call last):
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 1391, in run_event_loop
+[ts]     event_loop = EventLoop(
+[ts]                  ^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 248, in __init__
+[ts]     self.model_executor = create_model_executor(
+[ts]                           ^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/factory.py", line 166, in create_model_executor
+[ts]     return ModelExecutor(
+[ts]            ^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_executor.py", line 560, in __init__
+[ts]     self._autotune()
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_executor.py", line 661, in _autotune
+[ts]     self.model_runner.forward(
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_runner.py", line 226, in forward
+[ts]     return self.model.forward(
+[ts]            ^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5.py", line 1496, in forward
+[ts]     return super().forward(
+[ts]            ^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/base/causal_lm.py", line 196, in forward
+[ts]     hidden_states, aux_hidden_states = self.model(
+[ts]                                        ^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 577, in forward
+[ts]     hidden_states, residual = layer(
+[ts]                               ^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 326, in forward
+[ts]     return self._run_mlp(hidden_states, ctx), None
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 258, in _run_mlp
+[ts]     output = self.mlp(mixed, num_global_tokens, max_tokens_per_gpu, ctx)
+[ts]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5_moe.py", line 355, in forward
+[ts]     return self._forward_tp(
+[ts]            ^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5_moe.py", line 398, in _forward_tp
+[ts]     final_hidden_states = self.experts(
+[ts]                           ^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/moe/expert.py", line 393, in forward
+[ts]     return tokenspeed_kernel.moe_apply(
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/ops/moe/__init__.py", line 813, in moe_apply
+[ts]     return kernel(
+[ts]            ^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/selection.py", line 73, in __call__
+[ts]     return self.impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/ops/moe/flashinfer/cutlass_fp8.py", line 106, in flashinfer_cutlass_fp8_moe_apply
+[ts]     return cutlass_fused_moe(
+[ts]            ^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/flashinfer/api_logging.py", line 2333, in _auto_dump_wrapper
+[ts]     return _inner(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/flashinfer/fused_moe/core.py", line 1099, in cutlass_fused_moe
+[ts]     raise NotImplementedError(
+[ts] NotImplementedError: FP8 block scaling not yet implemented for Blackwell.
+[ts]  (event_loop.py:1423)[0m
+[ts] [31;20m[2026-08-27 20:25:15,074  ATTN TP RANK 1] - ERROR - Scheduler hit an exception: Traceback (most recent call last):
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 1391, in run_event_loop
+[ts]     event_loop = EventLoop(
+[ts]                  ^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 248, in __init__
+[ts]     self.model_executor = create_model_executor(
+[ts]                           ^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/factory.py", line 166, in create_model_executor
+[ts]     return ModelExecutor(
+[ts]            ^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_executor.py", line 560, in __init__
+[ts]     self._autotune()
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_executor.py", line 661, in _autotune
+[ts]     self.model_runner.forward(
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_runner.py", line 226, in forward
+[ts]     return self.model.forward(
+[ts]            ^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5.py", line 1496, in forward
+[ts]     return super().forward(
+[ts]            ^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/base/causal_lm.py", line 196, in forward
+[ts]     hidden_states, aux_hidden_states = self.model(
+[ts]                                        ^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 577, in forward
+[ts]     hidden_states, residual = layer(
+[ts]                               ^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 326, in forward
+[ts]     return self._run_mlp(hidden_states, ctx), None
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 258, in _run_mlp
+[ts]     output = self.mlp(mixed, num_global_tokens, max_tokens_per_gpu, ctx)
+[ts]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5_moe.py", line 355, in forward
+[ts]     return self._forward_tp(
+[ts]            ^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5_moe.py", line 398, in _forward_tp
+[ts]     final_hidden_states = self.experts(
+[ts]                           ^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/moe/expert.py", line 393, in forward
+[ts]     return tokenspeed_kernel.moe_apply(
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/ops/moe/__init__.py", line 813, in moe_apply
+[ts]     return kernel(
+[ts]            ^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/selection.py", line 73, in __call__
+[ts]     return self.impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/ops/moe/flashinfer/cutlass_fp8.py", line 106, in flashinfer_cutlass_fp8_moe_apply
+[ts]     return cutlass_fused_moe(
+[ts]            ^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/flashinfer/api_logging.py", line 2333, in _auto_dump_wrapper
+[ts]     return _inner(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/flashinfer/fused_moe/core.py", line 1099, in cutlass_fused_moe
+[ts]     raise NotImplementedError(
+[ts] NotImplementedError: FP8 block scaling not yet implemented for Blackwell.
+[ts]  (event_loop.py:1423)[0m
+[ts] [31;20m[2026-08-27 20:25:15,074  ATTN TP RANK 3] - ERROR - Scheduler hit an exception: Traceback (most recent call last):
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 1391, in run_event_loop
+[ts]     event_loop = EventLoop(
+[ts]                  ^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 248, in __init__
+[ts]     self.model_executor = create_model_executor(
+[ts]                           ^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/factory.py", line 166, in create_model_executor
+[ts]     return ModelExecutor(
+[ts]            ^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_executor.py", line 560, in __init__
+[ts]     self._autotune()
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_executor.py", line 661, in _autotune
+[ts]     self.model_runner.forward(
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/execution/model_runner.py", line 226, in forward
+[ts]     return self.model.forward(
+[ts]            ^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5.py", line 1496, in forward
+[ts]     return super().forward(
+[ts]            ^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/base/causal_lm.py", line 196, in forward
+[ts]     hidden_states, aux_hidden_states = self.model(
+[ts]                                        ^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+[ts]     return func(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 577, in forward
+[ts]     hidden_states, residual = layer(
+[ts]                               ^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 326, in forward
+[ts]     return self._run_mlp(hidden_states, ctx), None
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen4_exp.py", line 258, in _run_mlp
+[ts]     output = self.mlp(mixed, num_global_tokens, max_tokens_per_gpu, ctx)
+[ts]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5_moe.py", line 355, in forward
+[ts]     return self._forward_tp(
+[ts]            ^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/models/qwen3_5_moe.py", line 398, in _forward_tp
+[ts]     final_hidden_states = self.experts(
+[ts]                           ^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+[ts]     return self._call_impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+[ts]     return forward_call(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/moe/expert.py", line 393, in forward
+[ts]     return tokenspeed_kernel.moe_apply(
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/ops/moe/__init__.py", line 813, in moe_apply
+[ts]     return kernel(
+[ts]            ^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/selection.py", line 73, in __call__
+[ts]     return self.impl(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/tokenspeed-kernel/python/tokenspeed_kernel/ops/moe/flashinfer/cutlass_fp8.py", line 106, in flashinfer_cutlass_fp8_moe_apply
+[ts]     return cutlass_fused_moe(
+[ts]            ^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/flashinfer/api_logging.py", line 2333, in _auto_dump_wrapper
+[ts]     return _inner(*args, **kwargs)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/flashinfer/fused_moe/core.py", line 1099, in cutlass_fused_moe
+[ts]     raise NotImplementedError(
+[ts] NotImplementedError: FP8 block scaling not yet implemented for Blackwell.
+[ts]  (event_loop.py:1423)[0m
+startup failed: ts subprocess exited with rc=-10 during startup; see [ts] log lines above for the cause
+[ts] [2026-08-27 20:22:47.707] [info] lamportInitialize start: buffer: 0x70c9ed000000, size: 12582912
+[ts] [2026-08-27 20:22:47.707] [info] lamportInitialize start: buffer: 0x7d3c4d000000, size: 12582912
+[ts] [2026-08-27 20:22:47.707] [info] lamportInitialize start: buffer: 0x709f6d000000, size: 12582912
+[ts] [2026-08-27 20:22:47.707] [info] lamportInitialize start: buffer: 0x7a81ed000000, size: 12582912

@@ -1,0 +1,608 @@
+████████  ██████  ██   ██ ███████ ███    ██  ███████ ██████  ███████ ███████ ██████  
+   ██    ██    ██ ██  ██  ██      ████   ██  ██      ██   ██ ██      ██      ██   ██ 
+   ██    ██    ██ █████   █████   ██ ██  ██  ███████ ██████  █████   █████   ██   ██ 
+   ██    ██    ██ ██  ██  ██      ██  ██ ██       ██ ██      ██      ██      ██   ██ 
+   ██     ██████  ██   ██ ███████ ██   ████  ███████ ██      ███████ ███████ ██████  
+                        Tokens at the speed of light · v0.1.0
+Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:35,292 None] - INFO - Inferred world_size (4) from attn_tp_size (4) x attn_cp_size (1) x attn_dp_size (None) x pp_size (1) (server_args.py:586)[0m
+[ts] [38;20m[2026-08-27 20:01:35,293 None] - INFO - Parallelism configuration:
+[ts] Mapping(rank=?, world_size=4)
+[ts]   Cluster : 1 node(s) x 4 proc(s)
+[ts]   Pipeline: pp=1
+[ts]   Attention: tp=4  cp=1  dp=1
+[ts]     Vision: tp=4  item_dp=1
+[ts]   Dense   : tp=4  dp=1
+[ts]   MoE     : tp=4  ep=1  dp=1 (server_args.py:693)[0m
+[ts] [38;20m[2026-08-27 20:01:35,354 None] - INFO - Auto-enabled allreduce fusion (server_args.py:760)[0m
+[ts] [38;20m[2026-08-27 20:01:35,354 None] - INFO - EPLB is enabled or init_expert_location is provided. ep_dispatch_algorithm is configured. (server_args.py:935)[0m
+[ts] 2026-08-27 20:01:35,363 [smg_grpc_servicer.tokenspeed.server] INFO Launching TokenSpeed scheduler + AsyncLLM...
+[ts] [38;20m[2026-08-27 20:01:35,370 ] - INFO - server_args=ServerArgs(model='Qwen/Qwen3.8-Flash-Next-FP8', tokenizer='Qwen/Qwen3.8-Flash-Next-FP8', tokenizer_mode='auto', skip_tokenizer_init=False, load_format='auto', trust_remote_code=True, dtype='auto', kv_cache_dtype='auto', kv_cache_quant_method='none', quantization='fp8', quantization_param_path=None, max_model_len=None, device='cuda', served_model_name='Qwen/Qwen3.8-Flash-Next-FP8', revision=None, language_model_only=False, zmq_msgpack=False, data_parallel_address='127.0.0.1', data_parallel_rpc_port=30500, zmq_engine_index=0, host='127.0.0.1', port=37313, gpu_memory_utilization=0.95, max_num_seqs=80, max_total_tokens=None, chunked_prefill_size=8192, max_prefill_tokens=8192, enable_mixed_batch=False, prefix_granularity=64, mamba_ssm_dtype='float32', stream_interval=1, stream_output=False, enable_inline_detokenizer=True, seed=81029096, distributed_timeout_seconds=None, download_dir=None, ext_yaml=None, base_gpu_id=0, gpu_id_step=1, log_level='info', log_level_http=None, enable_log_requests=False, log_requests_level=0, enable_log_request_stats=False, enable_metrics=False, decode_log_interval=40, metrics_reporters=['prometheus'], app_key=None, api_key=None, enable_cache_report=False, kv_events_config=None, rl_control_port=44749, weight_version='default', data_parallel_size=None, pipeline_parallel_size=1, pp_layer_partition=None, load_balance_method='shortest_queue', load_watch_interval=0.02, ep_size=1, init_expert_location='trivial', ep_num_redundant_experts=0, ep_dispatch_algorithm='static', eplb_algorithm='auto', expert_distribution_recorder_mode=None, expert_distribution_recorder_buffer_size=None, enable_expert_distribution_metrics=False, enable_eplb=False, moe_backend='flashinfer_trtllm', draft_moe_backend=None, all2all_backend='none', deepep_mode='auto', disable_flashinfer_cutlass_moe_fp4_allgather=False, enable_kvstore=False, kvstore_ratio=2.0, kvstore_size=0, kvstore_io_backend='kernel', kvstore_mem_layout='layer_first', kvstore_storage_backend=None, kvstore_storage_backend_extra_config=None, dist_init_addr=None, nnodes=1, node_rank=0, hf_overrides='{}', preferred_sampling_params=None, attention_backend=None, kda_backend='auto', drafter_attention_backend=None, sampling_backend='flashinfer', dp_sampling=False, dp_sampling_min_bs=None, attention_use_fp4_indexer_cache=None, use_trtllm_ragged_deepseek_prefill=None, deepseek_v4_mega_moe_max_num_tokens=0, deepseek_v4_indexer_prefill_max_logits_mb=512, deepseek_v4_prefill_chunk_size=4, grammar_backend='none', reasoning_parser=None, grammar_compile_timeout_secs=30.0, grammar_compile_max_retries=2, disable_any_whitespace=False, disable_capturable_grammar=False, draft_model_path_use_base=True, speculative_config=None, speculative_algorithm='MTP', speculative_draft_model_path='Qwen/Qwen3.8-Flash-Next-FP8', speculative_draft_model_quantization=None, speculative_num_steps=3, speculative_eagle_topk=1, speculative_num_draft_tokens=4, enable_replay_ssm=False, eagle3_layers_to_capture=None, enable_output_logprobs=False, disable_pdl=False, enable_prefix_caching=True, disable_kvstore=True, enforce_eager=False, disable_cuda_graph_padding=False, disable_autotune=False, enable_cudagraph_gc=False, disable_nccl_nvls=False, disable_symm_mem=False, disable_overlap_schedule=False, disable_tf32=False, force_deterministic_rsag=False, disable_sampling_tp_sync=False, low_latency_max_num_tokens_per_gpu=256, max_cudagraph_capture_size=80, disable_prefill_graph=False, prefill_graph_max_tokens=None, prefill_graph_capture_sizes=None, cudagraph_capture_sizes=None, enable_nan_detection=False, enable_nvtx=False, enable_p2p_check=False, triton_attention_reduce_in_fp32=False, delete_ckpt_after_loading=False, weight_loader_prefetch_checkpoints=True, weight_loader_prefetch_num_threads=4, enable_memory_saver=False, enable_custom_logit_processor=False, mla_disable_ragged=False, warmups=None, nprocs_per_node=None, world_size=None, attn_tp_size=4, dense_tp_size=None, moe_tp_size=None, mapping=Mapping(rank=?, world_size=4)
+[ts]   Cluster : 1 node(s) x 4 proc(s)
+[ts]   Pipeline: pp=1
+[ts]   Attention: tp=4  cp=1  dp=1
+[ts]     Vision: tp=4  item_dp=1
+[ts]   Dense   : tp=4  dp=1
+[ts]   MoE     : tp=4  ep=1  dp=1, mla_chunk_multiplier=4, mm_attention_backend=None, mm_encoder_tp_mode='weights', disaggregation_mode='null', disaggregation_bootstrap_port=8998, disaggregation_transfer_backend='mooncake', disaggregation_ib_device=None, disaggregation_layerwise_interval=1, pdlb_url=None, skip_server_warmup=False, comm_fusion_max_num_tokens=2048, enable_allreduce_fusion=True, enable_expert_parallel=False) (engine.py:529)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:35] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] /home/runner/.local/lib/python3.12/site-packages/transformers/modeling_rope_utils.py:1036: FutureWarning: `rope_config_validation` is deprecated and has been removed. Its functionality has been moved to RotaryEmbeddingConfigMixin.validate_rope method. PreTrainedConfig inherits this class, so please call self.validate_rope() instead. Also, make sure to use the new rope_parameters syntax. You can call self.standardize_rope_params() in the meantime.
+[ts]   warnings.warn(
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:36] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:36,078 ] - INFO - Clamping gpu_memory_utilization 0.95 -> 0.9 to leave headroom for the vision encoder. (model_config.py:509)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:36] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] Could not cache non-existence of file. Will ignore error and continue. Error: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/.no_exist'
+[ts] [2026-08-27 20:01:37] Could not cache non-existence of file. Will ignore error and continue. Error: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/.no_exist'
+[ts] Could not cache non-existence of file. Will ignore error and continue. Error: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/.no_exist'
+[ts] [2026-08-27 20:01:37] Could not cache non-existence of file. Will ignore error and continue. Error: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/.no_exist'
+[ts] USDT:2026-08-27 20:01:41 13885:13885 SyncActivityProfilerHandler.cpp:52] profiler_start
+[ts] USDT:2026-08-27 20:01:41 13885:13885 SyncActivityProfilerHandler.cpp:59] profiler_stop
+[ts] USDT:2026-08-27 20:01:41 13882:13882 SyncActivityProfilerHandler.cpp:52] profiler_start
+[ts] USDT:2026-08-27 20:01:41 13884:13884 SyncActivityProfilerHandler.cpp:52] profiler_start
+[ts] USDT:2026-08-27 20:01:41 13882:13882 SyncActivityProfilerHandler.cpp:59] profiler_stop
+[ts] USDT:2026-08-27 20:01:41 13884:13884 SyncActivityProfilerHandler.cpp:59] profiler_stop
+[ts] USDT:2026-08-27 20:01:41 13883:13883 SyncActivityProfilerHandler.cpp:52] profiler_start
+[ts] USDT:2026-08-27 20:01:41 13883:13883 SyncActivityProfilerHandler.cpp:59] profiler_stop
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:41 ATTN TP RANK 3] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] /home/runner/.local/lib/python3.12/site-packages/transformers/modeling_rope_utils.py:1036: FutureWarning: `rope_config_validation` is deprecated and has been removed. Its functionality has been moved to RotaryEmbeddingConfigMixin.validate_rope method. PreTrainedConfig inherits this class, so please call self.validate_rope() instead. Also, make sure to use the new rope_parameters syntax. You can call self.standardize_rope_params() in the meantime.
+[ts]   warnings.warn(
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:41 ATTN TP RANK 3] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:41,619  ATTN TP RANK 3] - INFO - Clamping gpu_memory_utilization 0.95 -> 0.9 to leave headroom for the vision encoder. (model_config.py:509)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:41 ATTN TP RANK 3] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:41,902  ATTN TP RANK 3] - INFO - Init torch distributed begin. Avail mem=94.4601 GB (distributed_initializer.py:131)[0m
+[ts] [2026-08-27 20:01:41 ATTN TP RANK 3] Worker process 13885 pinned to 120 NUMA-local CPUs for device 3.
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:42 ATTN TP RANK 1] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] /home/runner/.local/lib/python3.12/site-packages/transformers/modeling_rope_utils.py:1036: FutureWarning: `rope_config_validation` is deprecated and has been removed. Its functionality has been moved to RotaryEmbeddingConfigMixin.validate_rope method. PreTrainedConfig inherits this class, so please call self.validate_rope() instead. Also, make sure to use the new rope_parameters syntax. You can call self.standardize_rope_params() in the meantime.
+[ts]   warnings.warn(
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:42 ATTN TP RANK 1] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:42,723  ATTN TP RANK 1] - INFO - Clamping gpu_memory_utilization 0.95 -> 0.9 to leave headroom for the vision encoder. (model_config.py:509)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:42 ATTN TP RANK 1] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:43,101  ATTN TP RANK 1] - INFO - Init torch distributed begin. Avail mem=94.4523 GB (distributed_initializer.py:131)[0m
+[ts] [2026-08-27 20:01:43 ATTN TP RANK 1] Worker process 13883 pinned to 120 NUMA-local CPUs for device 1.
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:43 ATTN TP RANK 2] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] /home/runner/.local/lib/python3.12/site-packages/transformers/modeling_rope_utils.py:1036: FutureWarning: `rope_config_validation` is deprecated and has been removed. Its functionality has been moved to RotaryEmbeddingConfigMixin.validate_rope method. PreTrainedConfig inherits this class, so please call self.validate_rope() instead. Also, make sure to use the new rope_parameters syntax. You can call self.standardize_rope_params() in the meantime.
+[ts]   warnings.warn(
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:43 ATTN TP RANK 2] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:43,923  ATTN TP RANK 2] - INFO - Clamping gpu_memory_utilization 0.95 -> 0.9 to leave headroom for the vision encoder. (model_config.py:509)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:44 ATTN TP RANK 2] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:44,389  ATTN TP RANK 2] - INFO - Init torch distributed begin. Avail mem=94.4520 GB (distributed_initializer.py:131)[0m
+[ts] [2026-08-27 20:01:44 ATTN TP RANK 2] Worker process 13884 pinned to 120 NUMA-local CPUs for device 2.
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:44 ATTN TP RANK 0] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] /home/runner/.local/lib/python3.12/site-packages/transformers/modeling_rope_utils.py:1036: FutureWarning: `rope_config_validation` is deprecated and has been removed. Its functionality has been moved to RotaryEmbeddingConfigMixin.validate_rope method. PreTrainedConfig inherits this class, so please call self.validate_rope() instead. Also, make sure to use the new rope_parameters syntax. You can call self.standardize_rope_params() in the meantime.
+[ts]   warnings.warn(
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:45 ATTN TP RANK 0] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:45,066  ATTN TP RANK 0] - INFO - Clamping gpu_memory_utilization 0.95 -> 0.9 to leave headroom for the vision encoder. (model_config.py:509)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:45 ATTN TP RANK 0] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:45,525  ATTN TP RANK 0] - INFO - Init torch distributed begin. Avail mem=94.4523 GB (distributed_initializer.py:131)[0m
+[ts] [2026-08-27 20:01:45 ATTN TP RANK 0] Worker process 13882 pinned to 120 NUMA-local CPUs for device 0.
+[ts] [2026-08-27 20:01:48 ATTN TP RANK 1] Re/initializing TRT-LLM fusion IPC workspace: world_size=4 rank=1 max_token_num=409 hidden_dim=2560 use_fp32_lamport=False (prev max_token_num=None hidden_dim=None use_fp32_lamport=None)
+[ts] [2026-08-27 20:01:48 ATTN TP RANK 2] Re/initializing TRT-LLM fusion IPC workspace: world_size=4 rank=2 max_token_num=409 hidden_dim=2560 use_fp32_lamport=False (prev max_token_num=None hidden_dim=None use_fp32_lamport=None)
+[ts] [2026-08-27 20:01:48 ATTN TP RANK 0] Re/initializing TRT-LLM fusion IPC workspace: world_size=4 rank=0 max_token_num=409 hidden_dim=2560 use_fp32_lamport=False (prev max_token_num=None hidden_dim=None use_fp32_lamport=None)
+[ts] [2026-08-27 20:01:48 ATTN TP RANK 3] Re/initializing TRT-LLM fusion IPC workspace: world_size=4 rank=3 max_token_num=409 hidden_dim=2560 use_fp32_lamport=False (prev max_token_num=None hidden_dim=None use_fp32_lamport=None)
+[ts] [38;20m[2026-08-27 20:01:49,567  ATTN TP RANK 1] - INFO - trtllm one-shot all-reduce for group (0, 1, 2, 3): unavailable (NCCL fallback) (distributed_initializer.py:197)[0m
+[ts] [38;20m[2026-08-27 20:01:49,567  ATTN TP RANK 2] - INFO - trtllm one-shot all-reduce for group (0, 1, 2, 3): unavailable (NCCL fallback) (distributed_initializer.py:197)[0m
+[ts] [38;20m[2026-08-27 20:01:49,567  ATTN TP RANK 3] - INFO - trtllm one-shot all-reduce for group (0, 1, 2, 3): unavailable (NCCL fallback) (distributed_initializer.py:197)[0m
+[ts] [38;20m[2026-08-27 20:01:49,567  ATTN TP RANK 0] - INFO - trtllm one-shot all-reduce for group (0, 1, 2, 3): unavailable (NCCL fallback) (distributed_initializer.py:197)[0m
+[ts] [38;20m[2026-08-27 20:01:49,567  ATTN TP RANK 3] - INFO - Init comm buff end. Avail mem=93.6164 GB (distributed_initializer.py:203)[0m
+[ts] [38;20m[2026-08-27 20:01:49,567  ATTN TP RANK 2] - INFO - Init comm buff end. Avail mem=93.6082 GB (distributed_initializer.py:203)[0m
+[ts] [38;20m[2026-08-27 20:01:49,567  ATTN TP RANK 3] - INFO - Current Process distributed state:  global rank: 3  attn_tp_rank: 3  attn_dp_rank: 0 (distributed_initializer.py:208)[0m
+[ts] [38;20m[2026-08-27 20:01:49,567  ATTN TP RANK 2] - INFO - Current Process distributed state:  global rank: 2  attn_tp_rank: 2  attn_dp_rank: 0 (distributed_initializer.py:208)[0m
+[ts] [38;20m[2026-08-27 20:01:49,567  ATTN TP RANK 1] - INFO - Init comm buff end. Avail mem=93.6086 GB (distributed_initializer.py:203)[0m
+[ts] [38;20m[2026-08-27 20:01:49,567  ATTN TP RANK 0] - INFO - Init comm buff end. Avail mem=93.6086 GB (distributed_initializer.py:203)[0m
+[ts] [38;20m[2026-08-27 20:01:49,568  ATTN TP RANK 1] - INFO - Current Process distributed state:  global rank: 1  attn_tp_rank: 1  attn_dp_rank: 0 (distributed_initializer.py:208)[0m
+[ts] [38;20m[2026-08-27 20:01:49,568  ATTN TP RANK 0] - INFO - Current Process distributed state:  global rank: 0  attn_tp_rank: 0  attn_dp_rank: 0 (distributed_initializer.py:208)[0m
+[ts] [38;20m[2026-08-27 20:01:49,569  ATTN TP RANK 3] - INFO - Load weight begin. avail mem=93.62 GB (weight_loader.py:65)[0m
+[ts] [38;20m[2026-08-27 20:01:49,569  ATTN TP RANK 0] - INFO - Load weight begin. avail mem=93.61 GB (weight_loader.py:65)[0m
+[ts] [38;20m[2026-08-27 20:01:49,569  ATTN TP RANK 2] - INFO - Load weight begin. avail mem=93.61 GB (weight_loader.py:65)[0m
+[ts] [38;20m[2026-08-27 20:01:49,569  ATTN TP RANK 1] - INFO - Load weight begin. avail mem=93.61 GB (weight_loader.py:65)[0m
+[ts] [2026-08-27 20:01:49 ATTN TP RANK 0] Detected fp8 checkpoint.
+[ts] [2026-08-27 20:01:49 ATTN TP RANK 1] model.language_model.layers.0.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:49 ATTN TP RANK 0] model.language_model.layers.0.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:49 ATTN TP RANK 2] model.language_model.layers.0.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:49 ATTN TP RANK 3] model.language_model.layers.0.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:49 ATTN TP RANK 0] model.language_model.layers.1.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:49 ATTN TP RANK 1] model.language_model.layers.1.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:49 ATTN TP RANK 2] model.language_model.layers.1.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:49 ATTN TP RANK 3] model.language_model.layers.1.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.2.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.2.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.2.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.2.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] using attn output gate!
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] using attn output gate!
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] using attn output gate!
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] using attn output gate!
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.3.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.3.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.3.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.3.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.4.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.5.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.6.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.7.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.8.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.9.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.10.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.4.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.4.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.11.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.4.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.5.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.5.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.12.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.5.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.6.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.13.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.6.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.6.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.7.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.14.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.7.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.7.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.15.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.8.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.8.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.8.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.9.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.16.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.9.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.9.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.17.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.10.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.10.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.10.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.11.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.18.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.11.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.11.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.19.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.12.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.12.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.12.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.13.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.20.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.13.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.13.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.21.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.14.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.14.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.14.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.15.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.15.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.22.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.15.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.23.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.16.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.16.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.16.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.24.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.17.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.17.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.17.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.25.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.18.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.18.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.18.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.19.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.19.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.26.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.19.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.27.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.20.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.20.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.20.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.28.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.21.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.21.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.21.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.29.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.22.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.22.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.22.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.30.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.23.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.23.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.23.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.31.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.24.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.24.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.24.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.32.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.25.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.25.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.25.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.33.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.26.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.26.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.26.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.34.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.27.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.27.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.27.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.35.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.28.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.28.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.28.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.36.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.29.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.29.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.29.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.37.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.30.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.30.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.30.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.38.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.31.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.31.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.31.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.39.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.32.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.32.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.32.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.40.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.33.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.33.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.33.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.41.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.34.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.34.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.34.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.42.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.35.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.35.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.35.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.43.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.36.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.36.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.36.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.44.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.37.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.37.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.45.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.37.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.38.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.46.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.38.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.39.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.38.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] model.language_model.layers.47.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.39.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.39.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.40.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.40.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 1] multimodal encoder attention backend: triton_attn (auto)
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.40.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.41.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.41.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.41.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.42.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.42.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.42.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.43.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.43.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.43.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.44.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.44.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.44.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.45.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.45.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.45.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.46.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.46.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.46.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] model.language_model.layers.47.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] model.language_model.layers.47.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] model.language_model.layers.47.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 0] multimodal encoder attention backend: triton_attn (auto)
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 3] multimodal encoder attention backend: triton_attn (auto)
+[ts] [2026-08-27 20:01:50 ATTN TP RANK 2] multimodal encoder attention backend: triton_attn (auto)
+[ts] [38;20m[2026-08-27 20:01:51,168  ATTN TP RANK 0] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] [38;20m[2026-08-27 20:01:51,373  ATTN TP RANK 1] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] [38;20m[2026-08-27 20:01:51,388  ATTN TP RANK 3] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:51 ATTN TP RANK 0] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:51,855  ATTN TP RANK 2] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] [38;20m[2026-08-27 20:01:51,967  ATTN TP RANK 0] - INFO - Prefetching 131 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Loading safetensors checkpoint shards:   0% Completed | 0/131 [00:00<?, ?it/s]
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:52 ATTN TP RANK 3] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:52,877  ATTN TP RANK 3] - INFO - Prefetching 131 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:53 ATTN TP RANK 1] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:53,514  ATTN TP RANK 1] - INFO - Prefetching 131 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:01:54 ATTN TP RANK 2] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:01:55,279  ATTN TP RANK 2] - INFO - Prefetching 131 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Loading safetensors checkpoint shards:   1% Completed | 1/131 [00:09<20:47,  9.60s/it]
+[ts] Loading safetensors checkpoint shards:   2% Completed | 2/131 [00:09<08:51,  4.12s/it]
+[ts] Loading safetensors checkpoint shards:   2% Completed | 3/131 [00:22<17:01,  7.98s/it]
+[ts] Loading safetensors checkpoint shards:   3% Completed | 4/131 [00:22<10:30,  4.97s/it]
+[ts] Loading safetensors checkpoint shards:   4% Completed | 5/131 [00:36<16:44,  7.97s/it]
+[ts] Loading safetensors checkpoint shards:   5% Completed | 6/131 [00:36<11:12,  5.38s/it]
+[ts] Loading safetensors checkpoint shards:   5% Completed | 7/131 [00:48<15:41,  7.59s/it]
+[ts] Loading safetensors checkpoint shards:   6% Completed | 8/131 [01:00<18:36,  9.08s/it]
+[ts] Loading safetensors checkpoint shards:   7% Completed | 9/131 [01:13<20:44, 10.20s/it]
+[ts] Loading safetensors checkpoint shards:   8% Completed | 10/131 [01:26<22:04, 10.95s/it]
+[ts] Loading safetensors checkpoint shards:   8% Completed | 11/131 [01:38<23:00, 11.50s/it]
+[ts] Loading safetensors checkpoint shards:   9% Completed | 12/131 [01:51<23:43, 11.96s/it]
+[ts] Loading safetensors checkpoint shards:  10% Completed | 13/131 [01:58<20:18, 10.33s/it]
+[ts] Loading safetensors checkpoint shards:  20% Completed | 26/131 [02:02<03:13,  1.84s/it]
+[ts] Loading safetensors checkpoint shards:  21% Completed | 27/131 [02:06<03:30,  2.02s/it]
+[ts] Loading safetensors checkpoint shards:  21% Completed | 28/131 [02:07<03:11,  1.86s/it]
+[ts] Loading safetensors checkpoint shards:  22% Completed | 29/131 [02:17<05:00,  2.94s/it]
+[ts] Loading safetensors checkpoint shards:  23% Completed | 30/131 [02:22<05:28,  3.26s/it]
+[ts] Loading safetensors checkpoint shards:  24% Completed | 31/131 [02:23<04:55,  2.95s/it]
+[ts] Loading safetensors checkpoint shards:  24% Completed | 32/131 [02:26<04:37,  2.81s/it]
+[ts] Loading safetensors checkpoint shards:  25% Completed | 33/131 [02:33<06:16,  3.84s/it]
+[ts] Loading safetensors checkpoint shards:  26% Completed | 34/131 [02:35<05:33,  3.44s/it]
+[ts] Loading safetensors checkpoint shards:  27% Completed | 36/131 [02:43<05:52,  3.71s/it]
+[ts] Loading safetensors checkpoint shards:  28% Completed | 37/131 [02:50<06:52,  4.39s/it]
+[ts] Loading safetensors checkpoint shards:  29% Completed | 38/131 [02:50<05:14,  3.38s/it]
+[ts] Loading safetensors checkpoint shards:  30% Completed | 39/131 [02:54<05:10,  3.38s/it]
+[ts] Loading safetensors checkpoint shards:  31% Completed | 40/131 [03:00<06:29,  4.28s/it]
+[ts] Loading safetensors checkpoint shards:  31% Completed | 41/131 [03:01<04:45,  3.17s/it]
+[ts] Loading safetensors checkpoint shards:  32% Completed | 42/131 [03:09<06:56,  4.68s/it]
+[ts] Loading safetensors checkpoint shards:  33% Completed | 43/131 [03:09<04:59,  3.41s/it]
+[ts] Loading safetensors checkpoint shards:  34% Completed | 44/131 [03:10<03:36,  2.49s/it]
+[ts] Loading safetensors checkpoint shards:  34% Completed | 45/131 [03:28<10:14,  7.15s/it]
+[ts] Loading safetensors checkpoint shards:  35% Completed | 46/131 [03:28<07:15,  5.12s/it]
+[ts] Loading safetensors checkpoint shards:  36% Completed | 47/131 [03:36<08:11,  5.85s/it]
+[ts] Loading safetensors checkpoint shards:  37% Completed | 48/131 [03:36<05:48,  4.19s/it]
+[ts] Loading safetensors checkpoint shards:  37% Completed | 49/131 [03:41<06:09,  4.51s/it]
+[ts] Loading safetensors checkpoint shards:  38% Completed | 50/131 [03:42<04:23,  3.25s/it]
+[ts] Loading safetensors checkpoint shards:  39% Completed | 51/131 [03:49<05:49,  4.37s/it]
+[ts] Loading safetensors checkpoint shards:  40% Completed | 52/131 [03:49<04:08,  3.15s/it]
+[ts] Loading safetensors checkpoint shards:  40% Completed | 53/131 [03:57<06:01,  4.63s/it]
+[ts] Loading safetensors checkpoint shards:  41% Completed | 54/131 [03:57<04:16,  3.33s/it]
+[ts] Loading safetensors checkpoint shards:  42% Completed | 55/131 [04:02<04:37,  3.65s/it]
+[ts] Loading safetensors checkpoint shards:  43% Completed | 56/131 [04:02<03:18,  2.64s/it]
+[ts] Loading safetensors checkpoint shards:  44% Completed | 57/131 [04:06<03:54,  3.17s/it]
+[ts] Loading safetensors checkpoint shards:  44% Completed | 58/131 [04:07<02:54,  2.39s/it]
+[ts] Loading safetensors checkpoint shards:  45% Completed | 59/131 [04:16<05:14,  4.36s/it]
+[ts] Loading safetensors checkpoint shards:  46% Completed | 60/131 [04:21<05:17,  4.47s/it]
+[ts] Loading safetensors checkpoint shards:  47% Completed | 61/131 [04:25<05:11,  4.45s/it]
+[ts] Loading safetensors checkpoint shards:  47% Completed | 62/131 [04:27<04:06,  3.57s/it]
+[ts] Loading safetensors checkpoint shards:  48% Completed | 63/131 [04:36<05:53,  5.20s/it]
+[ts] Loading safetensors checkpoint shards:  49% Completed | 64/131 [04:36<04:09,  3.73s/it]
+[ts] Loading safetensors checkpoint shards:  50% Completed | 65/131 [04:36<02:57,  2.69s/it]
+[ts] Loading safetensors checkpoint shards:  50% Completed | 66/131 [04:48<05:56,  5.48s/it]
+[ts] Loading safetensors checkpoint shards:  51% Completed | 67/131 [04:55<06:15,  5.86s/it]
+[ts] Loading safetensors checkpoint shards:  52% Completed | 68/131 [04:55<04:24,  4.19s/it]
+[ts] Loading safetensors checkpoint shards:  53% Completed | 69/131 [05:00<04:41,  4.54s/it]
+[ts] Loading safetensors checkpoint shards:  53% Completed | 70/131 [05:01<03:18,  3.26s/it]
+[ts] Loading safetensors checkpoint shards:  54% Completed | 71/131 [05:01<02:22,  2.37s/it]
+[ts] Loading safetensors checkpoint shards:  55% Completed | 72/131 [05:15<05:43,  5.82s/it]
+[ts] Loading safetensors checkpoint shards:  56% Completed | 73/131 [05:15<04:01,  4.16s/it]
+[ts] Loading safetensors checkpoint shards:  56% Completed | 74/131 [05:18<03:35,  3.78s/it]
+[ts] Loading safetensors checkpoint shards:  57% Completed | 75/131 [05:18<02:33,  2.74s/it]
+[ts] Loading safetensors checkpoint shards:  58% Completed | 76/131 [05:19<02:00,  2.20s/it]
+[ts] Loading safetensors checkpoint shards:  59% Completed | 77/131 [05:31<04:25,  4.91s/it]
+[ts] Loading safetensors checkpoint shards:  60% Completed | 78/131 [05:34<03:55,  4.44s/it]
+[ts] Loading safetensors checkpoint shards:  60% Completed | 79/131 [05:37<03:28,  4.00s/it]
+[ts] Loading safetensors checkpoint shards:  61% Completed | 80/131 [05:37<02:27,  2.89s/it]
+[ts] Loading safetensors checkpoint shards:  62% Completed | 81/131 [05:51<05:10,  6.21s/it]
+[ts] Loading safetensors checkpoint shards:  63% Completed | 82/131 [05:51<03:37,  4.44s/it]
+[ts] Loading safetensors checkpoint shards:  63% Completed | 83/131 [05:52<02:33,  3.19s/it]
+[ts] Loading safetensors checkpoint shards:  64% Completed | 84/131 [05:56<02:46,  3.54s/it]
+[ts] Loading safetensors checkpoint shards:  65% Completed | 85/131 [05:56<01:57,  2.56s/it]
+[ts] Loading safetensors checkpoint shards:  66% Completed | 86/131 [06:03<02:52,  3.83s/it]
+[ts] Loading safetensors checkpoint shards:  66% Completed | 87/131 [06:08<03:01,  4.13s/it]
+[ts] Loading safetensors checkpoint shards:  67% Completed | 88/131 [06:08<02:08,  2.98s/it]
+[ts] Loading safetensors checkpoint shards:  68% Completed | 89/131 [06:09<01:31,  2.18s/it]
+[ts] Loading safetensors checkpoint shards:  69% Completed | 90/131 [06:11<01:36,  2.34s/it]
+[ts] Loading safetensors checkpoint shards:  69% Completed | 91/131 [06:23<03:23,  5.09s/it]
+[ts] Loading safetensors checkpoint shards:  70% Completed | 92/131 [06:26<02:56,  4.53s/it]
+[ts] Loading safetensors checkpoint shards:  71% Completed | 93/131 [06:26<02:03,  3.26s/it]
+[ts] Loading safetensors checkpoint shards:  72% Completed | 94/131 [06:32<02:27,  3.97s/it]
+[ts] Loading safetensors checkpoint shards:  73% Completed | 95/131 [06:32<01:43,  2.87s/it]
+[ts] Loading safetensors checkpoint shards:  73% Completed | 96/131 [06:45<03:20,  5.73s/it]
+[ts] Loading safetensors checkpoint shards:  74% Completed | 97/131 [06:45<02:19,  4.10s/it]
+[ts] Loading safetensors checkpoint shards:  75% Completed | 98/131 [06:53<02:54,  5.27s/it]
+[ts] Loading safetensors checkpoint shards:  76% Completed | 99/131 [06:53<02:01,  3.78s/it]
+[ts] Loading safetensors checkpoint shards:  76% Completed | 100/131 [06:58<02:09,  4.16s/it]
+[ts] Loading safetensors checkpoint shards:  77% Completed | 101/131 [06:59<01:30,  3.01s/it]
+[ts] Loading safetensors checkpoint shards:  78% Completed | 102/131 [07:03<01:34,  3.26s/it]
+[ts] Loading safetensors checkpoint shards:  79% Completed | 103/131 [07:11<02:11,  4.70s/it]
+[ts] Loading safetensors checkpoint shards:  79% Completed | 104/131 [07:11<01:31,  3.37s/it]
+[ts] Loading safetensors checkpoint shards:  80% Completed | 105/131 [07:11<01:03,  2.45s/it]
+[ts] Loading safetensors checkpoint shards:  81% Completed | 106/131 [07:19<01:45,  4.21s/it]
+[ts] Loading safetensors checkpoint shards:  82% Completed | 107/131 [07:20<01:12,  3.03s/it]
+[ts] Loading safetensors checkpoint shards:  82% Completed | 108/131 [07:25<01:28,  3.84s/it]
+[ts] Loading safetensors checkpoint shards:  83% Completed | 109/131 [07:26<01:00,  2.77s/it]
+[ts] Loading safetensors checkpoint shards:  84% Completed | 110/131 [07:27<00:47,  2.28s/it]
+[ts] Loading safetensors checkpoint shards:  85% Completed | 111/131 [07:36<01:28,  4.42s/it]
+[ts] Loading safetensors checkpoint shards:  85% Completed | 112/131 [07:37<01:00,  3.20s/it]
+[ts] Loading safetensors checkpoint shards:  86% Completed | 113/131 [07:41<01:05,  3.66s/it]
+[ts] Loading safetensors checkpoint shards:  87% Completed | 114/131 [07:42<00:45,  2.65s/it]
+[ts] Loading safetensors checkpoint shards:  88% Completed | 115/131 [07:47<00:54,  3.42s/it]
+[ts] Loading safetensors checkpoint shards:  89% Completed | 116/131 [07:58<01:24,  5.62s/it]
+[ts] Loading safetensors checkpoint shards:  89% Completed | 117/131 [07:58<00:56,  4.02s/it]
+[ts] Loading safetensors checkpoint shards:  90% Completed | 118/131 [08:08<01:16,  5.87s/it]
+[ts] Loading safetensors checkpoint shards:  91% Completed | 119/131 [08:08<00:50,  4.20s/it]
+[ts] Loading safetensors checkpoint shards:  92% Completed | 120/131 [08:16<00:57,  5.26s/it]
+[ts] Loading safetensors checkpoint shards:  92% Completed | 121/131 [08:16<00:37,  3.77s/it]
+[ts] Loading safetensors checkpoint shards:  93% Completed | 122/131 [08:18<00:28,  3.21s/it]
+[ts] Loading safetensors checkpoint shards:  94% Completed | 123/131 [08:27<00:39,  4.90s/it]
+[ts] Loading safetensors checkpoint shards:  95% Completed | 124/131 [08:28<00:25,  3.60s/it]
+[ts] Loading safetensors checkpoint shards:  95% Completed | 125/131 [08:33<00:25,  4.24s/it]
+[ts] Loading safetensors checkpoint shards:  96% Completed | 126/131 [08:35<00:16,  3.39s/it]
+[ts] Loading safetensors checkpoint shards:  97% Completed | 127/131 [08:35<00:09,  2.45s/it]
+[ts] Loading safetensors checkpoint shards:  98% Completed | 128/131 [08:46<00:15,  5.10s/it]
+[ts] Loading safetensors checkpoint shards:  98% Completed | 129/131 [08:49<00:08,  4.27s/it]
+[ts] Loading safetensors checkpoint shards:  99% Completed | 130/131 [08:52<00:03,  3.92s/it]
+[ts] [38;20m[2026-08-27 20:10:45,307  ATTN TP RANK 2] - INFO - Checkpoint prefetch finished after 530.03s. (weight_utils.py:528)[0m
+[ts] [38;20m[2026-08-27 20:10:45,307  ATTN TP RANK 0] - INFO - Checkpoint prefetch finished after 533.34s. (weight_utils.py:528)[0m
+[ts] [38;20m[2026-08-27 20:10:45,307  ATTN TP RANK 3] - INFO - Checkpoint prefetch finished after 532.43s. (weight_utils.py:528)[0m
+[ts] [38;20m[2026-08-27 20:10:45,308  ATTN TP RANK 1] - INFO - Checkpoint prefetch finished after 531.79s. (weight_utils.py:528)[0m
+[ts] [38;20m[2026-08-27 20:10:45,600  ATTN TP RANK 3] - INFO - Load weight end. type=Qwen4ExpForConditionalGeneration, dtype=torch.bfloat16, avail mem=20.99 GB (weight_loader.py:117)[0m
+[ts] [38;20m[2026-08-27 20:10:45,600  ATTN TP RANK 3] - INFO - Load weight begin. avail mem=20.99 GB (weight_loader.py:65)[0m
+[ts] [2026-08-27 20:10:45 ATTN TP RANK 3] mtp.layers.0.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [38;20m[2026-08-27 20:10:45,609  ATTN TP RANK 3] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] Loading safetensors checkpoint shards: 100% Completed | 131/131 [08:53<00:00,  3.13s/it]
+[ts] Loading safetensors checkpoint shards: 100% Completed | 131/131 [08:53<00:00,  4.07s/it]
+[ts] 
+[ts] [38;20m[2026-08-27 20:10:45,709  ATTN TP RANK 2] - INFO - Load weight end. type=Qwen4ExpForConditionalGeneration, dtype=torch.bfloat16, avail mem=20.98 GB (weight_loader.py:117)[0m
+[ts] [38;20m[2026-08-27 20:10:45,710  ATTN TP RANK 2] - INFO - Load weight begin. avail mem=20.98 GB (weight_loader.py:65)[0m
+[ts] [2026-08-27 20:10:45 ATTN TP RANK 2] mtp.layers.0.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [38;20m[2026-08-27 20:10:45,718  ATTN TP RANK 2] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] [38;20m[2026-08-27 20:10:45,737  ATTN TP RANK 0] - INFO - Load weight end. type=Qwen4ExpForConditionalGeneration, dtype=torch.bfloat16, avail mem=20.98 GB (weight_loader.py:117)[0m
+[ts] [38;20m[2026-08-27 20:10:45,737  ATTN TP RANK 0] - INFO - Load weight begin. avail mem=20.98 GB (weight_loader.py:65)[0m
+[ts] [2026-08-27 20:10:45 ATTN TP RANK 0] Detected fp8 checkpoint.
+[ts] [2026-08-27 20:10:45 ATTN TP RANK 0] mtp.layers.0.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [38;20m[2026-08-27 20:10:45,746  ATTN TP RANK 0] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] [38;20m[2026-08-27 20:10:45,748  ATTN TP RANK 1] - INFO - Load weight end. type=Qwen4ExpForConditionalGeneration, dtype=torch.bfloat16, avail mem=20.98 GB (weight_loader.py:117)[0m
+[ts] [38;20m[2026-08-27 20:10:45,748  ATTN TP RANK 1] - INFO - Load weight begin. avail mem=20.98 GB (weight_loader.py:65)[0m
+[ts] [2026-08-27 20:10:45 ATTN TP RANK 1] mtp.layers.0.mlp: padding MoE intermediate size per partition 160 -> 256 so FP8 block scales tile it
+[ts] [38;20m[2026-08-27 20:10:45,757  ATTN TP RANK 1] - INFO - Using model weights format ['*.safetensors'] (weight_utils.py:201)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:10:46 ATTN TP RANK 3] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:10:46,598  ATTN TP RANK 3] - INFO - Loading 28 of 131 checkpoint shards; the others hold no weights needed by this model. (weight_utils.py:334)[0m
+[ts] [38;20m[2026-08-27 20:10:46,600  ATTN TP RANK 3] - INFO - Prefetching 28 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:10:46 ATTN TP RANK 0] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [38;20m[2026-08-27 20:10:47,380  ATTN TP RANK 0] - INFO - Loading 28 of 131 checkpoint shards; the others hold no weights needed by this model. (weight_utils.py:334)[0m
+[ts] [38;20m[2026-08-27 20:10:47,385  ATTN TP RANK 0] - INFO - Prefetching 28 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Loading safetensors checkpoint shards:   0% Completed | 0/28 [00:00<?, ?it/s]
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:10:47 ATTN TP RANK 2] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] Loading safetensors checkpoint shards:   4% Completed | 1/28 [00:00<00:04,  6.45it/s]
+[ts] Loading safetensors checkpoint shards:  18% Completed | 5/28 [00:00<00:01, 16.20it/s]
+[ts] [38;20m[2026-08-27 20:10:47,893  ATTN TP RANK 3] - INFO - Checkpoint prefetch finished after 1.29s. (weight_utils.py:528)[0m
+[ts] [38;20m[2026-08-27 20:10:47,934  ATTN TP RANK 3] - INFO - Load weight end. type=Qwen4ExpForCausalLMNextN, dtype=torch.bfloat16, avail mem=19.35 GB (weight_loader.py:117)[0m
+[ts] [38;20m[2026-08-27 20:10:48,073  ATTN TP RANK 2] - INFO - Loading 28 of 131 checkpoint shards; the others hold no weights needed by this model. (weight_utils.py:334)[0m
+[ts] [38;20m[2026-08-27 20:10:48,077  ATTN TP RANK 2] - INFO - Prefetching 28 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] [2026-08-27 20:10:48 ATTN TP RANK 1] Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] Loading safetensors checkpoint shards:  29% Completed | 8/28 [00:00<00:02,  8.71it/s]
+[ts] Loading safetensors checkpoint shards:  36% Completed | 10/28 [00:01<00:02,  7.53it/s]
+[ts] [38;20m[2026-08-27 20:10:48,663  ATTN TP RANK 0] - INFO - Checkpoint prefetch finished after 1.28s. (weight_utils.py:528)[0m
+[ts] Loading safetensors checkpoint shards:  61% Completed | 17/28 [00:01<00:00, 16.43it/s]
+[ts] [38;20m[2026-08-27 20:10:48,788  ATTN TP RANK 1] - INFO - Loading 28 of 131 checkpoint shards; the others hold no weights needed by this model. (weight_utils.py:334)[0m
+[ts] [38;20m[2026-08-27 20:10:48,794  ATTN TP RANK 1] - INFO - Prefetching 28 checkpoint shards into the OS page cache (window 80.0 GiB, 4 reader threads). (weight_utils.py:487)[0m
+[ts] Loading safetensors checkpoint shards:  82% Completed | 23/28 [00:01<00:00, 23.62it/s]
+[ts] Loading safetensors checkpoint shards: 100% Completed | 28/28 [00:01<00:00, 18.81it/s]
+[ts] 
+[ts] [38;20m[2026-08-27 20:10:48,880  ATTN TP RANK 0] - INFO - Load weight end. type=Qwen4ExpForCausalLMNextN, dtype=torch.bfloat16, avail mem=19.34 GB (weight_loader.py:117)[0m
+[ts] [38;20m[2026-08-27 20:10:49,396  ATTN TP RANK 2] - INFO - Checkpoint prefetch finished after 1.32s. (weight_utils.py:528)[0m
+[ts] [38;20m[2026-08-27 20:10:49,499  ATTN TP RANK 2] - INFO - Load weight end. type=Qwen4ExpForCausalLMNextN, dtype=torch.bfloat16, avail mem=19.34 GB (weight_loader.py:117)[0m
+[ts] [38;20m[2026-08-27 20:10:50,026  ATTN TP RANK 1] - INFO - Checkpoint prefetch finished after 1.23s. (weight_utils.py:528)[0m
+[ts] [38;20m[2026-08-27 20:10:50,278  ATTN TP RANK 1] - INFO - Load weight end. type=Qwen4ExpForCausalLMNextN, dtype=torch.bfloat16, avail mem=19.34 GB (weight_loader.py:117)[0m
+[ts] [2026-08-27 20:10:54 ATTN TP RANK 0] Multimodal encoder warmup complete: modality=image feature_shapes=[(2304, 1536)] elapsed=5648.111 ms
+[ts] [2026-08-27 20:10:54 ATTN TP RANK 2] Multimodal encoder warmup complete: modality=image feature_shapes=[(2304, 1536)] elapsed=5029.751 ms
+[ts] [2026-08-27 20:10:54 ATTN TP RANK 1] Multimodal encoder warmup complete: modality=image feature_shapes=[(2304, 1536)] elapsed=4251.463 ms
+[ts] [2026-08-27 20:10:54 ATTN TP RANK 3] Multimodal encoder warmup complete: modality=image feature_shapes=[(2304, 1536)] elapsed=6576.613 ms
+[ts] [2026-08-27 20:10:54 ATTN TP RANK 0] Multimodal encoder warmup complete: modality=video feature_shapes=[(4608, 1536)] elapsed=62.313 ms
+[ts] [2026-08-27 20:10:54 ATTN TP RANK 2] Multimodal encoder warmup complete: modality=video feature_shapes=[(4608, 1536)] elapsed=62.121 ms
+[ts] [2026-08-27 20:10:54 ATTN TP RANK 1] Multimodal encoder warmup complete: modality=video feature_shapes=[(4608, 1536)] elapsed=62.253 ms
+[ts] [2026-08-27 20:10:54 ATTN TP RANK 3] Multimodal encoder warmup complete: modality=video feature_shapes=[(4608, 1536)] elapsed=62.273 ms
+[ts] [31;20m[2026-08-27 20:10:54,608  ATTN TP RANK 3] - ERROR - Scheduler hit an exception: Traceback (most recent call last):
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 1391, in run_event_loop
+[ts]     event_loop = EventLoop(
+[ts]                  ^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 194, in __init__
+[ts]     ) = create_attn_components(
+[ts]         ^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/registry.py", line 882, in create_attn_components
+[ts]     cache_setup = prepare_cache_setup(
+[ts]                   ^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/setup.py", line 194, in prepare_cache_setup
+[ts]     ).setup()
+[ts]       ^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 113, in setup
+[ts]     num_lcm_blocks = self.num_lcm_blocks(layout)
+[ts]                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 271, in num_lcm_blocks
+[ts]     return self._capped_parents(
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 283, in _capped_parents
+[ts]     raise ValueError(
+[ts] ValueError: qwen4_exp cache budget must hold a null parent and one usable LCM parent
+[ts]  (event_loop.py:1423)[0m
+[ts] [31;20m[2026-08-27 20:10:54,608  ATTN TP RANK 2] - ERROR - Scheduler hit an exception: Traceback (most recent call last):
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 1391, in run_event_loop
+[ts]     event_loop = EventLoop(
+[ts]                  ^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 194, in __init__
+[ts]     ) = create_attn_components(
+[ts]         ^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/registry.py", line 882, in create_attn_components
+[ts]     cache_setup = prepare_cache_setup(
+[ts]                   ^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/setup.py", line 194, in prepare_cache_setup
+[ts]     ).setup()
+[ts]       ^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 113, in setup
+[ts]     num_lcm_blocks = self.num_lcm_blocks(layout)
+[ts]                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 271, in num_lcm_blocks
+[ts]     return self._capped_parents(
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 283, in _capped_parents
+[ts]     raise ValueError(
+[ts] ValueError: qwen4_exp cache budget must hold a null parent and one usable LCM parent
+[ts]  (event_loop.py:1423)[0m
+[ts] [31;20m[2026-08-27 20:10:54,608  ATTN TP RANK 1] - ERROR - Scheduler hit an exception: Traceback (most recent call last):
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 1391, in run_event_loop
+[ts]     event_loop = EventLoop(
+[ts]                  ^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 194, in __init__
+[ts]     ) = create_attn_components(
+[ts]         ^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/registry.py", line 882, in create_attn_components
+[ts]     cache_setup = prepare_cache_setup(
+[ts]                   ^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/setup.py", line 194, in prepare_cache_setup
+[ts]     ).setup()
+[ts]       ^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 113, in setup
+[ts]     num_lcm_blocks = self.num_lcm_blocks(layout)
+[ts]                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 271, in num_lcm_blocks
+[ts]     return self._capped_parents(
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 283, in _capped_parents
+[ts]     raise ValueError(
+[ts] ValueError: qwen4_exp cache budget must hold a null parent and one usable LCM parent
+[ts]  (event_loop.py:1423)[0m
+[ts] [31;20m[2026-08-27 20:10:54,608  ATTN TP RANK 0] - ERROR - Scheduler hit an exception: Traceback (most recent call last):
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 1391, in run_event_loop
+[ts]     event_loop = EventLoop(
+[ts]                  ^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/event_loop.py", line 194, in __init__
+[ts]     ) = create_attn_components(
+[ts]         ^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/registry.py", line 882, in create_attn_components
+[ts]     cache_setup = prepare_cache_setup(
+[ts]                   ^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/setup.py", line 194, in prepare_cache_setup
+[ts]     ).setup()
+[ts]       ^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 113, in setup
+[ts]     num_lcm_blocks = self.num_lcm_blocks(layout)
+[ts]                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 271, in num_lcm_blocks
+[ts]     return self._capped_parents(
+[ts]            ^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/attention/kv_cache/recipes/base.py", line 283, in _capped_parents
+[ts]     raise ValueError(
+[ts] ValueError: qwen4_exp cache budget must hold a null parent and one usable LCM parent
+[ts]  (event_loop.py:1423)[0m
+startup failed: ts subprocess exited with rc=-10 during startup; see [ts] log lines above for the cause
+[ts] [2026-08-27 20:01:48.321] [info] lamportInitialize start: buffer: 0x7bf4ad000000, size: 12582912
+[ts] [2026-08-27 20:01:48.321] [info] lamportInitialize start: buffer: 0x757dad000000, size: 12582912
+[ts] [2026-08-27 20:01:48.321] [info] lamportInitialize start: buffer: 0x74296d000000, size: 12582912
+[ts] [2026-08-27 20:01:48.321] [info] lamportInitialize start: buffer: 0x7b3fed000000, size: 12582912

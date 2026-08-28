@@ -1,0 +1,102 @@
+████████  ██████  ██   ██ ███████ ███    ██  ███████ ██████  ███████ ███████ ██████  
+   ██    ██    ██ ██  ██  ██      ████   ██  ██      ██   ██ ██      ██      ██   ██ 
+   ██    ██    ██ █████   █████   ██ ██  ██  ███████ ██████  █████   █████   ██   ██ 
+   ██    ██    ██ ██  ██  ██      ██  ██ ██       ██ ██      ██      ██      ██   ██ 
+   ██     ██████  ██   ██ ███████ ██   ████  ███████ ██      ███████ ███████ ██████  
+                        Tokens at the speed of light · v0.1.0
+Ignored error while writing commit hash to /home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs/main: [Errno 30] Read-only file system: '/home/runner/.cache/huggingface/hub/models--Qwen--Qwen3.8-Flash-Next-FP8/refs'.
+[ts] Traceback (most recent call last):
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/transformers/utils/import_utils.py", line 2262, in __getattr__
+[ts]     module = self._get_module(self._class_to_module[name])
+[ts]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/transformers/utils/import_utils.py", line 2496, in _get_module
+[ts]     raise e
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/transformers/utils/import_utils.py", line 2494, in _get_module
+[ts]     return importlib.import_module("." + module_name, self.__name__)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/usr/lib/python3.12/importlib/__init__.py", line 90, in import_module
+[ts]     return _bootstrap._gcd_import(name[level:], package, level)
+[ts]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+[ts]   File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+[ts]   File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+[ts]   File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+[ts]   File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+[ts]   File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/transformers/modeling_utils.py", line 87, in <module>
+[ts]     from .loss.loss_utils import LOSS_MAPPING
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/transformers/loss/loss_utils.py", line 20, in <module>
+[ts]     from .loss_d_fine import DFineForObjectDetectionLoss
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/transformers/loss/loss_d_fine.py", line 21, in <module>
+[ts]     from .loss_for_object_detection import box_iou
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/transformers/loss/loss_for_object_detection.py", line 31, in <module>
+[ts]     from transformers.image_transforms import center_to_corners_format
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/transformers/image_transforms.py", line 22, in <module>
+[ts]     from .image_utils import (
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/transformers/image_utils.py", line 54, in <module>
+[ts]     from torchvision.io import ImageReadMode, decode_image
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torchvision/__init__.py", line 8, in <module>
+[ts]     from torchvision import _meta_registrations, datasets, io, models, ops, transforms, utils  # usort:skip
+[ts]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torchvision/_meta_registrations.py", line 163, in <module>
+[ts]     @torch.library.register_fake("torchvision::nms")
+[ts]      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/library.py", line 1262, in register
+[ts]     use_lib._register_fake(
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/library.py", line 352, in _register_fake
+[ts]     handle = entry.fake_impl.register(
+[ts]              ^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/_library/fake_impl.py", line 87, in register
+[ts]     lib.impl(self.qualname, meta_kernel, "Meta", allow_override=allow_override)
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/torch/library.py", line 493, in impl
+[ts]     if torch._C._dispatch_has_kernel_for_dispatch_key(
+[ts]        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[ts] RuntimeError: operator torchvision::nms does not exist
+[ts] 
+[ts] The above exception was the direct cause of the following exception:
+[ts] 
+[ts] Traceback (most recent call last):
+[ts]   File "<frozen runpy>", line 198, in _run_module_as_main
+[ts]   File "<frozen runpy>", line 88, in _run_code
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/smg_grpc_servicer/tokenspeed/__main__.py", line 19, in <module>
+[ts]     from smg_grpc_servicer.tokenspeed.server import serve_grpc
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/smg_grpc_servicer/tokenspeed/server.py", line 21, in <module>
+[ts]     from smg_grpc_servicer.tokenspeed.scheduler_launcher import launch_engine
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/smg_grpc_servicer/tokenspeed/scheduler_launcher.py", line 12, in <module>
+[ts]     from tokenspeed.runtime.engine.async_llm import AsyncLLM
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/engine/async_llm.py", line 50, in <module>
+[ts]     from tokenspeed.runtime.configs.model_config import ModelConfig
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/configs/model_config.py", line 38, in <module>
+[ts]     from tokenspeed.runtime.layers.quantization import QUANTIZATION_METHODS
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/quantization/__init__.py", line 27, in <module>
+[ts]     from tokenspeed.runtime.layers.quantization.compressed_tensors.compressed_tensors import (
+[ts]   File "/workspace/tokenspeed/python/tokenspeed/runtime/layers/quantization/compressed_tensors/compressed_tensors.py", line 32, in <module>
+[ts]     from compressed_tensors.config import (
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/__init__.py", line 9, in <module>
+[ts]     from .compressors import *
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/compressors/__init__.py", line 6, in <module>
+[ts]     from .base import *
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/compressors/base.py", line 8, in <module>
+[ts]     from compressed_tensors.compressors.format import infer_module_format
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/compressors/format.py", line 8, in <module>
+[ts]     from compressed_tensors.quantization import QuantizationScheme
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/quantization/__init__.py", line 7, in <module>
+[ts]     from .quant_args import *
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/quantization/quant_args.py", line 9, in <module>
+[ts]     from compressed_tensors.utils import Aliasable
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/utils/__init__.py", line 11, in <module>
+[ts]     from .offload import *
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/utils/offload.py", line 17, in <module>
+[ts]     from compressed_tensors.offload import (
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/offload/__init__.py", line 11, in <module>
+[ts]     from compressed_tensors.offload.convert import from_accelerate, to_accelerate
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/offload/convert/__init__.py", line 6, in <module>
+[ts]     from .from_accelerate import from_accelerate
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/offload/convert/from_accelerate.py", line 20, in <module>
+[ts]     from compressed_tensors.offload.dispatch import dispatch_with_map
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/compressed_tensors/offload/dispatch.py", line 24, in <module>
+[ts]     from transformers import PreTrainedModel
+[ts]   File "/home/runner/.local/lib/python3.12/site-packages/transformers/utils/import_utils.py", line 2350, in __getattr__
+[ts]     raise ModuleNotFoundError(
+[ts] ModuleNotFoundError: Could not import module 'PreTrainedModel'. Are this object's requirements defined correctly?
+startup failed: ts subprocess exited with rc=1 during startup; see [ts] log lines above for the cause

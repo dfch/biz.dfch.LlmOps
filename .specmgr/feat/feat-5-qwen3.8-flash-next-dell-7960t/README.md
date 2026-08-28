@@ -3,7 +3,7 @@ created: 2026-08-27
 github_issue: 5
 id: feat-5-qwen3.8-flash-next-dell-7960t
 status: planning
-updated: 2026-08-27
+updated: 2026-08-28
 version: 1.0.0
 ---
 
@@ -457,6 +457,21 @@ What is explicitly out of scope:
   `7b719225242aacd3dbd3f9407468c2ee9a9d2594` remains pinned and scripted
   (`bin/05-download-weights.py nvfp4`) but **not started** — not needed
   for Task 1.1's FP8-based smoke test, start it when next convenient)
+- [x] Task 0.5 (GGUF half, added 2026-08-27): pin and download the
+  `Q8_0` quant of `unsloth/Qwen3.8-Flash-Next-GGUF` for the
+  llama.cpp-qwen4exp candidate — depends on: Task 0.1 — status: **in
+  progress**, started once TokenSpeed's Task 1.1 attempts surfaced real
+  blockers (see Task 1.1). Pinned to `83cadfda58d30be06c110518208d1bb918b33f10`
+  (`bin/05-download-weights.py gguf`, `allow_patterns=["Q8_0/*", ...]`,
+  188.2GB). Q8_0 deliberately chosen over a lower-bit UD-quant so Task
+  1.2's degenerate-output check isn't confounded by quantization
+  artifacts — see Design Notes.
+- [x] Task 0.5 (UD-Q4_K_XL addition, 2026-08-28): pin and download the
+  `UD-Q4_K_XL` shard of the same `unsloth/Qwen3.8-Flash-Next-GGUF` repo/
+  revision, as Phase 2's NVFP4-tier proxy (see Decisions Made 2026-08-28)
+  — depends on: Task 0.1 — status: **done** (`bin/05-download-weights.py gguf-ud-q4`, `allow_patterns=["UD-Q4_K_XL/*", ...]`, 111.4GB,
+  ~1h06m at ~28.9 MB/s average, zero errors; all 4 shards verified
+  present with correct sizes).
 - [x] Task 0.6: Confirm `feat-1`/`feat-2`/`feat-4`'s current live state
   (to avoid GPU contention during this feature's own testing) — depends
   on: none — status: done (2026-08-27: only `feat-4`'s
@@ -480,27 +495,178 @@ What is explicitly out of scope:
 
 #### Phase 1: Native-context correctness smoke test (hard gate)
 
-- [ ] Task 1.1: Bring up the model at short/native context, no YaRN
-  override yet — depends on: Task 0.4, Task 0.5 — status: not-started
-- [ ] Task 1.2: Temperature=0 smoke test — explicitly check for `feat-1`'s
+- [x] Task 1.1 (TokenSpeed half): Bring up the model at short/native
+  context, no YaRN override yet — depends on: Task 0.4, Task 0.5 —
+  status: **blocked, 4 distinct real bugs found (2026-08-27), not a
+  single reproducible smoke-test result yet**. GPU1/box-wide CUDA fault
+  reconfirmed fully cleared first (see Decisions Made) — `nvidia-smi`
+  clean, bare-metal `llama-server --version` succeeds, and (after fixing
+  a follow-up finding — see below) `tokenspeed_kernel` imports and
+  `torch.cuda.is_available()` returns `True` with 4 devices. Four launch
+  attempts of TokenSpeed's official recipe (`ts serve --model Qwen/Qwen3.8-Flash-Next-FP8 --trust-remote-code --tensor-parallel-size 4 --quantization fp8 ...`), each hitting a different failure after
+  successfully loading all 131 FP8 weight shards:
+  1. **With `--speculative-algorithm MTP --speculative-num-steps 3`** (recipe as documented): `ValueError: qwen4_exp cache budget must hold a null parent and one usable LCM parent` during KV-cache setup —
+     traced to `Qwen4ExpRecipe`'s cache-budget arithmetic leaving no room
+     for even one physical parent block once the MTP draft model's own
+     GDN/QSA/PLE cache groups are added on top of the target model's.
+  2. **Without MTP, `--moe-backend flashinfer_trtllm`** (the default):
+     `RuntimeError: unexpected hidden_states_scale shape (163840,); expected (20, 8192)` during MoE autotune — `per_token_group_quant_fp8`
+     returns a flattened 1D tensor instead of the `[hidden_size//128, num_tokens]` 2D shape `flashinfer_trtllm_fp8_moe_apply` requires, for
+     this model's specific hidden-size/expert-count combination.
+  3. **`--moe-backend triton`**: `NoKernelFoundError` — no Triton MoE
+     kernel is registered at all for this exact trait combination (fp8
+     weights, bf16 dense activation, silu, `fp8_scale_block_shape=(128, 128)`) on this GPU family.
+  4. **`--moe-backend flashinfer_cutlass`**: `NotImplementedError: FP8 block scaling not yet implemented for Blackwell` — an explicit,
+     upstream-flashinfer capability gap, not a TokenSpeed bug.
+     Net: `flashinfer_trtllm` is the only MoE backend flashinfer/TokenSpeed
+     register as Blackwell-capable for FP8 at all, and it has a real,
+     reproducible shape bug for this model. Checked
+     `lightseekorg/tokenspeed`'s GitHub issues for `hidden_states_scale` —
+     **zero results, not a previously known/reported bug**. This is
+     recorded as a genuine blocking finding for the TokenSpeed candidate,
+     not silently worked around — per Task 0.3's parallel-candidate
+     decision, attention now shifts to the llama.cpp-qwen4exp candidate
+     (Task 1.1 llama.cpp half, blocked only on the GGUF download, see
+     Progress) rather than continuing to patch TokenSpeed's day-0 kernels
+     ourselves. TokenSpeed remains revisitable later (e.g. NVFP4 instead of
+     FP8, or once upstream fixes land) but is not the Phase 1 path forward
+     right now.
+- [x] Task 1.1 (llama.cpp half): same, using the llama.cpp-qwen4exp build
+  against `unsloth/Qwen3.8-Flash-Next-GGUF`'s Q8_0 quant — depends on:
+  Task 0.4 — status: **done, first attempt succeeded (2026-08-27)**.
+  Once the Q8_0 GGUF download completed (188.2GB, 6 shards), brought up
+  `llama-server` at full native context with:
+  `llama-server -m .../Qwen3.8-Flash-Next-Q8_0-00001-of-00006.gguf -ngl 999 --tensor-split 1,1,1,1 --split-mode layer -c 0 --host 0.0.0.0 --port 30001 --jinja --reasoning auto`.
+  Loaded cleanly across all 4 GPUs with **zero CPU offload** (`kv_unified = 'true'`, no OOM/fallback warnings), memory split ~41GB/39GB/39GB/37GB
+  across GPU0-3 (well within each GPU's 97.9GB), full native
+  `n_ctx=262144` (`n_ctx_train=262144`, confirmed via `/v1/models`:
+  `n_embd=2560`, `n_params=176943899520`, `size=188214008320` bytes,
+  `ftype=Q8_0`). No unsupported-architecture error, no CUDA error — the
+  llama.cpp PR #27742 GGUF-oriented `qwen4_exp` support Works on the
+  first real attempt, in sharp contrast to TokenSpeed's four distinct
+  failures at the FP8 path (see above). This is now the lead Phase 1
+  candidate.
+- [x] Task 1.2: Temperature=0 smoke test — explicitly check for `feat-1`'s
   exact degenerate-output signature; verify tool-calling and thinking-
-  control modes — depends on: Task 1.1 — status: not-started
-- [ ] Task 1.3: Record the outcome — if degenerate, this is a blocking
+  control modes — depends on: Task 1.1 — status: **done, full PASS
+  (2026-08-27)**, llama.cpp-qwen4exp candidate. Built a dedicated,
+  reusable smoke-test script (`bin/07-smoke-test-endpoint.sh`, mirroring
+  feat-1's `bin/22-verify-against-baseline.sh` / feat-2's
+  `bin/14-smoke-test-glm-service.sh` pattern) that curls
+  `/v1/chat/completions`, auto-parses `logprobs`, and gives a plain
+  pass/fail verdict. Results: (1) temperature=0 coherent-Python-function
+  request produced 63 decode positions with **49 distinct tokens and 63
+  distinct logprobs** — the polar opposite of `feat-1`'s exact signature
+  (identical argmax token + identical logprob at every position);
+  response was a correct, working `def add(a: int, b: int) -> int: return a + b`, with a sensible `reasoning_content` trace. (2)
+  Tool-calling: a `get_weather` tool definition correctly resolved to
+  `tool_calls: [{name: "get_weather", arguments: {"location": "Paris"}}]`.
+  (3) All three thinking-control modes verified via
+  `chat_template_kwargs` (`enable_thinking`, `reasoning_effort`:
+  low/xhigh, `preserve_thinking`): disabled mode omits
+  `reasoning_content` and answers directly; low/xhigh modes both include
+  a `reasoning_content` trace and the correct final answer. Baseline
+  responses saved under `bin/baselines/` for the record.
+- [x] Task 1.3: Record the outcome — if degenerate, this is a blocking
   finding requiring escalation before any further work — depends on:
-  Task 1.2 — status: not-started
+  Task 1.2 — status: **done — NOT degenerate, hard gate cleared for the
+  llama.cpp-qwen4exp candidate** (2026-08-27). QSA's status as "the
+  single largest unvalidated risk in this plan" (Design Notes) did not
+  materialize as a decode-correctness bug on this hardware via the
+  llama.cpp path — matching `feat-2`'s precedent that llama.cpp's
+  sparse-attention/DSA decode path is correct on this SM120 hardware
+  while other frameworks' (vLLM's, and now separately TokenSpeed's FP8
+  MoE path) have hit real bugs. TokenSpeed remains blocked per Task 1.1's
+  TokenSpeed-half findings above; llama.cpp-qwen4exp is now the sole
+  Phase 1-cleared candidate and carries forward into Phase 2.
 
 #### Phase 2: GPU-only quantized placement (FP8 / NVFP4)
 
-- [ ] Task 2.1: Benchmark NVFP4 at GPU0+GPU2 (TP=2) first — depends on:
-  Task 1.3, Task 0.7 — status: not-started
-- [ ] Task 2.2: Benchmark FP8 at GPU0+GPU2 (TP=2); expected to be tight
-  per the footprint table — depends on: Task 2.1 — status: not-started
-- [ ] Task 2.3: If either precision's headroom is insufficient at 2 GPUs,
+- [x] Task 2.1: Benchmark the NVFP4-tier proxy
+  (`unsloth/Qwen3.8-Flash-Next-GGUF:UD-Q4_K_XL`, ~111.4GB, llama.cpp-only —
+  see Decisions Made 2026-08-28 for why the named RadixArk NVFP4
+  safetensors checkpoint itself is not used) at GPU0+GPU2 (TP=2) first —
+  depends on: Task 1.3, Task 0.7 — status: **done (2026-08-28)**.
+  `llama-server` (`CUDA_VISIBLE_DEVICES=0,2 ... --tensor-split 1,1 --split-mode layer -c 0`, full native 262144-token context, 4 slots,
+  `kv_unified=true`) loaded cleanly in ~14s with **zero CPU offload**,
+  GPU1/GPU3 confirmed untouched throughout (`nvidia-smi`: 10MiB/2MiB,
+  unchanged baseline). Measured footprint: **GPU0 50,996 MiB used /
+  46,891 MiB free (47.9%)**, **GPU2 48,594 MiB used / 49,293 MiB free
+  (50.4%)** — both comfortably clear the reused safety-margin policy
+  (>=15% free or >=10GiB absolute; 15% of 97,887MiB = 14,683MiB, i.e.
+  both GPUs have ~3.2-3.4x that much headroom) even at full native
+  context on only 2 GPUs. Re-ran `bin/07-smoke-test-endpoint.sh` at this
+  placement (not assumed carried-over from Task 1.2's 4-GPU run): full
+  PASS — 55 decode positions/42 distinct tokens/55 distinct logprobs (not
+  degenerate), tool-calling OK, all three thinking-control modes OK.
+  Throughput (llama.cpp's own per-request timing log, single-stream):
+  prompt eval **293.4 tok/s** (32 tokens), decode **70.4 tok/s** (400
+  tokens) — consistent across multiple requests during the smoke test
+  (~70-71 t/s decode each time). Server stopped cleanly after
+  measurement to free GPU0+GPU2 for Task 2.2 (`nvidia-smi` confirmed all
+  4 GPUs back to idle baseline).
+- [x] Task 2.2: Benchmark the FP8-tier proxy (already-downloaded
+  `unsloth/Qwen3.8-Flash-Next-GGUF:Q8_0`, 188.2GB — see Decisions Made
+  2026-08-28 for why the named official FP8 safetensors checkpoint itself
+  is not used) at GPU0+GPU2 (TP=2); expected to be tight per the
+  footprint table — depends on: Task 2.1 — status: **done (2026-08-28)**.
+  Same launch pattern as Task 2.1 (`CUDA_VISIBLE_DEVICES=0,2 ... --tensor-split 1,1 --split-mode layer -c 0`, full native 262144-token
+  context). **Loaded successfully — tighter than the NVFP4-tier proxy but
+  still clears the safety-margin policy, no escalation to 4 GPUs needed
+  for this tier either.** Measured footprint (after load + smoke test +
+  throughput requests): **GPU0 76,650 MiB used / 21,237 MiB free
+  (21.7%)**, **GPU2 72,098 MiB used / 25,789 MiB free (26.3%)** — both
+  above the 14,683 MiB (15%) threshold, but with noticeably less margin
+  than Task 2.1's ~48-50% free (matches the plan's own "expected to be
+  tight" prediction; Q8_0's ~175GiB of weights alone is most of 2 GPUs'
+  191.2GiB combined capacity). GPU1/GPU3 confirmed untouched throughout.
+  Smoke test re-run at this placement: full PASS (55 decode positions/42
+  distinct tokens/53 distinct logprobs, not degenerate; tool-calling OK;
+  all three thinking-control modes OK). Throughput: prompt eval ~274
+  tok/s, decode **66.6 tok/s** (400-token request) — slightly slower than
+  the NVFP4-tier proxy's 70.4 tok/s, consistent with Q8_0's heavier
+  per-token memory-bandwidth cost. Server stopped cleanly after
+  measurement; all 4 GPUs confirmed back to idle.
+- [x] Task 2.3: If either precision's headroom is insufficient at 2 GPUs,
   escalate to all 4 GPUs (TP=4) and re-measure — depends on: Task 2.2 —
-  status: not-started
+  status: **done (2026-08-28) — escalation not needed**. Both proxies
+  cleared the safety-margin policy at GPU0+GPU2 (Task 2.1: ~48-50% free;
+  Task 2.2: ~22-26% free, tighter as predicted but still above the 15%
+  threshold with margin). No 4-GPU re-measurement performed since the
+  trigger condition (insufficient 2-GPU headroom) never occurred; this is
+  recorded as an evaluated, closed finding, not a skipped step.
 - [ ] Task 2.4: Record the chosen GPU-only production config (precision +
-  GPU count) with measured data — depends on: Task 2.3 — status:
-  not-started
+  GPU count) with measured data — depends on: Task 2.3a — status:
+  **blocked on Task 2.3a** (2026-08-28): both proxies work at GPU0+GPU2
+  with headroom to spare at *native* context, so precision choice can't
+  be made responsibly without first knowing each proxy's headroom at the
+  actual **896K/768K target context** (REQ-004's real goal) — see
+  Decisions Made 2026-08-28 for why this was resequenced ahead of Phase
+  4 rather than after it.
+- [ ] Task 2.3a (inserted 2026-08-28, between Task 2.3 and Task 2.4):
+  Apply YaRN (`--rope-scaling yarn --yarn-orig-ctx 262144`) targeting
+  896K context (768K fallback per REQ-004) to **both** Phase 2 proxies
+  (`UD-Q4_K_XL`, `Q8_0`) at GPU0+GPU2, and measure headroom against the
+  safety-margin policy for each — depends on: Task 2.3 — status:
+  **BLOCKED — hard, reproducible crash found (2026-08-28), escalated to
+  user, not worked around.** Full detail in Decisions Made, summary:
+  `llama-server` refuses any slot context beyond `n_ctx_train` (262144,
+  read from the GGUF's `qwen4exp.context_length` key) via a hard
+  `server-context.cpp` cap, independent of `--rope-scaling`/
+  `--yarn-orig-ctx`/`--rope-freq-scale`. Bypassing the cap with
+  `--override-kv qwen4exp.context_length=int:896000` lets the server
+  *start* and *report* `n_ctx_slot=896000`, and a 45K-token real request
+  succeeded — but a genuinely large request (~310K words, tokenized to
+  well over native context) **crashed the server with a CUDA kernel-
+  launch error** (`ggml_cuda_kernel_launch`: `CUDA error: invalid argument`, inside `ggml_cuda_op_rms_norm_fused`) at **n_tokens ≈
+  260,096 — i.e. right at the native 262144-token training-context
+  boundary**, regardless of the 896000 target. This is a fixed,
+  reproducible break in the llama.cpp PR #27742 `qwen4exp` CUDA kernel
+  path, not a headroom/OOM issue and not something the `--override-kv`
+  metadata trick actually fixes at the kernel level — meaning **both**
+  896K and 768K targets are currently unreachable through this
+  framework, not just the more ambitious of the two. GPU0+GPU2 confirmed
+  freed cleanly after the crash (no orphaned process, no core dump).
 
 #### Phase 3: Hybrid offload for full BF16 (N-gram Embedding -> system RAM)
 
@@ -519,19 +685,34 @@ What is explicitly out of scope:
   3.1 — status: not-started
 - [ ] Task 3.3: Benchmark throughput/quality and compare against Phase
   2's chosen quantized config — depends on: Task 3.2 — status:
-  not-started
+  not-started. **Per the Task 2.3a resequencing (2026-08-28), this
+  benchmark must include a YaRN 896K/768K context-headroom probe on the
+  BF16 hybrid-offload config too** (same reasoning as Task 2.3a: 258GB of
+  GPU-resident BF16 weights leaves less native-context headroom margin
+  than either Phase 2 proxy, so context capacity needs to be measured
+  before Task 3.4's comparison, not assumed from native-context data
+  alone).
 - [ ] Task 3.4: Record the comparison and a one-line rationale for
   whichever configuration(s) remain available on-demand — depends on:
   Task 3.3 — status: not-started
 
 #### Phase 4: Context extension (896K target, 768K fallback)
 
-- [ ] Task 4.1: Apply YaRN override targeting 896K; measure headroom on
-  whichever configuration(s) Phase 2/3 kept — depends on: Task 2.4,
-  Task 3.4 — status: not-started
-- [ ] Task 4.2: If 896K does not clear the safety-margin policy, step
-  down to 768K and re-measure — depends on: Task 4.1 — status:
-  not-started
+**Resequencing note (2026-08-28)**: context-headroom *discovery* (which
+of 896K/768K each candidate config actually clears) now happens earlier,
+in Task 2.3a (Phase 2 proxies) and Task 3.3 (Phase 3 BF16 config) — see
+Decisions Made. Phase 4's job is narrower than originally scoped: apply
+the already-validated context setting to whichever config(s) Task 2.4/
+3.4 pick as production, and do the fuller filled-context correctness
+validation Task 4.3 always called for (that part was never front-loaded).
+
+- [ ] Task 4.1: Apply the YaRN context setting already validated in Task
+  2.3a/3.3 to the config(s) Task 2.4/Task 3.4 chose as production;
+  re-confirm headroom one more time on the specific final config/GPU
+  placement — depends on: Task 2.4, Task 3.4 — status: not-started
+- [ ] Task 4.2: If the chosen production config can't clear 896K (per
+  Task 2.3a/3.3's own findings), confirm the 768K fallback is what's
+  actually applied — depends on: Task 4.1 — status: not-started
 - [ ] Task 4.3: Validate with a real filled-context request (built from
   the model's own tokenizer) — depends on: Task 4.2 — status: not-started
 
@@ -556,10 +737,89 @@ originally planned, rather than keeping a second copy of the task around.
 
 ### Handover (resume here in a fresh session)
 
-Updated 2026-08-27, end of session: **everything that doesn't need a
-live GPU is done.** Both build trees are complete and verified-as-far-as-
-possible; the FP8 checkpoint is fully downloaded. The *only* remaining
-blocker is the GPU1/CUDA-context fault. Read this first, in order.
+Updated 2026-08-28: **Phase 2 has started.** Pre-flight re-checked clean
+(all 4 GPUs idle, no other feature's service running, 6.6TB free on
+`/data`). Hit and resolved a real checkpoint/framework mismatch before
+any GPU work: neither of REQ-006's *named* Phase 2 checkpoints (official
+FP8 safetensors, RadixArk NVFP4 safetensors) is loadable by the only
+Phase 1-cleared framework (llama.cpp, GGUF-only) — RadixArk's card is
+SGLang-only, and SGLang `main` still has zero `qwen4_exp` support as of
+today (re-verified directly). **User decision: use llama.cpp's own GGUF
+quant ladder as the Phase 2 proxy** — see Decisions Made 2026-08-28.
+Concretely: `Q8_0` (already downloaded, 188.2GB) is the FP8-tier proxy
+for Task 2.2; `UD-Q4_K_XL` (111.4GB, new `gguf-ud-q4` download target in
+`bin/05-download-weights.py`, same pinned repo revision as `Q8_0`) is the
+NVFP4-tier proxy for Task 2.1 — **download completed 2026-08-28, 01:35**
+(~1h06m total, ~28.9 MB/s average bursty rate, zero errors/stalls;
+confirmed independently via both a background monitoring task and a
+direct `ls -la` of the snapshot's `UD-Q4_K_XL/` dir — all 4 shards
+present, sizes match exactly: 10.4MB / 46.4GiB / 46.0GiB / 11.3GiB,
+summing to 103.69 GiB). Task 2.1's checkpoint prerequisite is now
+satisfied. Next:
+
+1. Launch `llama-server` against the `UD-Q4_K_XL` GGUF restricted to
+   GPU0+GPU2 only (unlike Task 1.1's all-4-GPU `--tensor-split 1,1,1,1`)
+   — use `CUDA_VISIBLE_DEVICES=0,2` plus a 2-way `--tensor-split 1,1`,
+   confirm `nvidia-smi` shows load on only GPU0/GPU2 during the run.
+2. Measure and record: per-GPU VRAM footprint, headroom against the
+   reused safety-margin policy (>=15% free or >=10GiB, whichever
+   greater), and throughput (reuse `bin/07-smoke-test-endpoint.sh` for a
+   correctness spot-check, plus a basic tok/s measure).
+3. Task 2.2 next, same GPU0+GPU2 restriction, against the already-present
+   `Q8_0` checkpoint — expected tight per the footprint table (Q8_0 is
+   ~188GB, close to 2 GPUs' 192GB combined).
+4. Task 2.3 (escalate to 4 GPUs) only if either proxy's headroom is
+   insufficient at 2 GPUs.
+
+______________________________________________________________________
+
+Prior handover (2026-08-27, later same day, kept for history):
+**Phase 1's hard gate is cleared.**
+GPU1/box-wide CUDA fault is confirmed resolved; llama.cpp-qwen4exp is up
+and running, smoke-tested, and NOT degenerate (Task 1.1-1.3 all done for
+that candidate). TokenSpeed is blocked on 4 distinct real bugs (recorded,
+not silently worked around) and is parked, not being actively debugged
+further right now. **Next up: Phase 2** (GPU-only quantized placement
+benchmarking) — start with Task 2.1 (NVFP4 at GPU0+GPU2). Read this
+first, in order:
+
+1. **The llama.cpp-qwen4exp smoke-test server was stopped cleanly at the
+   end of this session** (ad-hoc process, not a systemd unit — Task 1.1's
+   `-c 0 -ngl 999 --tensor-split 1,1,1,1` config used for the Task 1.2
+   smoke test). All 4 GPUs confirmed freed (`nvidia-smi` showed
+   ~0MiB/0MiB/0MiB/0MiB after stop). Nothing to clean up; re-launch the
+   same command from Task 1.1's entry above if you need the endpoint
+   again before Phase 2 needs the GPUs for something else.
+2. **Re-verify GPU health is still good** before any further work (things
+   can regress): `nvidia-smi` clean, no repeat of GPU1's fault signature.
+3. **Phase 2 prerequisites not yet done**:
+   - NVFP4 checkpoint (`RadixArk/Qwen3.8-Flash-Next-NVFP4` @
+     `7b719225242aacd3dbd3f9407468c2ee9a9d2594`) is pinned/scripted
+     (`bin/05-download-weights.py nvfp4`) but **not downloaded yet** —
+     needed for Task 2.1.
+   - Task 2.2 (FP8 at GPU0+GPU2) can reuse the already-downloaded FP8
+     checkpoint, but recall TokenSpeed (the only framework tested against
+     FP8 so far) is currently blocked — Task 2.2 may need to retry
+     TokenSpeed with a smaller/different config, wait for upstream fixes,
+     or use llama.cpp against a to-be-converted FP8 GGUF instead. Not
+     resolved yet, flag to the user if it comes up.
+4. **The dedicated smoke-test script `bin/07-smoke-test-endpoint.sh`**
+   is reusable for Phase 2/3/4's own correctness spot-checks against
+   whatever config is under test — `bin/07-smoke-test-endpoint.sh <base_url> [model_name]`.
+5. **TokenSpeed is not abandoned, just parked**: its container
+   (`tokenspeed-qwen4exp`) still exists and works for import-level checks;
+   remember the `FLASHINFER_DISABLE_VERSION_CHECK=1` env-var caveat (must
+   be passed explicitly on every `docker exec` against this specific
+   running container — it does NOT persist via `.bashrc`, see Decisions
+   Made) if it's revisited.
+
+______________________________________________________________________
+
+Prior handover (2026-08-27, earlier same day, kept for history):
+everything that doesn't need a live GPU is done.\*\* Both build trees are
+complete and verified-as-far-as-possible; the FP8 checkpoint is fully
+downloaded. The *only* remaining blocker is the GPU1/CUDA-context fault.
+Read this first, in order.
 
 1. **Confirm the hardware fix landed**:
    ```bash
@@ -616,24 +876,53 @@ blocker is the GPU1/CUDA-context fault. Read this first, in order.
 
 ### Current Status
 
-**As of 2026-08-27**: **All of Phase 0 that doesn't require a live GPU is
-done.** Tasks 0.1, 0.2, 0.3, 0.4, 0.6, and (partially) 0.7 are done.
-Task 0.5's FP8 half is **done** (`Qwen/Qwen3.8-Flash-Next-FP8`
-downloaded, 2h12m, ~173GB); its NVFP4 half is still pending, not urgent.
-Task 0.4 (both isolated build trees) is now **fully done**:
-llama.cpp-qwen4exp built successfully first try; TokenSpeed took 3
-attempts but is now fully installed and working (`tokenspeed --help`/
-`tokenspeed env` succeed), after finding and permanently fixing two real
-bugs along the way (a FlashInfer version mismatch, a Docker bind-mount
-ownership gotcha) — see Decisions Made. **The only thing left blocking
-any further progress is the GPU1/CUDA-context fault**, confirmed
-box-wide (not GPU1-only): no new CUDA context can be created on this box
-at all right now (bare metal or Docker, any GPU) — both `llama-server --version` and `tokenspeed_kernel`'s import-time platform check fail with
-the identical underlying error. The user is leaving `feat-4`'s GPU0+GPU2
-production service running until this feature's own downloads/builds
-finish (now the case) and will address GPU1 next. This affects more than
-just feat-5 (no feature on this box can start new GPU work until it's
-fixed).
+**As of 2026-08-28, end of this session: FEATURE PAUSED, by user
+decision, on a hard blocking finding.** Do not resume GPU-touching work
+on feat-5 without re-reading this section and the 2026-08-28 Decisions
+Made entries in full first.
+
+**Why paused**: Task 2.1/2.2 (Phase 2, GPU-only quantized placement)
+both succeeded — `UD-Q4_K_XL` and `Q8_0` (llama.cpp GGUF quant-ladder
+proxies, substituting for REQ-006's named safetensors checkpoints per
+the 2026-08-28 Decisions Made entry on that) both load and serve
+correctly at GPU0+GPU2 with headroom to spare, at **native** 262144-token
+context. But when Task 2.3a tried to actually validate REQ-004's real
+goal — extending context toward 896K/768K via YaRN — the *only*
+Phase-1-cleared framework (llama.cpp-qwen4exp, built from PR #27742)
+**crashed with a CUDA kernel-launch error the moment real KV-cache usage
+crossed the native 262144-token boundary**, regardless of the configured
+target (896000 or otherwise). This is not a headroom/OOM problem and not
+fixable by the `--override-kv` metadata trick that got the server to
+*start* with a larger reported context — it's a reproducible break in
+the architecture's CUDA kernel path itself. Net effect: **large context
+— this feature's actual goal — is not currently achievable with any
+working framework**, since TokenSpeed (the only other framework that
+understands `qwen4_exp` at all) is separately blocked on 4 real FP8 MoE
+bugs (Task 1.1) and was never tested for context extension in the first
+place.
+
+**User decision (2026-08-28)**: pause the whole feature here rather than
+work around this task-by-task. Do not attempt further patches, kernel
+fixes, or workarounds to the llama.cpp CUDA crash. Do not resume TokenSpeed
+debugging either. This is a full-stop pending either (a) an upstream fix
+to llama.cpp PR #27742's `qwen4_exp` CUDA path, (b) TokenSpeed's FP8 MoE
+bugs getting fixed upstream *and* a follow-up finding that TokenSpeed's
+own context handling doesn't share this same break, or (c) a fresh user
+decision to re-scope REQ-004 downward to native 262144-token context and
+proceed without extension.
+
+**What's salvageable when this resumes**: Phase 0 and Phase 1 remain
+fully valid (framework support exists via llama.cpp at native context;
+native-context output is not degenerate). Task 2.1/2.2's native-context
+placement data (GPU0+GPU2 fits both proxies with headroom) remains valid
+too, *for native context only* — it says nothing about extended-context
+viability, which is exactly what broke. Task 2.4 (pick the Phase 2
+primary config) was already blocked pending Task 2.3a and stays blocked;
+there is no point deciding a "production" precision until it's known
+whether long context is achievable at all with any framework.
+
+**All GPUs confirmed idle, no orphaned processes, no core dumps** —
+the box is clean for other features to use while feat-5 is paused.
 
 ### Recent Updates
 
@@ -668,46 +957,216 @@ fixed).
 - Next: user decision on Task 0.3 (which unreleased framework to use, or
   wait); once resolved, Task 0.4 (isolated venv) and Task 0.5 (pinned
   checkpoint download) can proceed without needing any GPU.
+- Completed (same day, GPU-touching session resuming after GPU1 fix):
+  re-verified GPU1/box-wide CUDA fault resolved via all three checks the
+  prior escalation demanded; found and fixed a follow-up
+  `FLASHINFER_DISABLE_VERSION_CHECK` gap (only covered install-time, not
+  every future `docker exec`); attempted TokenSpeed's official FP8 serve
+  recipe 4 times, hitting 4 distinct real bugs (MTP cache-budget error,
+  `flashinfer_trtllm` shape bug, `triton` no-kernel, `flashinfer_cutlass`
+  not-implemented-for-Blackwell) — recorded as a blocking finding for
+  TokenSpeed, not silently worked around; kicked off and completed the
+  `unsloth/Qwen3.8-Flash-Next-GGUF` Q8_0 download (188.2GB) in parallel;
+  brought up llama.cpp-qwen4exp against it — **succeeded on the first
+  attempt**, full native 262144-token context, all 4 GPUs, zero CPU
+  offload; built `bin/07-smoke-test-endpoint.sh` and ran Task 1.2's
+  degenerate-output/tool-calling/thinking-control checks — **full PASS**,
+  clearing Phase 1's hard gate for the llama.cpp-qwen4exp candidate.
+- Next: Phase 2 (GPU-only quantized placement). Download the NVFP4
+  checkpoint (Task 0.5 NVFP4 half, not yet started), then Task 2.1
+  (NVFP4 at GPU0+GPU2, TP=2). Decide how to handle Task 2.2 (FP8 at
+  GPU0+GPU2) given TokenSpeed — the only framework tested against FP8 so
+  far — is currently blocked.
+
+#### 2026-08-28
+
+- Completed: pre-flight re-check before starting Phase 2 (all 4 GPUs
+  clean/idle, no `feat-1`/`feat-2`/`feat-4` service running, 6.6TB free
+  on `/data`). Found REQ-006's named Phase 2 checkpoints (official FP8
+  safetensors, RadixArk NVFP4 safetensors) are not loadable by the only
+  Phase 1-cleared framework (llama.cpp, GGUF-only) — RadixArk's own model
+  card requires SGLang, and a fresh direct re-check of SGLang `main`
+  today confirmed it still has zero `qwen4_exp` support, one day after
+  Task 0.2's identical finding. User decided to substitute llama.cpp's
+  own GGUF quant ladder as the Phase 2 proxy instead of parking Task 2.1
+  or attempting an unsupported combination (see Decisions Made). Added a
+  `gguf-ud-q4` target to `bin/05-download-weights.py` (same pinned
+  `unsloth/Qwen3.8-Flash-Next-GGUF` revision as `Q8_0`) and downloaded
+  the `UD-Q4_K_XL` shard (111.4GB) as the NVFP4-tier proxy — completed
+  cleanly in ~1h06m at ~28.9 MB/s average, all 4 shards verified present
+  with correct sizes, no errors/stalls (confirmed both via a background
+  monitoring task and directly). `Q8_0` (already on disk) serves as the
+  FP8-tier proxy for Task 2.2.
+- Next: Task 2.1 — launch `llama-server` against `UD-Q4_K_XL` restricted
+  to GPU0+GPU2 (`CUDA_VISIBLE_DEVICES=0,2`, 2-way `--tensor-split`),
+  measure VRAM footprint/headroom and throughput.
+- Completed: Task 2.1 (`UD-Q4_K_XL` at GPU0+GPU2, full native context) —
+  loaded cleanly, GPU0 47.9%/GPU2 50.4% free, full smoke-test PASS,
+  decode ~70.4 tok/s. Task 2.2 (`Q8_0` at GPU0+GPU2) — loaded, tighter as
+  predicted (GPU0 21.7%/GPU2 26.3% free, still clears the safety-margin
+  policy), full smoke-test PASS, decode ~66.6 tok/s. Task 2.3 closed (no
+  4-GPU escalation needed, both proxies fit at 2 GPUs). Task 2.4 left
+  open pending a quality/throughput/headroom tradeoff call between the
+  two proxies.
+- User flagged a real sequencing problem: Task 4.1 (context extension)
+  depended on Task 2.4/3.4 being *already decided*, meaning the
+  precision choice would have been made on native-context data alone,
+  with REQ-004's actual large-context goal untested until afterward.
+  Inserted Task 2.3a (context-headroom probe) ahead of Task 2.4, and an
+  equivalent requirement into Task 3.3, per user decision.
+- Attempted Task 2.3a on `UD-Q4_K_XL`: llama-server hard-caps slot
+  context to `n_ctx_train` (262144) regardless of `--rope-scaling yarn`
+  flags; bypassed via `--override-kv qwen4exp.context_length=int:896000`,
+  which let the server start and accept a 45K-token request normally —
+  but a genuinely large (~310K-word) request **crashed the server with a
+  CUDA kernel-launch error** (`ggml_cuda_op_rms_norm_fused`, "invalid
+  argument") at n_tokens≈260,096, essentially exactly the native
+  262144-token boundary, independent of the 896000 target. This blocks
+  **both** REQ-004 context targets identically, not just the larger one
+  — recorded as a hard, reproducible finding, not silently worked
+  around, no kernel patching attempted (mirrors the TokenSpeed
+  day-0-kernel non-patching precedent).
+- **User decision: pause the entire feature here.** Do not attempt
+  further workarounds to the CUDA crash or resume TokenSpeed debugging
+  without a fresh decision. See Current Status for the full resume
+  criteria. All 4 GPUs confirmed idle, no orphaned processes, no core
+  dumps, box left clean for other features.
+- Session artifacts consolidated from `/tmp` into the feature dir
+  (nothing left behind that isn't reproducible): Task 2.1/2.2 throughput
+  responses and Task 2.3a's 45K-token success response saved under
+  `bin/baselines/`; the GPU-memory samples taken during the crash-
+  inducing request saved to `bin/logs/20260828T045515Z-task2.3a-crash-gpu-memory-samples.log`;
+  the crash itself is reproducible via the new
+  `bin/08-repro-task2.3a-context-crash.sh` (regenerates the exact
+  45K-word/310K-word seeded prompts rather than shipping the original
+  multi-MB `.txt` blobs).
 
 ### Decisions Made
+
+- **2026-08-28 (FEATURE PAUSED — user decision, top-level)**: given the
+  Task 2.3a CUDA-crash finding (below) means large context — this
+  feature's actual goal — is not currently achievable with any working
+  framework, the user decided to **pause the entire feature** rather
+  than continue working around findings task-by-task. Scope of the
+  pause: no further attempts to patch/work around the llama.cpp CUDA
+  crash, no resumed TokenSpeed debugging, no further Phase 2/3/4 GPU
+  work, until a fresh decision reopens one of the three paths noted in
+  Current Status (upstream llama.cpp fix, TokenSpeed fix + a fresh
+  context-safety check, or a user-approved downward re-scope of REQ-004
+  to native-context-only). Everything already completed (Phase 0, Phase
+  1, Task 2.1/2.2/2.3) remains valid and does not need to be redone when
+  work resumes — only Task 2.3a onward is blocked. See Current Status
+  for the full resume checklist.
+
+- **2026-08-28 (Task list resequenced — context headroom moved ahead of
+  precision decisions)**: user flagged that REQ-004's actual goal (large
+  context, 896K target/768K fallback) was being tested *after* Task
+  2.4/Task 3.4 locked in the precision/placement decisions (`Task 4.1`
+  originally depended on both), meaning those decisions would have been
+  made on native-context headroom data alone — backwards, since headroom
+  at native context (262144) says nothing about headroom at 3.4x that
+  size, and this model's hybrid GDN (linear attention, ~O(1) state per
+  layer) + QSA (bounded block-budget sparse attention, per Design Notes'
+  "512 blocks / 2048 tokens") architecture means KV-cache growth with
+  context is genuinely unknown/unmeasured (REQ-004 already flags this
+  explicitly) rather than the straightforward O(n) scaling a dense-
+  attention model would have. **Resolution: inserted Task 2.3a between
+  Task 2.3 and Task 2.4** (YaRN 896K/768K headroom probe on both Phase 2
+  proxies, before deciding which is primary) and added an equivalent
+  requirement to Task 3.3 for the Phase 3 BF16 config. Phase 4 (`Task 4.1`-`4.3`) is narrowed to applying the already-validated setting to
+  whichever config is finally chosen, plus the filled-context correctness
+  check that was always its own job.
+
+- **2026-08-28 (Task 2.3a: context extension crashes at the native-context
+  boundary, hard blocking finding, needs user decision)**: attempted the
+  Task 2.3a context-headroom probe on `UD-Q4_K_XL` at GPU0+GPU2. Found
+  llama-server has a hard-coded slot-context cap at `n_ctx_train`
+  (`server-context.cpp`'s `load_model`, unconditional on rope-scaling
+  flags) — bypassed via `--override-kv qwen4exp.context_length=int:896000`
+  (a standard llama.cpp technique for context-extending non-YaRN-native
+  GGUF conversions), which let the server accept `-c 896000` and report
+  `n_ctx_slot=896000` without the display-only cap warning. A 45,027-
+  token real request succeeded normally. But a much larger real request
+  (a ~310K-word synthetic prompt) **crashed the server outright** partway
+  through prompt processing, at n_tokens≈260,096 (essentially exactly the
+  native 262144-token boundary): `CUDA error: invalid argument` inside
+  `ggml_cuda_kernel_launch` / `ggml_cuda_op_rms_norm_fused`. This is a
+  reproducible kernel-level break in the llama.cpp PR #27742 `qwen4exp`
+  implementation once real KV-cache usage crosses the native training
+  context, not a memory/headroom shortfall (GPU memory was nowhere near
+  exhausted at crash time) and not something the metadata override
+  actually fixes underneath. Net effect: **the only Phase 1-cleared
+  framework cannot currently serve *any* context beyond native 262144 —
+  both the 896K and 768K REQ-004 targets are blocked identically**, not
+  just the more ambitious one. This is recorded as a hard blocking
+  finding per this feature's established pattern (REQ-002/REQ-003) —
+  not silently worked around, not patched in the kernel ourselves
+  (mirrors the TokenSpeed day-0-kernel non-patching precedent) — and
+  escalated to the user for a decision on how to proceed (see the
+  question raised in the session transcript / next Progress update).
+
+- **2026-08-28 (Task 2.4, open — needs user input)**: Phase 2 measured
+  both GGU-quant-ladder proxies at GPU0+GPU2, full native context:
+
+  | Proxy | Precision tier | GPU0/GPU2 free | Decode tok/s | Notes |
+  |---|---|---|---|---|
+  | `UD-Q4_K_XL` | NVFP4-tier (4-bit dynamic) | 47.9% / 50.4% | 70.4 | More headroom, faster, lower-precision quant |
+  | `Q8_0` | FP8-tier (8-bit, near-lossless) | 21.7% / 26.3% | 66.6 | Less headroom (still clears policy), slightly slower, higher precision |
+
+  Both fit GPU0+GPU2 with headroom to spare (no 4-GPU escalation
+  triggered, Task 2.3). Neither is a technical gate failure, so which one
+  (if either) becomes the "primary" GPU-only-quantized reference for
+  Task 2.4/ACC-006 is a genuine quality/throughput/headroom tradeoff,
+  not something to decide unilaterally — flagged to the user, not yet
+  resolved. Both remain available on-demand regardless per ACC-006's own
+  wording.
 
 - **2026-08-27**: `qwen-community-1.0` license accepted — this repo's
   anonymous/internal-network-only posture satisfies the "Model as a
   Service"/"AI Work Assistant" carve-out (no third-party exposure of the
   model, its outputs, or its capabilities).
+
 - **2026-08-27**: QSA's status as a novel, unvalidated sparse-attention
   decode kernel on the same SM120 GPU family where `feat-1` already hit
   an unresolved sparse-attention decode bug is noted and accepted as a
   known risk — Phase 1's smoke test is the mitigation, not a guarantee.
+
 - **2026-08-27**: No engine preference — vLLM, SGLang, KTransformers, and
   llama.cpp are co-equal Phase 0 candidates; llama.cpp is elevated from
   "unlikely" to a real candidate given `unsloth/Qwen3.8-Flash-Next-GGUF`
   already exists and `feat-2`'s precedent that llama.cpp avoided the
   SM120 sparse-attention bug class that blocks `feat-1`.
+
 - **2026-08-27**: Precision/placement evaluated in two ordered phases —
   GPU-only quantized (FP8/NVFP4) first, then a hybrid offload of the
   N-gram Embedding to system RAM specifically to enable full BF16 for
   the remaining 129B — rather than picking one precision by default.
+
 - **2026-08-27**: GPU preference order — GPU0+GPU2 first for the
   GPU-only-quantized phase (escalate to all 4 only if needed); the
   hybrid-offload-BF16 phase starts directly at 4 GPUs since 2 GPUs
   (192GB) cannot fit 258GB of BF16-resident weights regardless of
   context headroom.
+
 - **2026-08-27**: TP=3 is treated as architecturally invalid (Gated
   DeltaNet's 16 QK heads and QSA's 2 KV heads are both not divisible by
   3\) and will be confirmed via config arithmetic, not a live GPU test —
   precedent: `feat-4` found the same class of exclusion for Qwen3.8-27B's
   4 KV heads.
+
 - **2026-08-27**: Phase 3 (hybrid offload) must never stop another
   feature's running production service — if one is running when Phase 3
   work is ready to start, wait for it to be stopped by its owner, then
   proceed immediately once all GPUs are confirmed free.
+
 - **2026-08-27 (start-of-implementation findings)**: TokenSpeed added as
   a 5th REQ-002/Task 0.2 candidate — the model card names it explicitly,
   alongside vLLM/SGLang, with its own YaRN command syntax.
+
 - **2026-08-27**: Design Notes' context-extension figure corrected from
   1,048,576 to 1,000,000 (the model card's actual stated ceiling); does
   not affect the 896K/768K targets, both well under either figure.
+
 - **2026-08-27**: Task 0.2 closed with a confirmed **no-stable-support**
   finding across all 5 candidates (direct source inspection of each
   project's latest release and `main`/dev branch — not assumption, per
@@ -717,6 +1176,7 @@ fixed).
   — not decided unilaterally, given REQ-002/ACC-001 explicitly treat this
   as a hard gate and call out "if none do, record as a blocking finding,
   not silently worked around."
+
 - **2026-08-27**: Task 0.3 resolved — pursue **both** unreleased
   candidates in parallel (TokenSpeed `main` and llama.cpp PR #27742),
   each in its own isolated build tree, rather than betting on one or
@@ -724,6 +1184,7 @@ fixed).
   output smoke test first (or both, if both do) carries forward into
   Phase 2; this doubles Task 0.4's build effort but removes the risk of
   picking the wrong unreleased dependency on reputation alone.
+
 - **2026-08-27**: A GPU1 hardware fault was found live on the box during
   Task 0.6 (same `nvidia-smi` "Unknown Error" signature as the documented
   2026-08-25 incident in `hardware/dell-7960t/recovery.md`, but occurring
@@ -734,6 +1195,7 @@ fixed).
   (0.4, 0.5) proceed independently, and no GPU-touching feat-5 work
   (Phase 1+) starts until GPU1 is confirmed healthy again or the user
   explicitly accepts a 3-working-GPU posture.
+
 - **2026-08-27 (escalation of the above)**: the GPU1 fault is **not
   isolated to GPU1**, confirmed three independent ways: (1) bare-metal
   `llama-server --version` fails with `ggml_cuda_init: failed to initialize CUDA: unknown error` even with `CUDA_VISIBLE_DEVICES=0,2,3`
@@ -760,6 +1222,7 @@ fixed).
   `--gpus '"device=0,2,3"'` workaround is recorded here for TokenSpeed's
   container going forward regardless (avoids Docker's own CDI-enumeration
   abort once the underlying CUDA-context issue is fixed).
+
 - **2026-08-27**: Task 0.4 completed for both parallel candidates despite
   the GPU1 blocker -- llama.cpp-qwen4exp built cleanly on the first try;
   TokenSpeed needed 3 attempts, surfacing two real, fixable bugs (a
@@ -773,6 +1236,83 @@ fixed).
   mechanic (parent-dir auto-creation on bind mount) unrelated to either
   framework's own code quality. With both trees built, Task 0.4 is fully
   closed; only Phase 1 (actually running either) remains gated on GPU1.
+
+- **2026-08-27 (GPU1/box-wide CUDA fault confirmed resolved)**: re-ran
+  the exact three-part verification the previous session's escalation
+  demanded (not trusting a clean `nvidia-smi` alone): (1) `nvidia-smi`
+  shows all 4 GPUs cleanly, no processes; (2) bare-metal
+  `llama-server --version` succeeds (no `ggml_cuda_init` failure); (3)
+  `import tokenspeed_kernel` inside the container succeeds and
+  `torch.cuda.is_available()` returns `True` with `device_count()==4`.
+  All three passed. `feat-4`'s production service was also found already
+  stopped (`inactive (dead)`) by its owner, and `feat-1`/`feat-2` have no
+  running services -- REQ-012's pre-flight condition is satisfied with no
+  wait needed. GPU-touching feat-5 work (Phase 1) is unblocked.
+
+- **2026-08-27 (follow-up finding, `FLASHINFER_DISABLE_VERSION_CHECK`)**:
+  discovered the previous session's fix only covered the one-off
+  `docker exec` that ran `pip install` (Task 0.4's install step), not any
+  later `docker exec`/`ts serve` invocation against the *running*
+  container -- a fresh `docker exec` without the env var explicitly set
+  still hit the identical `flashinfer-jit-cache version (0.6.17+cu130) does not match flashinfer version (0.6.16)` error, which could easily
+  be mistaken for a recurrence of the box-wide CUDA fault. Fixed at two
+  levels: (1) `bin/04-run-tokenspeed-container.sh` now bakes
+  `-e FLASHINFER_DISABLE_VERSION_CHECK=1` into `docker run` itself for
+  any *future* container creation; (2) the *current*, already-running
+  container cannot pick that up without a costly rebuild (its editable
+  package installs live in the container layer, not the bind mount), so
+  every `docker exec` against it for the rest of this feature must pass
+  `-e FLASHINFER_DISABLE_VERSION_CHECK=1` explicitly (confirmed: appending
+  to `~/.bashrc` does **not** work either, since Debian's default
+  `~/.bashrc` returns immediately for non-interactive shells, which is
+  exactly what `docker exec ... bash -lc '...'` uses).
+
+- **2026-08-28 (Phase 2 checkpoint/framework mismatch, resolved by user
+  decision)**: before starting Task 2.1, re-verified pre-flight state
+  (`nvidia-smi` clean all 4 GPUs, no `feat-1`/`feat-2`/`feat-4` service
+  running, `/data` 6.6TB free) and found REQ-006's *named* Phase 2
+  checkpoints are not actually servable by any currently-working
+  framework: the official `Qwen/Qwen3.8-Flash-Next-FP8` and community
+  `RadixArk/Qwen3.8-Flash-Next-NVFP4` are both safetensors checkpoints
+  requiring a framework that understands `qwen4_exp` natively (TokenSpeed
+  or SGLang); TokenSpeed is separately blocked (Task 1.1 findings) and
+  RadixArk's own model card states **SGLang-only** support, which a
+  fresh re-check of SGLang `main` today (`model_config.py` and
+  `models/registry.py`, zero `qwen4_exp` references) confirms still
+  doesn't exist, one day after Task 0.2's identical finding. The only
+  Phase 1-cleared framework, llama.cpp-qwen4exp, is GGUF-only and cannot
+  load either named checkpoint. **User decision: substitute llama.cpp's
+  own GGUF quant ladder as the Phase 2 proxy** rather than parking Task
+  2.1 or attempting an unsupported combination — the already-downloaded
+  `Q8_0` shard (188.2GB) stands in for the FP8 tier (Task 2.2) and the
+  newly-added `UD-Q4_K_XL` shard (111.4GB, `gguf-ud-q4` download target,
+  same pinned repo revision as `Q8_0`) stands in for the NVFP4 tier
+  (Task 2.1) — chosen because its 4-bit dynamic quant is the closest
+  available bit-width/footprint match to NVFP4 (~99GB estimated vs.
+  111.4GB actual). This substitution is recorded explicitly in Task 2.1/
+  2.2's own wording, not silently assumed; ACC-006 comparison language
+  should read these as the tested proxies, not the originally-named
+  safetensors checkpoints.
+
+- **2026-08-27 (TokenSpeed FP8 MoE: 4 distinct bugs, Task 1.1 blocked)**:
+  see Task 1.1 in the Task List for full detail. Summary: MTP speculative
+  decoding blows the `qwen4_exp` KV-cache budget; of the four `--moe-backend`
+  options TokenSpeed exposes, `flashinfer_trtllm` (the only one
+  registered as Blackwell-FP8-capable at all) has a real
+  `hidden_states_scale` shape bug, `triton` has no matching kernel
+  registered for this GPU/trait combo, and `flashinfer_cutlass` explicitly
+  raises `NotImplementedError: FP8 block scaling not yet implemented for Blackwell`. None of the four combinations reached a working HTTP
+  endpoint. Checked `lightseekorg/tokenspeed`'s GitHub issues for
+  `hidden_states_scale` -- zero results, so this is a novel finding, not
+  a known/already-fixed bug. **Decision: do not keep patching TokenSpeed's
+  day-0 kernels ourselves** -- record this as a blocking finding for the
+  TokenSpeed candidate (revisitable later, e.g. via NVFP4 instead of FP8,
+  or once upstream fixes land) and shift Phase 1 effort to the
+  llama.cpp-qwen4exp candidate, per Task 0.3's original parallel-candidate
+  intent (this is exactly the scenario it was meant to hedge against).
+  Kicked off the `unsloth/Qwen3.8-Flash-Next-GGUF` Q8_0 download
+  (Task 0.5 GGUF half) in parallel rather than waiting for TokenSpeed
+  debugging to exhaust itself further.
 
 ### Related PRs / Commits
 

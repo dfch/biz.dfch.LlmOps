@@ -1,0 +1,7 @@
+/data/vllm/.venv/lib/python3.12/site-packages/huggingface_hub/constants.py:298: FutureWarning: The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated as 'hf_transfer' is not used anymore. Please use `HF_XET_HIGH_PERFORMANCE` instead to enable high performance transfer with Xet. Visit https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables#hfxethighperformance for more details.
+  warnings.warn(
+== Downloading gguf: unsloth/Qwen3.8-Flash-Next-GGUF @ 83cadfda58d30be06c110518208d1bb918b33f10 ==
+HF_HOME: /data/nvidia/hf_cache
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files:  14%|█▍        | 1/7 [00:00<00:03,  1.88it/s]Fetching 7 files:  29%|██▊       | 2/7 [00:21<01:02, 12.47s/it]Fetching 7 files:  43%|████▎     | 3/7 [01:58<03:24, 51.10s/it]Fetching 7 files:  57%|█████▋    | 4/7 [1:03:07<1:13:58, 1479.36s/it]Fetching 7 files:  71%|███████▏  | 5/7 [1:21:58<45:07, 1353.85s/it]  Fetching 7 files:  86%|████████▌ | 6/7 [1:38:40<20:34, 1234.16s/it]Fetching 7 files: 100%|██████████| 7/7 [1:43:01<00:00, 916.12s/it] Fetching 7 files: 100%|██████████| 7/7 [1:43:01<00:00, 883.11s/it]
+== gguf done -> /data/nvidia/hf_cache/hub/models--unsloth--Qwen3.8-Flash-Next-GGUF/snapshots/83cadfda58d30be06c110518208d1bb918b33f10 ==
+All requested downloads complete.

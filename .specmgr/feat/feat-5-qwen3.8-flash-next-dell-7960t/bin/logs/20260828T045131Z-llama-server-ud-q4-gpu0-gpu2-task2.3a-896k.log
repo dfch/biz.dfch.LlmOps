@@ -1,0 +1,17 @@
+0.00.441.229 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.441.559 W srv  llama_server: -----------------
+0.00.441.559 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.441.560 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.441.560 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.441.560 W srv  llama_server: -----------------
+0.00.442.886 I srv    load_model: loading model '/data/nvidia/hf_cache/hub/models--unsloth--Qwen3.8-Flash-Next-GGUF/snapshots/83cadfda58d30be06c110518208d1bb918b33f10/UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf'
+0.11.441.017 W llama_context: n_ctx_seq (896000) > n_ctx_train (262144) -- possible training context overflow
+0.11.507.373 W ggml_backend_sched_graph_inputs_grow: increasing graph inputs capacity from 30 to 60
+0.11.507.524 W ggml_backend_sched_graph_inputs_grow: increasing graph inputs capacity from 60 to 120
+0.17.867.042 I cmn          init: llama threadpool init, n_threads = 60
+0.17.990.668 W srv    load_model: the slot context (896000) exceeds the training context of the model (262144) - capping
+0.18.056.236 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 262144, kv_unified = 'false'
+0.18.061.094 I srv          init: chat template supports preserving reasoning, consider enabling it via --reasoning-preserve
+0.18.061.139 I srv  llama_server: model loaded
+0.18.061.143 I srv  llama_server: listening on http://0.0.0.0:30004
+0.48.010.942 I srv    operator(): operator(): cleaning up before exit...
