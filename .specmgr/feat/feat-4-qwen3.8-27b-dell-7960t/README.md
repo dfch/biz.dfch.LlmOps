@@ -1001,6 +1001,89 @@ What is explicitly out of scope:
   **closed 2026-08-25, explicit user decision: out of scope, not pursued.**
   No OpenWebUI configuration will be produced for this feature.
 
+#### Phase 7: GPU1-outage standby — single-GPU NVFP4+MTP on GPU3 (PLANNED, not yet implemented)
+
+**Trigger**: GPU1 (`00000000:34:00.0`) is again exhibiting the box's
+recurring under-sustained-load fault (see `hardware/dell-7960t/recovery.md`
+incident log) — it currently enumerates cleanly at idle but has a history of
+dropping off the PCIe bus after some time under load. Until that hardware
+issue is physically resolved, the user wants a temporary, on-demand
+standby endpoint that avoids GPU1 entirely, using GPU3 (the box's other
+Gen4 x16 card, currently idle/healthy, and NOT independently faulted in any
+prior incident — only "implicated" via correlated NVRM RPC failures during
+GPU1's TP=4 incidents). This reuses this feature's already-built,
+isolated `/data/qwen3.8-27b/.venv` and already-downloaded NVFP4 checkpoint
+— no new venv, no new download. This is explicitly **not** a reversal of
+Task 4.5's "NVFP4/MTP not adopted" production decision: that decision was
+about default precision on the healthy GPU0+GPU2 TP=2 pair; this is a
+scoped, temporary, single-GPU (TP=1) workaround driven by a hardware
+constraint, not a throughput preference — see Decisions Made below.
+
+Note: `~/.local/bin/qwen3.8-27b-nvfp4-896k.sh` and its `.service` file,
+found on this box, are **stray leftovers from `feat-3`'s GB10/DGX-Spark
+box** (aarch64 paths under `/home/admin/...`, port 8000) — not registered
+as a systemd unit here, not functional on this box. Kept only as a
+reference for its validated flag set
+(`--kv-cache-dtype fp8 --kv-cache-memory-bytes 35433480192 --no-enable-prefix-caching`, MTP `num_speculative_tokens=5`); this is
+almost certainly the origin of the user's "~60 GB VRAM on a DGX Spark"
+recollection, which does not directly transfer to this box's discrete
+96 GB-per-GPU VRAM/SM120 hardware and must be re-measured here (Task 7.5/
+7.7), not assumed.
+
+- [ ] Task 7.1: Pre-flight — confirm GPU3 idle/healthy (`nvidia-smi`),
+  confirm GPU1's current fault does not affect GPU0/GPU2/GPU3, confirm the
+  currently-active `qwen3.8-27b-bf16-896k-mtp-1.service` (GPU0+GPU2) stays
+  untouched throughout, re-verify the NVFP4 checkpoint's pinned revision
+  (`unsloth/Qwen3.8-27B-NVFP4@7d6f8d4d72f56b92b3cdbf22f156b90e1bab0108`)
+  and tokenizer-truncation fix still hold — depends on: none — status:
+  not started
+- [ ] Task 7.2: Install `qwen3.8-27b-nvfp4-mtp-gpu3.service` (`systemctl --user`, disabled, on-demand, per REQ-008) — `--tensor-parallel-size 1`,
+  `CUDA_VISIBLE_DEVICES` pinned to GPU3's UUID
+  (`GPU-780fe0cd-17a5-153d-bd3c-766d6c1c120e`), the NVFP4 checkpoint,
+  `--speculative-config '{"method":"mtp","num_speculative_tokens":5}'`,
+  the YaRN 896K `--hf-overrides` blob reused verbatim (REQ-012), port
+  **8007** — deliberately reused from `qwen3.8-27b-bf16-896k-mtp-2.service`
+  since the two can never run concurrently (both need GPU3) — and
+  `--max-num-seqs` tuned for this TP=1 config's own Mamba-cache-block
+  ceiling (same class of fix Task 1.1 hit for BF16/TP=1) — depends on:
+  Task 7.1 — status: not started
+- [ ] Task 7.3: Native/short-context correctness smoke test on GPU3 alone
+  — explicitly re-check for `feat-1`'s degenerate-output signature
+  (hard gate, REQ-010, since NVFP4+MTP+TP=1 is a combination never
+  tested before), verify tool-calling and all three thinking-control
+  modes — depends on: Task 7.2 — status: not started
+- [ ] Task 7.4: Byte-identical MTP-vs-no-MTP greedy output check at
+  `temperature: 0` on this GPU3/NVFP4 config — the lossless-verification
+  check Task 4.2 skipped for the TP=2 case, per REQ-004's bar — depends
+  on: Task 7.3 — status: not started
+- [ ] Task 7.5: Apply the YaRN 896K override; measure real KV-cache token
+  capacity and free VRAM headroom at TP=1 (not previously measured —
+  every prior NVFP4 KV-cache number is TP=2-only), check against this
+  repo's established ≥15%/≥10 GiB safety-margin policy — depends on:
+  Task 7.4 — status: not started
+- [ ] Task 7.6: Real ~896K-token filled-context request end-to-end
+  (same methodology as Task 3.3), confirm no OOM — depends on: Task 7.5
+  — status: not started
+- [ ] Task 7.7: Record actual measured VRAM usage against the user's
+  "~60 GB on a DGX Spark" expectation — measured, not assumed, per this
+  repo's methodology; note any divergence from the `feat-3` GB10
+  reference config's numbers, since VRAM/pool shape differs between the
+  two boxes — depends on: Task 7.6 — status: not started
+- [ ] Task 7.8: Add `~/.local/bin/qwen3.8-27b-nvfp4-mtp-gpu3` control
+  script (`start|stop|restart|status|logs|metrics`), modeled on
+  `qwen3.8-27b-bf16-896k-mtp-2`'s script, with a start-guard refusing to
+  launch if `qwen3.8-27b-bf16-896k-mtp-2.service` is active (shared
+  GPU3) — depends on: Task 7.2 — status: not started
+- [ ] Task 7.9: Produce an OpenCode provider snippet for this standby
+  service (port 8007, `served-model-name qwen3.8-27b-nvfp4-mtp-gpu3`),
+  clearly labeled as the GPU1-outage fallback, kept separate from the
+  existing BF16 896K snippet (`opencode-provider-snippet-qwen3.8-27b.jsonc`) — depends on: Task 7.6 — status: not started
+- [x] Task 7.10: Log the current GPU1 recurrence in
+  `hardware/dell-7960t/recovery.md`'s incident log (user-reported,
+  pending live reproduction under sustained load) — depends on: none —
+  status: done 2026-09-21 — see recovery.md's new "2026-09-21" incident
+  entry
+
 ## Progress
 
 ### Current Status
@@ -1344,3 +1427,62 @@ GPU2+GPU0 confirmed in the unit's own description line); `qwen3.8-27b stop` → 
 own `bin/` (it is a personal shell convenience file under the user's
 home directory, not a feature deliverable), so it is not part of this
 repo's version control.
+
+**2026-09-21 (Phase 7 planned, not yet implemented — GPU1 recurrence)**:
+user reports GPU1 (`00000000:34:00.0`) is again exhibiting the box's
+recurring under-sustained-load fault (disappears from `nvidia-smi`/
+`nvtop` after running under load for a while) — a live `nvidia-smi` check
+in this session shows all 4 GPUs enumerating cleanly and GPU1 idle/
+healthy at rest, and `journalctl -k -b` shows zero NVRM/Xid errors since
+the last boot, consistent with the documented pattern that the fault only
+manifests under sustained load, not at idle/boot. Live state at planning
+time: `qwen3.8-27b-bf16-896k-mtp-1.service` (production+MTP, GPU0+GPU2)
+is `active (running)`, ~89 GiB/GPU, 10h+ uptime, healthy spec-decode
+metrics — untouched by this plan. GPU1 and GPU3 are both idle. User wants
+a temporary standby endpoint on GPU3 alone (avoiding GPU1 entirely) using
+NVFP4+MTP for a smaller single-GPU footprint, referencing a "~60 GB VRAM
+on a DGX Spark" figure that turned out to trace back to a stray,
+non-functional-on-this-box leftover file from `feat-3`'s GB10 deployment
+(`~/.local/bin/qwen3.8-27b-nvfp4-896k.sh`/`.service`, aarch64 paths,
+inert here) rather than anything measured on this box. **Phase 7 above
+records the full task breakdown for this standby deployment — nothing
+in Phase 7 has been implemented yet; this entry and the Task List are
+planning-only, per explicit user instruction ("write the plan, do not
+implement").**
+
+### Decisions Made
+
+<!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-09-21 - GPU3 NVFP4+MTP standby is a hardware-driven workaround, not a reversal of Task 4.5
+
+**Decision**: while GPU1 (`00000000:34:00.0`) continues to exhibit its
+recurring under-sustained-load fault (see `hardware/dell-7960t/recovery.md`
+incident log), stand up a temporary, on-demand, single-GPU (TP=1) NVFP4+MTP
+instance of Qwen3.8-27B pinned to GPU3 only, reusing this feature's
+existing isolated venv and already-downloaded NVFP4 checkpoint — tracked as
+this feature's Phase 7, not as a new feature folder (per explicit user
+choice).
+
+**Rationale**: this is deliberately **not** a reversal of Task 4.5's
+"BF16 only, NVFP4/MTP not adopted for production" call. That decision was
+about default *precision* on the healthy GPU0+GPU2 TP=2 pair, evaluated
+purely on throughput at the fixed 896K/YaRN context (NVFP4 showed no
+throughput win there). This decision is orthogonal: it is driven by a
+*hardware availability* constraint (GPU1 unreliable under load, GPU0+GPU2
+already committed to the running production+MTP service), and the
+selection criterion is smallest single-GPU footprint that avoids GPU1
+entirely, not throughput. NVFP4 is the natural choice here specifically
+*because* Task 4.1 already measured it as ~2.3x smaller per-GPU weight
+footprint than BF16 (11.2 GiB vs. 25.7 GiB at TP=2) — the same property
+that made it lose on the "does it help at 896K" question is exactly what
+makes it the right fit for "must fit alone on one GPU."
+
+**Alternatives considered**: BF16 single-GPU (TP=1) on GPU3 — rejected as
+the first choice since NVFP4's smaller footprint leaves substantially more
+KV-cache headroom for the same 896K target on a single card, and this
+feature's NVFP4 checkpoint/MTP tooling is already fully built and
+downloaded; BF16 remains a documented fallback if NVFP4+MTP fails Phase
+7's correctness gates (Task 7.3/7.4). Using GPU1 anyway (with a soak test
+first) — rejected outright per the user's explicit instruction to avoid
+GPU1 until the hardware issue is fixed.

@@ -306,3 +306,37 @@ TP=4 on this box as unreliable until a longer soak test (repeated
 back-to-back runs, not a single success) demonstrates otherwise — do
 not conclude from one clean run that the fault is resolved. Production
 scope is unaffected either way (REQ-001 already excludes TP=4).
+
+### 2026-09-21: GPU1 recurrence reported under load (user report, not yet independently reproduced this session)
+
+**User report**: GPU1 (`00000000:34:00.0`) again disappears from
+`nvidia-smi`/`nvtop` and stops functioning after running under load for
+some time — the same "mid-session GPU drop" symptom class as the
+2026-08-25 incidents above, reported directly by the user rather than
+observed live in this session.
+
+**Live check at report time**: `nvidia-smi` shows all 4 GPUs enumerating
+cleanly; GPU1 idle, `P8`, 0% util, 2 MiB used, 30°C — no visible fault at
+rest. `journalctl -k -b` (current boot) shows GPU1 (`34:00.0`) loading
+cleanly with **zero** NVRM/Xid errors since boot. This is **consistent
+with, not contradictory to**, the documented pattern: every prior
+incident (2026-08-25 x2) only manifested after sustained multi-GPU load,
+never at idle or boot — a clean idle `nvidia-smi` reading does not confirm
+the fault is absent under load, only that it is not *currently*
+manifesting. Concurrently, `qwen3.8-27b-bf16-896k-mtp-1.service`
+(production+MTP, GPU0+GPU2, unrelated GPUs) has been `active (running)`
+for 10+ hours with no issues — i.e. sustained load on GPU0+GPU2 alone is
+not triggering this, matching the prior incidents' pattern that GPU1
+(and, correlated, GPU3's GSP-RPC channel) is the fault's locus, not a
+box-wide power/thermal ceiling reached by any GPU.
+
+**Response (planned, not yet implemented)**: rather than continue using
+GPU1 pending physical inspection, the user requested a temporary
+standby workload on GPU3 alone (avoiding GPU1 entirely) — tracked as
+`feat-4-qwen3.8-27b-dell-7960t`'s new Phase 7 (single-GPU NVFP4+MTP
+Qwen3.8-27B on GPU3). See that feature's README for the full task
+breakdown; as of this entry, Phase 7 is planning-only, nothing has been
+deployed. This entry does not resolve or further diagnose the GPU1
+hardware fault itself — the recommended next steps from the 2026-08-25
+incidents (physical power-cable/seating check, then reboot) still apply
+whenever the user is ready to take GPU1 out of service for inspection.
