@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Simple start/stop/status wrapper around the qwen3.8-27b-nvfp4-mtp-gpu3
+# systemd --user service (NVFP4, YaRN 896K context, TP=1 GPU3 only, MTP
+# speculative decoding num_speculative_tokens=5). Phase 7 GPU1-outage
+# standby (feat-4) -- temporary workaround while GPU1 exhibits its
+# recurring under-sustained-load PCIe-drop fault. NOT a reversal of
+# Task 4.5's "NVFP4/MTP not adopted for production" decision -- see the
+# unit file's own header comment. Modeled on
+# qwen3.8-27b-bf16-896k-mtp-2's control script.
+#
+# Shares GPU3 with qwen3.8-27b-bf16-896k-mtp-2.service (GPU1+GPU3) --
+# the two can never run concurrently. Start-guard below refuses to start
+# this unit while that one is active, mirroring
+# qwen3.8-27b-bf16-896k-mtp-1's own guard against its production sibling.
+set -euo pipefail
+
+UNIT="qwen3.8-27b-nvfp4-mtp-gpu3.service"
+CONFLICTING_UNIT="qwen3.8-27b-bf16-896k-mtp-2.service"
+PORT=8007
+
+usage() {
+  echo "Usage: $(basename "$0") {start|stop|restart|status|logs|metrics}"
+  exit 1
+}
+
+[ $# -eq 1 ] || usage
+
+case "$1" in
+  start)
+    if [ "$(systemctl --user is-active "$CONFLICTING_UNIT" 2>/dev/null || true)" = "active" ]; then
+      echo "Refusing to start: $CONFLICTING_UNIT is active and shares GPU3 with this service." >&2
+      echo "Stop it first: systemctl --user stop $CONFLICTING_UNIT" >&2
+      exit 1
+    fi
+    systemctl --user start "$UNIT"
+    ;;
+  stop)    systemctl --user stop "$UNIT" ;;
+  restart) systemctl --user restart "$UNIT" ;;
+  status)
+    systemctl --user status "$UNIT" --no-pager
+    echo ""
+    echo "Health check:"
+    curl -f "http://localhost:${PORT}/health" 2>&1 || echo "Not responding"
+    ;;
+  logs)    journalctl --user -u "$UNIT" -f ;;
+  metrics)
+    echo "MTP spec-decode counters (non-zero after at least one request means MTP is firing):"
+    curl -s "http://localhost:${PORT}/metrics" | grep -i spec_decode || echo "No spec_decode metrics found"
+    ;;
+  *)       usage ;;
+esac

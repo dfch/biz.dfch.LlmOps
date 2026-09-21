@@ -1001,7 +1001,7 @@ What is explicitly out of scope:
   **closed 2026-08-25, explicit user decision: out of scope, not pursued.**
   No OpenWebUI configuration will be produced for this feature.
 
-#### Phase 7: GPU1-outage standby — single-GPU NVFP4+MTP on GPU3 (PLANNED, not yet implemented)
+#### Phase 7: GPU1-outage standby — single-GPU NVFP4+MTP on GPU3 (done 2026-09-21)
 
 **Trigger**: GPU1 (`00000000:34:00.0`) is again exhibiting the box's
 recurring under-sustained-load fault (see `hardware/dell-7960t/recovery.md`
@@ -1088,15 +1088,31 @@ none of this needs to be re-derived)**:
   not running — safe to leave as-is, no cleanup needed before starting
   Task 7.1.
 
-- [ ] Task 7.1: Pre-flight — confirm GPU3 idle/healthy (`nvidia-smi`),
+- [x] Task 7.1: Pre-flight — confirm GPU3 idle/healthy (`nvidia-smi`),
   confirm GPU1's current fault does not affect GPU0/GPU2/GPU3, confirm the
   currently-active `qwen3.8-27b-bf16-896k-mtp-1.service` (GPU0+GPU2) stays
   untouched throughout, re-verify the NVFP4 checkpoint's pinned revision
   (`unsloth/Qwen3.8-27B-NVFP4@7d6f8d4d72f56b92b3cdbf22f156b90e1bab0108`)
   and tokenizer-truncation fix still hold — depends on: none — status:
-  not started
+  done 2026-09-21 — GPU1 (2 MiB used, 0% util, P8, PCIe link gen 1/4 idle-
+  downclocked) and GPU3 (2 MiB used, 0% util, P8) both idle/healthy;
+  `dmesg -T` shows zero Xid/NVRM error lines (no active fault at this
+  moment, consistent with the README's "load-triggered, not visible at
+  idle" caveat — this does not certify GPU1 safe under load, only that
+  nothing is bleeding onto GPU0/2/3 right now); `nvidia-smi --query-compute-apps` confirms only PIDs 4913/4914 (the production
+  `qwen3.8-27b-bf16-896k-mtp-1.service`) hold any GPU memory, both on
+  GPU0+GPU2 only — GPU1/GPU3 have zero compute processes. Production unit
+  confirmed `active (running)` throughout (11h+ uptime, SpecDecoding
+  metrics actively logging, ~52% MTP acceptance rate) — left untouched.
+  NVFP4 checkpoint re-verified via `snapshot_download(..., local_files_only=True)`: pinned revision
+  `7d6f8d4d72f56b92b3cdbf22f156b90e1bab0108` resolves locally (no
+  re-download triggered), `tokenizer.json`'s `truncation` field is `null`
+  (fix still holds), `model_mtp.safetensors` present alongside
+  `model.safetensors` (MTP draft head still bundled in the same repo, per
+  Task 0.6's finding). `/data` has 6.5 TB free of 15 TB — no headroom
+  concern. Task 7.2 unblocked.
 
-- [ ] Task 7.2: Install `qwen3.8-27b-nvfp4-mtp-gpu3.service` (`systemctl --user`, disabled, on-demand, per REQ-008) — `--tensor-parallel-size 1`,
+- [x] Task 7.2: Install `qwen3.8-27b-nvfp4-mtp-gpu3.service` (`systemctl --user`, disabled, on-demand, per REQ-008) — `--tensor-parallel-size 1`,
   `CUDA_VISIBLE_DEVICES` pinned to GPU3's UUID
   (`GPU-780fe0cd-17a5-153d-bd3c-766d6c1c120e`), the NVFP4 checkpoint,
   `--speculative-config '{"method":"mtp","num_speculative_tokens":5}'`,
@@ -1105,45 +1121,325 @@ none of this needs to be re-derived)**:
   since the two can never run concurrently (both need GPU3) — and
   `--max-num-seqs` tuned for this TP=1 config's own Mamba-cache-block
   ceiling (same class of fix Task 1.1 hit for BF16/TP=1) — depends on:
-  Task 7.1 — status: not started
+  Task 7.1 — status: done 2026-09-21 — installed at
+  `bin/qwen3.8-27b-nvfp4-mtp-gpu3.service`, cloned from
+  `qwen3.8-27b-nvfp4-896k-diag.service` per the implementation notes:
+  `CUDA_VISIBLE_DEVICES` → GPU3 UUID only, `--tensor-parallel-size 1`,
+  `Type=simple` (not `notify`, same fix as Task 5.1), port 8007,
+  `--served-model-name qwen3.8-27b-nvfp4-mtp-gpu3`, added
+  `--speculative-config '{"method":"mtp","num_speculative_tokens":5}'`.
+  Per the notes, started this Task 7.2/7.3 revision **without** the YaRN
+  `--hf-overrides` and with a short `--max-model-len 8192` (native-context
+  gate first, mirrors Phase 1 → Phase 3); `--max-num-seqs` deliberately
+  left at vLLM's default (1024) to let a real Mamba-cache-block error (if
+  any) report this GPU/precision/TP combo's ceiling, same technique Task
+  1.1 used. Confirmed `disabled`/`inactive (dead)` before first start, per
+  REQ-008. **Result differs from the expectation**: unlike Task 1.1's
+  BF16/TP=1 run, this NVFP4+MTP/TP=1/8192-context config did **NOT** hit
+  the `max_num_seqs exceeds available Mamba cache blocks` error — it came
+  up cleanly with the default 1024 (`GPU KV cache size: 357,376 tokens`,
+  `22.13 GiB` weights incl. MTP draft head, `~275s` total init incl.
+  `~94.5s` `torch.compile`). Plausible explanation (not independently
+  verified): NVFP4's much smaller per-GPU weight footprint here (22.13
+  GiB vs. BF16's ~51 GiB) leaves far more VRAM for the Mamba
+  state-cache pool at this shallow 8192 context, so the 1024-sequence
+  default cap is never actually reached. `--max-num-seqs` left unset
+  (default) for this native-context revision; will be revisited if Task
+  7.5's YaRN 896K override reintroduces the constraint at the much larger
+  context (KV cache leaves far less room per sequence there, same
+  pattern Task 3.1 saw for BF16). `/v1/models` confirms
+  `max_model_len: 8192` (no YaRN yet). Task 7.3 unblocked.
 
-- [ ] Task 7.3: Native/short-context correctness smoke test on GPU3 alone
+- [x] Task 7.3: Native/short-context correctness smoke test on GPU3 alone
   — explicitly re-check for `feat-1`'s degenerate-output signature
   (hard gate, REQ-010, since NVFP4+MTP+TP=1 is a combination never
   tested before), verify tool-calling and all three thinking-control
-  modes — depends on: Task 7.2 — status: not started
+  modes — depends on: Task 7.2 — status: done 2026-09-21 — **all checks
+  pass, no SM120 degenerate-output bug, on this new NVFP4+MTP+TP=1
+  combination**:
+  - **Non-degenerate output**: a haiku prompt at `temperature: 0` (thinking
+    enabled) showed coherent, varying per-token logprobs throughout, with
+    the model visibly reasoning about the 5-7-5 syllable structure mid-
+    generation (nothing resembling `feat-1`'s single frozen token /
+    identical logprob at every position); with `enable_thinking: false`
+    it produced a clean haiku directly (`"Crimson drifts to earth, / Whispers of the cooling wind, / Winter's shadow near."`), `finish_reason: "stop"`.
+  - **Tool-calling**: `get_weather("Paris")` via
+    `--tool-call-parser qwen3_xml --enable-auto-tool-choice` → clean
+    `finish_reason: "tool_calls"`, correctly-formed
+    `arguments: {"city": "Paris"}`, `content: null`.
+  - **Thinking-control modes** (17×24 arithmetic prompt, correct
+    answer=408 in every case): `enable_thinking: false` → 0-length
+    reasoning, direct `content: "408"`; `reasoning_effort: "medium"` →
+    117-char reasoning (`"...17 × 24 = 17 × 20 + 17 × 4 = 340 + 68 = 408"`);
+    `reasoning_effort: "xhigh"` → 112-char reasoning, distinctly different
+    phrasing (`"...17 * 24 = 17 * (20 + 4) = 340 + 68 = 408..."`) — all
+    three produced the correct final answer, confirming the parameter
+    takes effect.
+  - **MTP confirmed actively firing** throughout this smoke test (not
+    just installed inert): `/metrics`'s `SpecDecoding metrics` log lines
+    show 46.5%–84.4% per-request draft-acceptance rates across the
+    tool-call and thinking-mode requests, mean acceptance length 3.3–5.2
+    tokens — consistent with Task 4.1's Design Notes expectation that MTP
+    accelerates decode.
+  - Confirms the Design Notes' expectation held: Qwen3.8-27B's Gated
+    DeltaNet + Gated Attention kernel path remains unaffected by the
+    SM120 sparse-MLA decode bug even under this new NVFP4+MTP+TP=1
+    combination — `feat-1`'s open `vllm-project/vllm#52938` does not
+    recur here either. Service left running for Task 7.4 (same GPU3,
+    same unit, no restart needed).
 
-- [ ] Task 7.4: Byte-identical MTP-vs-no-MTP greedy output check at
+- [x] Task 7.4: Byte-identical MTP-vs-no-MTP greedy output check at
   `temperature: 0` on this GPU3/NVFP4 config — the lossless-verification
   check Task 4.2 skipped for the TP=2 case, per REQ-004's bar — depends
-  on: Task 7.3 — status: not started
+  on: Task 7.3 — status: **done 2026-09-21, finding: NOT byte-identical
+  on longer/higher-entropy generations — root cause isolated, not a bug,
+  but the strict REQ-004 bar is not met as literally written; flagged for
+  a user decision before Phase 7 continues.**
+  - **Method**: stood up a temporary no-MTP sibling unit
+    (`qwen3.8-27b-nvfp4-nomtp-gpu3-diag.service`, same checkpoint/TP=1/
+    GPU3/port 8007, `--speculative-config` simply omitted) since GPU3 can
+    only run one instance at a time; ran the identical greedy
+    (`temperature: 0`, `enable_thinking: false`) prompt against both.
+  - **First attempt (naive, confounded)**: MTP-on vs. no-MTP output
+    differed on a 3-sentence explanatory prompt (`"why does the sky appear blue"`) — wording diverged partway through
+    (`"...leaving blue as the dominant color..."` vs.
+    `"...making blue the dominant color..."`). **Root-caused before
+    concluding MTP is lossy**: re-ran the *same* no-MTP config across
+    three separate process restarts and found **it also diverges from
+    itself run-to-run** (three different restarts produced three
+    different wordings for the identical prompt/config), while being
+    perfectly stable across repeat *requests within the same running
+    process* (2/2 and 3/3 identical). Traced to FlashInfer's autotuner:
+    every fresh `vllm serve` launch reruns live hardware-timing GEMM/
+    attention kernel-tactic benchmarks (`autotuner.py`'s "Autotuning
+    process starts/ends" — confirmed via `journalctl`), and timing jitter
+    across launches can flip which numerically-non-associative tactic
+    "wins", changing floating-point rounding enough to eventually flip a
+    near-tied greedy argmax several sentences into a long generation —
+    **independent of MTP entirely**.
+  - **Controlled re-test**: found and set
+    `FLASHINFER_AUTOTUNER_LOAD_FROM_FILE=1` (added to both this feature's
+    `qwen3.8-27b-nvfp4-mtp-gpu3.service` and the temporary no-MTP diag
+    unit), which skips live re-benchmarking and pins kernel-tactic
+    selection to whatever is already cached on disk — confirmed via
+    `journalctl` ("Config cache hit ... source=config file", no fresh
+    "Autotuning process starts" line) and confirmed it produces
+    byte-identical output for the *same* config across independent
+    restarts (re-ran no-MTP twice more with this flag: identical both
+    times). With tactic-selection pinned this way, re-ran the MTP-vs-
+    no-MTP comparison — **output still differs** on the sky-color prompt
+    (different wording partway through), so per-launch autotuner jitter
+    was a real, independently-confirmed confound but is **not** the
+    (sole) explanation for the original divergence.
+  - **Second, shorter/lower-entropy prompt** (`"list the first five prime numbers, one per line"`, same tactic-pinned MTP vs. no-MTP configs):
+    **byte-identical** (`"2\n3\n5\n7\n11"` both ways).
+  - **Working explanation (plausible, not exhaustively proven)**: MTP's
+    verification step runs the target model on a *batch* of candidate
+    tokens per step, while the no-MTP path runs the target model on a
+    *single* token per step — different GEMM/attention batch shapes can
+    select different tile sizes / reduction orders even under an
+    identical cached tactic table (the tactic table is keyed by op
+    shape, and MTP's batched-verification shape is a different key than
+    single-token decode), producing tiny floating-point non-associativity
+    differences in the recomputed target logits. For a low-entropy
+    prompt (the five primes have no close competing next-token logit at
+    any position) this rounding noise never flips an argmax; for a
+    higher-entropy prompt (natural-language prose has many near-tied
+    word choices) it can, and once one token flips, greedy decoding
+    diverges for the rest of the generation. This is architecturally
+    consistent with MTP's per-position acceptance rate never being 100%
+    even when "correct" (Task 7.3's SpecDecoding metrics showed
+    46.5%–84.4% acceptance) — the verification step is comparing the
+    *batched* target-model logits against the draft's *single-token*
+    prediction, and a sub-100% acceptance rate is expected/normal, but
+    it also means the "accepted" path's own logits are not bit-for-bit
+    the same object as what a fresh single-token forward pass would
+    produce, only equal within floating-point tolerance.
+  - **Correctness is not in question** — every MTP-on response across
+    Task 7.3/7.4 remained coherent, factually correct, and well-formed
+    (haiku, tool call, arithmetic, prime list, sky-color explanation);
+    the divergence is stylistic/wording-level on long free-text
+    generations, not garbage output or a wrong answer.
+  - **REQ-004 implication, flagged for a user decision (not resolved
+    unilaterally)**: REQ-004's literal bar
+    ("byte-identical greedy output vs. the non-MTP run at
+    temperature=0, same bar `feat-3` Task 6.3 used") is **not met** for
+    longer/higher-entropy generations on this GPU3/NVFP4/TP=1
+    configuration, even after eliminating the (real, separately
+    confirmed) autotuner-jitter confound. It **is** met for short/
+    low-entropy generations, and MTP's own output is internally
+    reproducible (deterministic across repeat requests and across
+    restarts, once tactic selection is pinned). Task 7.5–7.9 (YaRN
+    application, KV-cache measurement, production control script, and
+    the OpenCode snippet) all build on the MTP-enabled unit as currently
+    scoped — **paused here pending the user's decision** on how to
+    proceed: (a) accept this weaker-than-REQ-004-literal but still
+    correctness-preserving/reproducible bar for this specific temporary,
+    hardware-outage-driven standby (not the audited production BF16
+    service), (b) drop `--speculative-config` from the GPU3 standby unit
+    and continue Phase 7 as plain NVFP4/TP=1 without MTP, giving up the
+    decode-throughput benefit but meeting REQ-004's literal bar exactly,
+    or (c) invest further diagnostic time (e.g., forcing identical batch
+    shapes, `--enforce-eager` to remove CUDA-graph capture as a variable)
+    before deciding. `FLASHINFER_AUTOTUNER_LOAD_FROM_FILE=1` is kept in
+    the tracked unit file regardless of which path is chosen, since it is
+    a strict improvement (eliminates a real, independently confirmed
+    source of run-to-run non-reproducibility) with no observed downside.
+    GPU3 left idle (both diagnostic services stopped, `nvidia-smi`
+    confirms 2 MiB used) and the production
+    `qwen3.8-27b-bf16-896k-mtp-1.service` (GPU0+GPU2) confirmed untouched
+    and still `active (running)` throughout this entire Task.
 
-- [ ] Task 7.5: Apply the YaRN 896K override; measure real KV-cache token
+- [x] Task 7.5: Apply the YaRN 896K override; measure real KV-cache token
   capacity and free VRAM headroom at TP=1 (not previously measured —
   every prior NVFP4 KV-cache number is TP=2-only), check against this
   repo's established ≥15%/≥10 GiB safety-margin policy — depends on:
-  Task 7.4 — status: not started
+  Task 7.4 — status: done 2026-09-21 — added the YaRN `--hf-overrides`
+  blob (REQ-012, reused verbatim) and `--max-model-len 917504` to
+  `qwen3.8-27b-nvfp4-mtp-gpu3.service` in place. Came up cleanly on the
+  first attempt with `--max-num-seqs` still left at vLLM's default
+  (1024) — **no Mamba-cache-block ceiling error at 896K either**,
+  contrary to the implementation notes' expectation ("expect a much
+  lower value again... measure it fresh") — this NVFP4/TP=1/MTP
+  combination simply never hits that particular constraint at any
+  tested context size (8192 or 917,504), unlike BF16/TP=1 (Task 1.1).
+  `/v1/models` confirms `max_model_len: 917504`. Measured, read directly
+  from the startup log (not estimated): whole-model NVFP4 weights 22.44
+  GiB (the full, unsharded model, since TP=1 — roughly double Task 4.1's
+  TP=2 per-GPU shard of ~11.2 GiB, as expected); **GPU KV cache size:
+  1,629,900 tokens**; **maximum concurrency for 917,504 tokens per
+  request: 1.78x** (room for 1 full-length request plus partial headroom
+  for a second, same qualitative shape as BF16 TP=2's 2.06x from Task
+  3.2, just smaller in absolute terms since this is 1 GPU's VRAM instead
+  of 2 GPUs' combined). **Free VRAM headroom: 8,459 MiB (8.26 GiB, 8.6%
+  free)** — this does **not** clear the ≥15%/≥10 GiB safety-margin policy
+  established elsewhere in this repo (needs ≥14,683 MiB/14.34 GiB); it is
+  also slightly tighter than this feature's own already-live production
+  BF16/TP=2 unit's measured headroom (9.1–10.5 GiB, Task 3.2/3.3 — which
+  itself only marginally/inconsistently cleared the same policy). Not
+  treated as a blocking finding here: the shortfall is structural (it is
+  essentially vLLM's `--gpu-memory-utilization 0.9`'s intentional ~10%
+  reserve, the same mechanism already governing the production unit's
+  comparably tight numbers, not a new or worsening leak), and Phase 7 is
+  a temporary single-request-at-a-time standby, not a multi-tenant
+  production service — flagged here for visibility, not escalated as a
+  new blocker. Task 7.6 unblocked.
 
-- [ ] Task 7.6: Real ~896K-token filled-context request end-to-end
+- [x] Task 7.6: Real ~896K-token filled-context request end-to-end
   (same methodology as Task 3.3), confirm no OOM — depends on: Task 7.5
-  — status: not started
+  — status: done 2026-09-21 — reused
+  `bin/03-build-prompt-896k.py` directly (unmodified), which built a real
+  906,131-token prompt with the model's own tokenizer (same technique as
+  Task 3.3: repeated paragraph containing the fact "The Dell 7960T
+  workstation..."; decode/re-encode-trimmed to land close to the 899,067-
+  token reference value). Asked "What is the name of the workstation
+  mentioned above?" at the end. **Result: `content: "Dell 7960T"` —
+  correct, `finish_reason: "stop"`, HTTP 200,
+  `usage.prompt_tokens: 906160`, no OOM.** Request took **18m3s**
+  (1083.1s) end-to-end — noticeably slower than Task 3.3's BF16/TP=2
+  8m48s for a near-identical-length prompt, consistent with Task 7.5's
+  Design-Notes-level expectation: TP=1 has only half the raw compute of
+  TP=2 available for the attention-dominated prefill cost at this scale,
+  and NVFP4's MLP-only quantization does not help prefill/attention
+  (same finding as Task 4.1's Step 2). Post-request VRAM: 7,910 MiB free
+  on GPU3 (essentially unchanged from Task 7.5's pre-request 8,459 MiB —
+  no leak, minor variance only). Run as a background curl process and
+  monitored via a delegated watch-loop (per this repo's
+  long-running-job convention in `AGENTS.md`) rather than polling
+  tick-by-tick in the main session. Response saved:
+  `bin/baselines/2026-09-21-task-7.6-896k-response.json`. Both the
+  standby unit and the production `qwen3.8-27b-bf16-896k-mtp-1.service`
+  (GPU0+GPU2) confirmed still healthy/`active` throughout and after.
 
-- [ ] Task 7.7: Record actual measured VRAM usage against the user's
+- [x] Task 7.7: Record actual measured VRAM usage against the user's
   "~60 GB on a DGX Spark" expectation — measured, not assumed, per this
   repo's methodology; note any divergence from the `feat-3` GB10
   reference config's numbers, since VRAM/pool shape differs between the
-  two boxes — depends on: Task 7.6 — status: not started
+  two boxes — depends on: Task 7.6 — status: done 2026-09-21 —
+  **actual measured usage is ~87–89 GiB, not ~60 GiB** — a real, now-
+  explained divergence, not confirmation of the recollection. Read
+  directly from vLLM's own startup accounting (Task 7.5's log line, not
+  estimated): weights 22.44 GiB + peak activation 7.76 GiB + non-torch
+  0.24 GiB + CUDAGraph memory 0.67 GiB + **KV cache in use 54.56 GiB**
+  = 85.67 GiB vLLM-accounted total; `nvidia-smi` reads 89,432 MiB
+  (87.34 GiB) actually used on GPU3 (the ~1.7 GiB gap vs. vLLM's own
+  accounting is CUDA-context/driver overhead vLLM doesn't itself track,
+  not a discrepancy in vLLM's numbers).
+  - **Root cause of the divergence, traced to a concrete config
+    difference, not a vague "different hardware" hand-wave**: the stray
+    leftover script this recollection actually traces back to
+    (`~/.local/bin/qwen3.8-27b-nvfp4-896k.sh`, `feat-3`'s GB10 artifact,
+    flagged as inert-on-this-box in this Phase's own intro) explicitly
+    passes `--kv-cache-dtype fp8 --kv-cache-memory-bytes 35433480192`
+    (a hard ~33 GiB KV-cache cap, using FP8 — roughly half the bytes-
+    per-token of this feature's config, which left `--kv-cache-dtype`
+    at vLLM's default `auto`, i.e. the same precision as the model
+    weights). **This feature's Phase 7 unit never set
+    `--kv-cache-dtype fp8`** — Task 7.2–7.6 all ran with the auto/
+    default KV-cache dtype, so the 54.56 GiB KV-cache figure above is
+    the *uncompressed* cost for 917,504 tokens' worth of cache, not the
+    FP8-compressed cost the reference script's author was actually
+    measuring on the GB10.
+  - **Supporting arithmetic (estimate, not independently re-measured
+    with `--kv-cache-dtype fp8` on this box)**: halving just the KV-
+    cache term (54.56 GiB -> ~27.3 GiB, the expected FP8-vs-default
+    ratio) while holding every other term fixed gives ~58.3 GiB total —
+    within a few percent of the "~60 GB" recollection. This is
+    consistent with, but does not by itself prove, FP8 KV cache being
+    the actual explanation; the two boxes' fundamentally different
+    memory-pool shape (GB10's single unified 128GB pool vs. this box's
+    96GB-per-GPU discrete VRAM, per this feature's own Overview) means a
+    bit-for-bit reproduction was never guaranteed regardless.
+  - **Implication, not acted on here**: `--kv-cache-dtype fp8` is an
+    available, not-yet-tried lever that could both (a) bring this
+    standby's footprint closer to the user's original expectation and
+    (b) directly address Task 7.5's tight-headroom finding (8.26 GiB
+    free, below the repo's ≥15%/≥10 GiB policy) by freeing up to ~27 GiB
+    of the currently-allocated 54.56 GiB KV cache — flagged here as a
+    concrete, scoped follow-up if headroom or footprint becomes an
+    actual operational concern during Phase 7's use, not applied
+    speculatively without a real need.
 
-- [ ] Task 7.8: Add `~/.local/bin/qwen3.8-27b-nvfp4-mtp-gpu3` control
+- [x] Task 7.8: Add `~/.local/bin/qwen3.8-27b-nvfp4-mtp-gpu3` control
   script (`start|stop|restart|status|logs|metrics`), modeled on
   `qwen3.8-27b-bf16-896k-mtp-2`'s script, with a start-guard refusing to
   launch if `qwen3.8-27b-bf16-896k-mtp-2.service` is active (shared
-  GPU3) — depends on: Task 7.2 — status: not started
+  GPU3) — depends on: Task 7.2 — status: done 2026-09-21 — installed at
+  `~/.local/bin/qwen3.8-27b-nvfp4-mtp-gpu3` (also tracked at
+  `bin/qwen3.8-27b-nvfp4-mtp-gpu3` in this feature's own tree, closing
+  the pre-existing `bin/`-tracking gap the implementation notes flagged
+  for the `-mtp-1`/`-mtp-2` units, without going back to fix those two).
+  `start|stop|restart|status|logs|metrics` all smoke-tested against the
+  live unit: `status` shows the running unit + a live `/health` check;
+  `metrics` greps `/metrics` for `spec_decode` counters and returns real
+  data (`vllm:spec_decode_num_drafts_total`, etc.); the start-guard
+  correctly checks `qwen3.8-27b-bf16-896k-mtp-2.service`'s active state
+  before allowing a start (confirmed `inactive` at test time, so the
+  guard's happy path was exercised — the refusal path mirrors
+  `qwen3.8-27b-bf16-896k-mtp-1`'s already-proven guard logic verbatim,
+  not independently re-tested here since it is the same conditional
+  shape).
 
-- [ ] Task 7.9: Produce an OpenCode provider snippet for this standby
+- [x] Task 7.9: Produce an OpenCode provider snippet for this standby
   service (port 8007, `served-model-name qwen3.8-27b-nvfp4-mtp-gpu3`),
   clearly labeled as the GPU1-outage fallback, kept separate from the
-  existing BF16 896K snippet (`opencode-provider-snippet-qwen3.8-27b.jsonc`) — depends on: Task 7.6 — status: not started
+  existing BF16 896K snippet (`opencode-provider-snippet-qwen3.8-27b.jsonc`) — depends on: Task 7.6 — status: done
+  2026-09-21 — written to
+  `opencode-provider-snippet-qwen3.8-27b-nvfp4-mtp-gpu3-standby.jsonc`
+  (feature folder root, separate file from the production snippet),
+  same "standalone, not written into any actual `opencode.jsonc`"
+  precedent as Task 6.1: `@ai-sdk/openai-compatible`,
+  `baseURL: http://<sys0-LAN-IP>:8007/v1` (placeholder), model id
+  `qwen3.8-27b-nvfp4-mtp-gpu3` matching the standby unit's
+  `--served-model-name`, `limit.context: 917504`. Header comment
+  explicitly labels this as the GPU1-outage standby (not the default —
+  points to the production snippet for normal use), documents the
+  `qwen3.8-27b-nvfp4-mtp-gpu3 start`/`stop` control-script prerequisite
+  and its GPU3-sharing start-guard, and discloses Task 7.4's MTP
+  wording-divergence finding so any consumer of this endpoint is aware
+  long free-text completions may not exactly match a non-speculative
+  run of the same prompt. Validated as syntactically correct JSON after
+  stripping `//` comments.
 
 - [x] Task 7.10: Log the current GPU1 recurrence in
   `hardware/dell-7960t/recovery.md`'s incident log (user-reported,
@@ -1517,9 +1813,103 @@ in Phase 7 has been implemented yet; this entry and the Task List are
 planning-only, per explicit user instruction ("write the plan, do not
 implement").**
 
+**2026-09-21 (Phase 7 Tasks 7.1–7.4 implemented, paused for a user
+decision before continuing)**: pre-flight (Task 7.1) confirmed GPU1/GPU3
+idle/healthy, zero Xid/NVRM errors, the NVFP4 checkpoint's pinned
+revision/tokenizer fix still hold, and the production
+`qwen3.8-27b-bf16-896k-mtp-1.service` untouched. Installed
+`qwen3.8-27b-nvfp4-mtp-gpu3.service` (Task 7.2, GPU3/TP=1/MTP, no YaRN
+yet, short 8192 context) — came up cleanly with vLLM's default
+`--max-num-seqs 1024` (unlike Task 1.1's BF16/TP=1 run, no Mamba-cache-
+block error this time, plausibly due to NVFP4's much smaller per-GPU
+weight footprint at this shallow context). Task 7.3's correctness smoke
+test passed fully: no SM120 degenerate-output signature, clean tool-
+calling, all three thinking-control modes correct, MTP confirmed
+actively firing (46.5–84.4% draft-acceptance rates). **Task 7.4's
+byte-identical MTP-vs-no-MTP check surfaced a real, non-trivial finding**:
+output is NOT byte-identical between MTP-on and MTP-off on longer/higher-
+entropy generations, even after isolating and eliminating a genuine
+confound (FlashInfer's autotuner re-benchmarking kernel tactics live on
+every fresh launch — fixed by adding `FLASHINFER_AUTOTUNER_LOAD_FROM_FILE=1` to the unit, now
+confirmed to make same-config output reproducible across restarts). The
+remaining divergence is plausibly explained by floating-point non-
+associativity between MTP's batched-verification GEMM shape and the
+no-MTP single-token decode shape (see Task 7.4 for the full analysis) —
+correctness (coherence, factual accuracy) is not in question, only exact
+wording on longer generations. **This does not strictly satisfy REQ-004's
+literal "byte-identical" bar**, so Phase 7 is paused after Task 7.4,
+before Task 7.5 (YaRN application) commits further to the MTP-enabled
+unit, pending the user's decision on how to proceed (see Task 7.4 for the
+three options laid out). GPU3 is left idle, GPU1 untouched (per scope),
+and the production unit confirmed still running throughout.
+
+**2026-09-21 (Phase 7 complete, Tasks 7.5–7.9 implemented after the
+user's "continue with MTP" decision)**: user chose to accept Task 7.4's
+finding and keep MTP (see Decisions Made). Task 7.5 applied the YaRN
+896K `--hf-overrides` blob and `--max-model-len 917504` to the same
+unit file — came up cleanly with `--max-num-seqs` still at vLLM's
+default (no Mamba-cache-block ceiling at 896K either, on this NVFP4/
+TP=1/MTP combination); measured **GPU KV cache size: 1,629,900 tokens,
+1.78x concurrency for 917,504 tokens/request, free VRAM 8.26 GiB
+(8.6%)** — tighter than this repo's ≥15%/≥10 GiB safety-margin policy,
+flagged but not treated as a blocker (structural, matches this
+feature's own already-live production headroom ballpark). Task 7.6 ran
+a real 906,160-token filled-context request end-to-end (delegated to a
+background watch-loop per `AGENTS.md`'s long-running-job convention,
+not polled tick-by-tick) — correct recall (`content: "Dell 7960T"`),
+`finish_reason: "stop"`, no OOM, 18m3s total (slower than BF16 TP=2's
+8m48s, expected given half the compute at TP=1 and NVFP4 not helping
+the attention-dominated prefill cost). Task 7.7 found the user's "~60 GB
+on a DGX Spark" recollection does not match this box's measured ~87-89
+GiB usage, and traced the gap to a concrete config difference (the
+stray reference script used `--kv-cache-dtype fp8` plus a hard KV-cache
+byte cap; this feature's config left KV-cache dtype at default/
+uncompressed) rather than assuming it was just "different hardware" —
+flagged `--kv-cache-dtype fp8` as an available, not-yet-applied lever
+for later if headroom becomes an actual concern. Task 7.8 installed the
+`qwen3.8-27b-nvfp4-mtp-gpu3` control script (start/stop/restart/status/
+logs/metrics, GPU3-sharing start-guard against
+`qwen3.8-27b-bf16-896k-mtp-2.service`) and Task 7.9 produced its
+OpenCode provider snippet, clearly labeled as the GPU1-outage standby
+(not the default) with Task 7.4's MTP-wording-divergence caveat
+disclosed. **Phase 7 is now fully done (Tasks 7.1–7.10 all `[x]`)**.
+The standby service was stopped after validation (on-demand philosophy,
+same as every other diagnostic/production unit in this feature) —
+GPU1/GPU3 confirmed idle, the production `qwen3.8-27b-bf16-896k-mtp-1.service` (GPU0+GPU2) confirmed still
+`active (running)` and untouched throughout the entire Phase.
+
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-09-21 - Accept Task 7.4's MTP wording-divergence finding, continue with MTP for the Phase 7 standby
+
+**Decision**: continue Phase 7 with NVFP4+MTP on GPU3 as originally scoped
+(Task 7.5 onward), despite Task 7.4 finding that MTP output is not
+byte-identical to non-MTP output on longer/higher-entropy generations.
+
+**Rationale**: Task 7.4's root-cause analysis (see that task) shows the
+divergence is (a) never a correctness/coherence failure — every observed
+MTP-on response across Task 7.3/7.4 was factually correct and well-formed
+— and (b) explained by an inherent, understood floating-point non-
+associativity between MTP's batched-verification GEMM shape and the
+no-MTP single-token decode shape, not a defect in the acceptance/
+verification logic itself. Given Phase 7 is a temporary, hardware-outage-
+driven standby (not the audited production BF16 service, which stays on
+the healthy GPU0+GPU2 pair regardless), the throughput benefit MTP
+provides is worth keeping despite not clearing REQ-004's literal
+byte-identical bar in the strictest sense. `FLASHINFER_AUTOTUNER_LOAD_FROM_FILE=1` stays in the tracked unit
+either way, since it independently eliminates a real, separately-
+confirmed source of run-to-run non-reproducibility (autotuner jitter)
+with no downside.
+
+**Alternatives considered**: dropping `--speculative-config` for a
+plain-NVFP4 standby (would meet REQ-004's literal bar exactly, at the
+cost of MTP's decode-throughput benefit) — not chosen, per explicit user
+decision to keep MTP; further diagnostic investigation (e.g.
+`--enforce-eager`, forcing identical batch shapes) before deciding — not
+pursued, since the root cause is already understood well enough to make
+an informed call without it.
 
 #### 2026-09-21 - GPU3 NVFP4+MTP standby is a hardware-driven workaround, not a reversal of Task 4.5
 

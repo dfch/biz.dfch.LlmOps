@@ -1,0 +1,38 @@
+[Unit]
+Description=vLLM Qwen3.8-27B NVFP4 no-MTP (Task 7.4 lossless-comparison baseline: GPU3 only, TP=1)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/data/qwen3.8-27b
+Environment=PATH=/data/qwen3.8-27b/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/data/qwen3.8-27b/.venv/lib/python3.12/site-packages/nvidia/cu13/bin
+Environment=HF_HOME=/data/nvidia/hf_cache
+Environment=HF_HUB_OFFLINE=1
+Environment=TRANSFORMERS_OFFLINE=1
+Environment=VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
+Environment=FLASHINFER_AUTOTUNER_LOAD_FROM_FILE=1
+Environment=CUDA_VISIBLE_DEVICES=GPU-780fe0cd-17a5-153d-bd3c-766d6c1c120e
+ExecStart=/data/qwen3.8-27b/.venv/bin/vllm serve unsloth/Qwen3.8-27B-NVFP4 \
+    --revision 7d6f8d4d72f56b92b3cdbf22f156b90e1bab0108 \
+    --served-model-name qwen3.8-27b-nvfp4-nomtp-gpu3 \
+    --tensor-parallel-size 1 \
+    --max-model-len 8192 \
+    --gpu-memory-utilization 0.9 \
+    --tool-call-parser qwen3_xml \
+    --enable-auto-tool-choice \
+    --reasoning-parser qwen3 \
+    --host 0.0.0.0 \
+    --port 8007 \
+    --trust-remote-code
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=control-group
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=3600
+TimeoutStopSec=60
+LimitNOFILE=1048576
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=default.target

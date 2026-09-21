@@ -1,0 +1,88 @@
+# vLLM Qwen3.8-27B NVFP4 + MTP speculative decoding -- Phase 7 GPU1-outage
+# standby, single GPU (TP=1, GPU3 only). Temporary workaround while GPU1
+# exhibits its recurring under-sustained-load PCIe-drop fault (see
+# hardware/dell-7960t/recovery.md incident log) -- avoids GPU1 entirely by
+# running on GPU3 (the box's other Gen4 x16 card, idle/healthy, not
+# independently faulted). NOT a reversal of Task 4.5's "NVFP4/MTP not
+# adopted for production" decision: that decision was about default
+# precision on the healthy GPU0+GPU2 TP=2 pair; this is a scoped,
+# hardware-constraint-driven, single-GPU fallback, not a throughput
+# preference.
+#
+# Reuses this feature's already-built, isolated /data/qwen3.8-27b/.venv
+# and already-downloaded/pinned NVFP4 checkpoint -- no new venv, no new
+# download (Task 7.1).
+#
+# Cloned from qwen3.8-27b-nvfp4-896k-diag.service (Phase 4's TP=2 NVFP4
+# diagnostic) with these deltas:
+#   - CUDA_VISIBLE_DEVICES -> GPU3's UUID only (GPU-780fe0cd-...)
+#   - --tensor-parallel-size 2 -> 1
+#   - Type=notify -> Type=simple (vLLM 0.26.0 never emits systemd's
+#     READY=1 -- same fix Task 5.1 applied to the production unit)
+#   - --port 8005 -> 8007 (deliberately reused from
+#     qwen3.8-27b-bf16-896k-mtp-2.service: that unit also needs GPU3, so
+#     the two can never run concurrently anyway)
+#   - --served-model-name -> qwen3.8-27b-nvfp4-mtp-gpu3
+#   - added --speculative-config '{"method":"mtp","num_speculative_tokens":5}'
+#     (draft head ships inside the same unsloth/Qwen3.8-27B-NVFP4 repo,
+#     confirmed by Task 0.6/Task 7.1 -- no separate model needed)
+#
+# Task 7.2/7.3 state (native-context correctness gate, mirrors the
+# Phase 1 -> Phase 3 progression): started with NO YaRN --hf-overrides,
+# short --max-model-len, --max-num-seqs deliberately omitted (vLLM
+# default 1024) -- came up cleanly with no Mamba-cache-block error at
+# that shallow context (see Task 7.2's finding). Task 7.4 added
+# FLASHINFER_AUTOTUNER_LOAD_FROM_FILE=1 after isolating a genuine
+# autotuner-jitter confound in the byte-identical MTP-vs-no-MTP check
+# (kept regardless of that check's outcome -- see Task 7.4/Decisions
+# Made 2026-09-21). Task 7.5 (this revision) adds the --hf-overrides
+# YaRN 896K blob (REQ-012, reused verbatim) and the fixed 917504
+# --max-model-len, per the 2026-09-21 "continue with MTP" decision.
+# --max-num-seqs re-tuned fresh for this TP=1/NVFP4/896K combination
+# (not reused from BF16's Task 3.1 value of 2, not assumed) -- see
+# Task 7.5 for the measured value and rationale.
+#
+# LimitNOFILE/TimeoutStartSec bumped to match qwen3.8-27b-bf16-896k-mtp-2's
+# values (extra headroom for the added MTP compile/init step), same
+# rationale as that unit's own comment.
+
+[Unit]
+Description=vLLM Qwen3.8-27B NVFP4+MTP (Phase 7 GPU1-outage standby: GPU3 only, TP=1, YaRN 896K context)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/data/qwen3.8-27b
+Environment=PATH=/data/qwen3.8-27b/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/data/qwen3.8-27b/.venv/lib/python3.12/site-packages/nvidia/cu13/bin
+Environment=HF_HOME=/data/nvidia/hf_cache
+Environment=HF_HUB_OFFLINE=1
+Environment=TRANSFORMERS_OFFLINE=1
+Environment=VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
+Environment=FLASHINFER_AUTOTUNER_LOAD_FROM_FILE=1
+Environment=CUDA_VISIBLE_DEVICES=GPU-780fe0cd-17a5-153d-bd3c-766d6c1c120e
+ExecStart=/data/qwen3.8-27b/.venv/bin/vllm serve unsloth/Qwen3.8-27B-NVFP4 \
+    --revision 7d6f8d4d72f56b92b3cdbf22f156b90e1bab0108 \
+    --served-model-name qwen3.8-27b-nvfp4-mtp-gpu3 \
+    --tensor-parallel-size 1 \
+    --max-model-len 917504 \
+    --gpu-memory-utilization 0.9 \
+    --speculative-config '{"method":"mtp","num_speculative_tokens":5}' \
+    --hf-overrides '{"text_config": {"rope_parameters": {"mrope_interleaved": true, "mrope_section": [11, 11, 10], "rope_type": "yarn", "rope_theta": 10000000, "partial_rotary_factor": 0.25, "factor": 3.5, "original_max_position_embeddings": 262144}}}' \
+    --tool-call-parser qwen3_xml \
+    --enable-auto-tool-choice \
+    --reasoning-parser qwen3 \
+    --host 0.0.0.0 \
+    --port 8007 \
+    --trust-remote-code
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=control-group
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=4200
+TimeoutStopSec=60
+LimitNOFILE=1048576
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=default.target

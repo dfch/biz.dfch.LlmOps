@@ -1,0 +1,62 @@
+// Standalone OpenCode provider snippet for the qwen3.8-27b-nvfp4-mtp-gpu3
+// service (feat-4 Phase 7), Dell 7960T (hostname sys0).
+//
+// *** GPU1-OUTAGE STANDBY -- NOT the default production endpoint. ***
+// This is a temporary, single-GPU (TP=1, GPU3 only) fallback that exists
+// solely because GPU1 has been exhibiting a recurring under-sustained-
+// load PCIe-drop fault (see hardware/dell-7960t/recovery.md's incident
+// log). For normal use, prefer the production BF16/896K/TP=2 service
+// (GPU0+GPU2) documented in this feature folder's own
+// opencode-provider-snippet-qwen3.8-27b.jsonc -- use *this* snippet only
+// while that GPU pairing is unavailable/degraded, or when explicitly
+// asked to validate the standby itself.
+//
+// Precision/decode note: this endpoint runs NVFP4 + MTP speculative
+// decoding. Task 7.4 found MTP output on this GPU3/NVFP4/TP=1 config is
+// NOT strictly byte-identical to a non-MTP run on longer/higher-entropy
+// generations (root-caused to floating-point non-associativity between
+// MTP's batched-verification and single-token decode GEMM shapes, not a
+// correctness bug -- every response remained coherent and factually
+// correct). Kept enabled per the 2026-09-21 "continue with MTP" decision
+// (see Decisions Made) -- flagging here so any consumer of this endpoint
+// is aware the exact wording of long free-text completions may differ
+// slightly from what a non-speculative run of the same prompt would
+// produce.
+//
+// NOT written into any opencode.jsonc on this box -- paste this into the
+// "provider" object of your own opencode.jsonc. Mirrors feat-2/feat-3's
+// "standalone snippet" precedent for this repo.
+//
+// Prerequisites before this endpoint actually answers requests:
+//   1. On the Dell 7960T: `qwen3.8-27b-nvfp4-mtp-gpu3 start`
+//      (on-demand only -- never auto-started, per REQ-008; the control
+//      script refuses to start while qwen3.8-27b-bf16-896k-mtp-2.service
+//      is active, since both share GPU3 -- stop that one first if so;
+//      stop this one with `qwen3.8-27b-nvfp4-mtp-gpu3 stop` when done,
+//      or via `systemctl --user stop qwen3.8-27b-nvfp4-mtp-gpu3.service`)
+//   2. Confirm GPU1 is not in use by this standby -- it never is
+//      (CUDA_VISIBLE_DEVICES is pinned to GPU3's UUID only), but this is
+//      the entire reason this unit exists, so it is worth re-stating
+//   3. Replace <sys0-LAN-IP> below with the box's actual current LAN IP
+//      (DHCP-assigned, so it can change -- e.g. `192.168.1.103` as of
+//      2026-08-25's session; use `localhost`/`127.0.0.1` instead if
+//      OpenCode runs on the Dell 7960T itself)
+//
+// No API key is required or accepted (REQ-007: unauthenticated, internal
+// network only, accepted risk) -- if the AI SDK's openai-compatible
+// provider errors on a missing key anyway, add "apiKey": "not-needed"
+// under "options" (same workaround feat-2/feat-3/the production snippet
+// documented).
+{
+    "qwen3.8-27b-nvfp4-mtp-gpu3-standby": {
+        "npm": "@ai-sdk/openai-compatible",
+        "name": "Qwen3.8-27B NVFP4+MTP GPU3 standby (Dell 7960T, GPU1-outage fallback)",
+        "options": { "baseURL": "http://<sys0-LAN-IP>:8007/v1" },
+        "models": {
+            "qwen3.8-27b-nvfp4-mtp-gpu3": {
+                "name": "qwen3.8-27b-nvfp4-mtp-gpu3",
+                "limit": { "context": 917504, "output": 65536 }
+            }
+        }
+    }
+}
