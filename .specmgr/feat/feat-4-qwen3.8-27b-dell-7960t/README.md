@@ -1030,6 +1030,64 @@ recollection, which does not directly transfer to this box's discrete
 96 GB-per-GPU VRAM/SM120 hardware and must be re-measured here (Task 7.5/
 7.7), not assumed.
 
+**Implementation notes for a fresh session (concrete starting points, so
+none of this needs to be re-derived)**:
+
+- **Clone source for Task 7.2's unit**: `~/.config/systemd/user/qwen3.8-27b-nvfp4-896k-diag.service` (still present, `disabled`,
+  TP=2/GPU2+GPU0/port 8005/`Type=notify`). Copy it, then change: `CUDA_VISIBLE_DEVICES` to GPU3's UUID only
+  (`GPU-780fe0cd-17a5-153d-bd3c-766d6c1c120e`); `--tensor-parallel-size 2` → `1`; `Type=notify` → `Type=simple` (vLLM 0.26.0 never emits
+  `READY=1` — same fix Task 5.1 already applied to the production unit);
+  `--port 8005` → `8007`; `--served-model-name` →
+  `qwen3.8-27b-nvfp4-mtp-gpu3`; add
+  `--speculative-config '{"method":"mtp","num_speculative_tokens":5}'`.
+  Start with **no YaRN override and a short `--max-model-len`** for Task
+  7.3's native-context gate first — only add the `--hf-overrides` YaRN
+  blob once Task 7.3/7.4 pass (mirrors the Phase 1 → Phase 3 progression).
+  Track the final unit file under this feature's own `bin/` (tracked in
+  git), the same way every other `qwen3.8-27b-*` unit is — note the two
+  live `-mtp-1`/`-mtp-2` units currently do **not** have a `bin/`-tracked
+  copy (a pre-existing gap in this repo, not something to fix here, but
+  don't repeat it for the new unit).
+
+- **Clone source for Task 7.8's control script**:
+  `~/.local/bin/qwen3.8-27b-bf16-896k-mtp-2` (`start|stop|restart|status|logs|metrics`, already has the `/metrics`
+  `spec_decode` grep for confirming MTP is firing). Copy it, set
+  `UNIT=qwen3.8-27b-nvfp4-mtp-gpu3.service`, `PORT=8007`, and add a
+  start-guard that refuses to start if
+  `systemctl --user is-active qwen3.8-27b-bf16-896k-mtp-2.service` reports
+  `active` (shared GPU3) — model the guard on `-mtp-1`'s script, which
+  already refuses to start against the production unit.
+
+- **`--max-num-seqs` tuning (Task 7.2/7.3)**: don't guess a value up
+  front — start the native-context diagnostic with the flag omitted
+  (vLLM default `1024`), let it fail the same way Task 1.1's BF16/TP=1
+  run did (`ValueError: max_num_seqs (1024) exceeds available Mamba cache blocks (N)`), read the real `N` for *this* GPU/precision/TP combo from
+  that error, and set `--max-num-seqs` accordingly for the native-context
+  unit. Expect a much lower value again (like the BF16 896K unit's `2`)
+  once the YaRN 896K override is applied in Task 7.5, for the same
+  reason (KV cache at full context leaves room for very few full-length
+  concurrent sequences) — measure it fresh, do not reuse BF16's `2` or
+  assume NVFP4's smaller weight footprint changes it in a predictable
+  direction.
+
+- **Task 7.6's filled-context prompt**: reuse
+  `.specmgr/feat/feat-4-qwen3.8-27b-dell-7960t/bin/03-build-prompt-896k.py`
+  directly (already builds a real ~899K-token prompt via the model's own
+  tokenizer, with a plantable fact for a recall check) — no need to write
+  a new one.
+
+- **Live state as of 2026-09-21 (re-verify fresh before running anything
+  — do not trust this snapshot)**: `qwen3.8-27b-bf16-896k-mtp-1.service`
+  is `active (running)` on GPU0+GPU2 (~89 GiB used each, 100% util) —
+  **never stop this** as part of Phase 7 work. GPU1 and GPU3 both read
+  idle/healthy (2 MiB, 0%, P8) at last check — GPU1's fault is
+  load-triggered, not visible at idle, so a clean `nvidia-smi` alone does
+  not mean it's safe; Phase 7 only ever touches GPU3, never GPU1.
+  `qwen3.8-27b-nvfp4-896k-diag.service` and
+  `qwen3.8-27b-bf16-896k-mtp-2.service` both exist, `disabled`, and are
+  not running — safe to leave as-is, no cleanup needed before starting
+  Task 7.1.
+
 - [ ] Task 7.1: Pre-flight — confirm GPU3 idle/healthy (`nvidia-smi`),
   confirm GPU1's current fault does not affect GPU0/GPU2/GPU3, confirm the
   currently-active `qwen3.8-27b-bf16-896k-mtp-1.service` (GPU0+GPU2) stays
@@ -1037,6 +1095,7 @@ recollection, which does not directly transfer to this box's discrete
   (`unsloth/Qwen3.8-27B-NVFP4@7d6f8d4d72f56b92b3cdbf22f156b90e1bab0108`)
   and tokenizer-truncation fix still hold — depends on: none — status:
   not started
+
 - [ ] Task 7.2: Install `qwen3.8-27b-nvfp4-mtp-gpu3.service` (`systemctl --user`, disabled, on-demand, per REQ-008) — `--tensor-parallel-size 1`,
   `CUDA_VISIBLE_DEVICES` pinned to GPU3's UUID
   (`GPU-780fe0cd-17a5-153d-bd3c-766d6c1c120e`), the NVFP4 checkpoint,
@@ -1047,37 +1106,45 @@ recollection, which does not directly transfer to this box's discrete
   `--max-num-seqs` tuned for this TP=1 config's own Mamba-cache-block
   ceiling (same class of fix Task 1.1 hit for BF16/TP=1) — depends on:
   Task 7.1 — status: not started
+
 - [ ] Task 7.3: Native/short-context correctness smoke test on GPU3 alone
   — explicitly re-check for `feat-1`'s degenerate-output signature
   (hard gate, REQ-010, since NVFP4+MTP+TP=1 is a combination never
   tested before), verify tool-calling and all three thinking-control
   modes — depends on: Task 7.2 — status: not started
+
 - [ ] Task 7.4: Byte-identical MTP-vs-no-MTP greedy output check at
   `temperature: 0` on this GPU3/NVFP4 config — the lossless-verification
   check Task 4.2 skipped for the TP=2 case, per REQ-004's bar — depends
   on: Task 7.3 — status: not started
+
 - [ ] Task 7.5: Apply the YaRN 896K override; measure real KV-cache token
   capacity and free VRAM headroom at TP=1 (not previously measured —
   every prior NVFP4 KV-cache number is TP=2-only), check against this
   repo's established ≥15%/≥10 GiB safety-margin policy — depends on:
   Task 7.4 — status: not started
+
 - [ ] Task 7.6: Real ~896K-token filled-context request end-to-end
   (same methodology as Task 3.3), confirm no OOM — depends on: Task 7.5
   — status: not started
+
 - [ ] Task 7.7: Record actual measured VRAM usage against the user's
   "~60 GB on a DGX Spark" expectation — measured, not assumed, per this
   repo's methodology; note any divergence from the `feat-3` GB10
   reference config's numbers, since VRAM/pool shape differs between the
   two boxes — depends on: Task 7.6 — status: not started
+
 - [ ] Task 7.8: Add `~/.local/bin/qwen3.8-27b-nvfp4-mtp-gpu3` control
   script (`start|stop|restart|status|logs|metrics`), modeled on
   `qwen3.8-27b-bf16-896k-mtp-2`'s script, with a start-guard refusing to
   launch if `qwen3.8-27b-bf16-896k-mtp-2.service` is active (shared
   GPU3) — depends on: Task 7.2 — status: not started
+
 - [ ] Task 7.9: Produce an OpenCode provider snippet for this standby
   service (port 8007, `served-model-name qwen3.8-27b-nvfp4-mtp-gpu3`),
   clearly labeled as the GPU1-outage fallback, kept separate from the
   existing BF16 896K snippet (`opencode-provider-snippet-qwen3.8-27b.jsonc`) — depends on: Task 7.6 — status: not started
+
 - [x] Task 7.10: Log the current GPU1 recurrence in
   `hardware/dell-7960t/recovery.md`'s incident log (user-reported,
   pending live reproduction under sustained load) — depends on: none —
